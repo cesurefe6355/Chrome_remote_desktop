@@ -37,6 +37,8 @@
         .profile-actions { display: flex; gap: 4px; }
         .action-icon-btn { background: transparent; border: none; color: #949ba4; cursor: pointer; padding: 6px; border-radius: 4px; transition: 0.15s; font-size: 14px; }
         .action-icon-btn:hover { background: #35363c; color: #f2f3f5; }
+        .action-icon-btn.active-stream { color: #ed4245 !important; background: rgba(237, 66, 69, 0.15); }
+        .action-icon-btn.active-stream:hover { background: rgba(237, 66, 69, 0.3); }
         .action-icon-btn.logout:hover { color: #ed4245; }
 
         /* 3. SÜTUN: Ana İçerik Alanı */
@@ -155,7 +157,7 @@
                 </div>
             </div>
 
-            <!-- Sol Alt Kullanıcı Profili ve Yayın Açma Butonu -->
+            <!-- Sol Alt Kullanıcı Profili ve Yayın Açma / Kapatma Butonu -->
             <div class="user-profile">
                 <div class="user-info-box">
                     <div class="user-avatar" id="userAvatarIcon">U</div>
@@ -165,7 +167,7 @@
                     </div>
                 </div>
                 <div class="profile-actions">
-                    <button class="action-icon-btn" onclick="openStreamModal()" title="Yayın Aç">📡</button>
+                    <button class="action-icon-btn" id="streamToggleBtn" onclick="handleStreamToggle()" title="Yayın Aç">📡</button>
                     <button class="action-icon-btn logout" onclick="handleLogout()" title="Çıkış Yap">⎋</button>
                 </div>
             </div>
@@ -196,7 +198,7 @@
                             <div class="stream-bottom-bar">
                                 <button id="fullscreenBtn">Tam Ekran ⛶</button>
                                 <span id="roleIndicator" style="color: #949ba4; font-size: 14px;"></span>
-                                <button class="btn-danger" id="leaveStreamBtn">Yayından Ayrıl</button>
+                                <button class="btn-danger" id="leaveStreamBtn" onclick="leaveStream()">Yayından Ayrıl</button>
                             </div>
                         </div>
 
@@ -222,6 +224,7 @@
         }
 
         function handleLogout() {
+            if (currentRoomId) leaveStream();
             localStorage.removeItem('lumolive_user');
             window.location.href = '/login.html';
         }
@@ -257,6 +260,20 @@
                 { urls: 'stun:stun1.l.google.com:19302' }
             ]
         };
+
+        // Sol Alttaki Yayın Butonu Yönetimi (Aç/Kapat)
+        function handleStreamToggle() {
+            if (isHost) {
+                // Eğer zaten yayın açılmışsa butona basınca yayını kapat
+                leaveStream();
+            } else if (currentRoomId) {
+                // İzleyici olarak bir yayındaysa uyarı ver
+                showModal("Bilgi", "Şu anda bir yayını izliyorsunuz. Önce yayından ayrılmalısınız.");
+            } else {
+                // Yayın yoksa yeni yayın açma modalını göster
+                openStreamModal();
+            }
+        }
 
         socket.on('room-list', (rooms) => {
             const grid = document.getElementById('roomGrid');
@@ -313,6 +330,12 @@
                 currentRoomId = roomName;
 
                 closeStreamModal();
+
+                // Sol alttaki butonu Yayını Kapat moduna geçir
+                const toggleBtn = document.getElementById('streamToggleBtn');
+                toggleBtn.innerText = '⏹';
+                toggleBtn.title = 'Yayını Kapat';
+                toggleBtn.classList.add('active-stream');
 
                 document.getElementById('tabContentList').style.display = 'none';
                 document.getElementById('active-stream-screen').style.display = 'flex';
@@ -405,8 +428,6 @@
             }
         });
 
-        document.getElementById('leaveStreamBtn').addEventListener('click', () => leaveStream());
-
         function leaveStream() {
             if (currentRoomId) socket.emit('leave-room', { roomId: currentRoomId });
             if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
@@ -415,6 +436,12 @@
             document.getElementById('remoteVideo').srcObject = null;
             currentRoomId = "";
             isHost = false;
+
+            // Sol alttaki butonu tekrar varsayılan Yayın Aç moduna getir
+            const toggleBtn = document.getElementById('streamToggleBtn');
+            toggleBtn.innerText = '📡';
+            toggleBtn.title = 'Yayın Aç';
+            toggleBtn.classList.remove('active-stream');
 
             document.getElementById('active-stream-screen').style.display = 'none';
             document.getElementById('tabContentList').style.display = 'block';
