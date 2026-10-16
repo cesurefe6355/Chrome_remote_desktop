@@ -1,16 +1,43 @@
 {
   "name": "lumolive",
   "version": "1.0.0",
-  "description": "Discord tarzı canlı yayın ve ekran paylaşım platformu",
-  "main": "server.js",
+  "main": "main.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "desktop": "electron .",
+    "build": "electron-builder"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
-    "express": "^4.19.2",
-    "jsonwebtoken": "^9.0.2",
-    "socket.io": "^4.7.5",
-    "sqlite3": "^5.1.7"
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2"
+  },
+  "devDependencies": {
+    "electron": "^28.3.3",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.lumolive.app",
+    "productName": "LumoLive",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
+  },
+  "description": "LumoLive - Sesli sohbet ve canlı yayın",
+  "author": "LumoLive",
+  "engines": {
+    "node": ">=18"
   }
 }
