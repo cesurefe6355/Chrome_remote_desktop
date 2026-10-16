@@ -12,7 +12,6 @@ const io = new Server(server);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'Public')));
 
-// SQLite Veritabanı
 const db = new sqlite3.Database('./lumolive.db', (err) => {
     if (err) console.error('Veritabanı hatası:', err.message);
     else console.log('SQLite veritabanına bağlanıldı.');
@@ -24,7 +23,6 @@ db.run(`CREATE TABLE IF NOT EXISTS users (
     password TEXT
 )`);
 
-// Kayıt & Giriş API
 app.post('/api/register', (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'Kullanıcı adı ve şifre zorunludur.' });
@@ -46,7 +44,6 @@ app.post('/api/login', (req, res) => {
     });
 });
 
-// --- ODA & SESLİ SOHBET / YAYIN SİSTEMİ ---
 const rooms = {
     "Lobi": { createdBy: "Sistem", isLive: false, hostSocketId: null, hostName: null, members: [] },
     "Oyun-Gecesi": { createdBy: "Sistem", isLive: false, hostSocketId: null, hostName: null, members: [] }
@@ -55,7 +52,6 @@ const rooms = {
 io.on('connection', (socket) => {
     socket.emit('room-list-update', getRoomsList());
 
-    // Oda Oluşturma
     socket.on('create-channel', ({ roomName, username }) => {
         const formattedRoom = roomName.trim().replace(/\s+/g, '-').toLowerCase();
         if (!formattedRoom || rooms[formattedRoom]) {
@@ -74,14 +70,11 @@ io.on('connection', (socket) => {
         socket.emit('channel-created', { roomId: formattedRoom });
     });
 
-    // Odaya Katılma (Sesli Sohbet Ağına Dahil Olma)
     socket.on('join-room', ({ roomId, username }) => {
         const room = rooms[roomId];
         if (!room) return socket.emit('error-msg', 'Oda bulunamadı.');
 
         socket.join(roomId);
-        
-        // Odadaki diğer kullanıcılara yeni birinin katıldığını haber ver (Sesli Sohbet Mesh Ağı için)
         socket.to(roomId).emit('user-joined-voice', { socketId: socket.id, username });
 
         if (!room.members.some(m => m.id === socket.id)) {
@@ -92,13 +85,18 @@ io.on('connection', (socket) => {
             roomId,
             isLive: room.isLive,
             hostName: room.hostName,
+            hostSocketId: room.hostSocketId,
             members: room.members
         });
+
+        // Eğer odada aktif yayın varsa, yeni katılan izleyiciye yayıncının ID'sini bildir
+        if (room.isLive && room.hostSocketId !== socket.id) {
+            io.to(room.hostSocketId).emit('viewer-wants-stream', { viewerId: socket.id });
+        }
 
         io.to(roomId).emit('update-room-members', room.members);
     });
 
-    // Odada Ekran Yayını Başlatma
     socket.on('start-stream-in-room', ({ roomId, username }) => {
         const room = rooms[roomId];
         if (!room) return socket.emit('error-msg', 'Oda bulunamadı.');
@@ -110,19 +108,25 @@ io.on('connection', (socket) => {
 
         io.emit('room-list-update', getRoomsList());
         io.to(roomId).emit('stream-started', { roomId, hostName: username, hostSocketId: socket.id });
+
+        // Odadaki mevcut diğer kullanıcılara yayıncıya bağlanmaları gerektiğini söyle
+        room.members.forEach(member => {
+            if (member.id !== socket.id) {
+                io.to(socket.id).emit('viewer-wants-stream', { viewerId: member.id });
+            }
+        });
     });
 
-    // Odayı/Yayını Terk Etme
     socket.on('leave-room', ({ roomId }) => {
         handleUserLeave(socket, roomId);
     });
 
-    // WebRTC Sinyalleşmesi (Sesli Sohbet ve Ekran Paylaşımı İçin Ortak)
+    // WebRTC Sinyalleşmesi
     socket.on('signal', (data) => {
         io.to(data.target).emit('signal', {
             sender: socket.id,
             signal: data.signal,
-            type: data.type // 'voice' veya 'stream'
+            type: data.type
         });
     });
 
@@ -137,7 +141,6 @@ function handleUserLeave(socket, roomId) {
     const room = rooms[roomId];
     if (!room) return;
 
-    // Kullanıcının ayrıldığını odadakilere bildir
     socket.to(roomId).emit('user-left-voice', socket.id);
 
     const index = room.members.findIndex(m => m.id === socket.id);
