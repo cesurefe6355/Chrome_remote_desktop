@@ -33,8 +33,11 @@
         .user-avatar { width: 32px; height: 32px; background: #5865F2; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px; flex-shrink: 0; overflow: hidden; }
         .username-text { font-size: 14px; font-weight: 600; color: #f2f3f5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .user-status-text { font-size: 11px; color: #23a55a; font-weight: 500; }
-        .logout-icon-btn { background: transparent; border: none; color: #949ba4; cursor: pointer; padding: 6px; border-radius: 4px; transition: 0.15s; font-size: 14px; }
-        .logout-icon-btn:hover { background: #35363c; color: #ed4245; }
+        
+        .profile-actions { display: flex; gap: 4px; }
+        .action-icon-btn { background: transparent; border: none; color: #949ba4; cursor: pointer; padding: 6px; border-radius: 4px; transition: 0.15s; font-size: 14px; }
+        .action-icon-btn:hover { background: #35363c; color: #f2f3f5; }
+        .action-icon-btn.logout:hover { color: #ed4245; }
 
         /* 3. SÜTUN: Ana İçerik Alanı */
         .main-content { flex: 1; background-color: #313338; display: flex; flex-direction: column; overflow: hidden; }
@@ -59,9 +62,7 @@
         .room-card p { font-size: 13px; color: #949ba4; margin-bottom: 12px; }
         .room-card button { width: 100%; }
 
-        /* Yayın Açma Kutusu */
-        .host-form-container { max-width: 480px; background: #2b2d31; padding: 24px; border-radius: 8px; border: 1px solid #1f2023; }
-        .input-group { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+        .input-group { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; text-align: left; }
         label { font-size: 12px; font-weight: 700; color: #b5bac1; text-transform: uppercase; letter-spacing: 0.5px; }
 
         /* Aktif Yayın İzleme Alanı */
@@ -81,23 +82,55 @@
         .viewer-item { padding: 8px 10px; background: #1e1f22; border-radius: 4px; font-size: 13px; display: flex; align-items: center; gap: 8px; color: #f2f3f5; }
         .status-dot { width: 8px; height: 8px; background: #23a55a; border-radius: 50%; }
 
-        /* Discord Tarzı Özel Bildirim Modalı */
+        /* Discord Tarzı Özel Modallar */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.7); z-index: 1000; justify-content: center; align-items: center; }
-        .modal-box { background: #313338; border: 1px solid #1f2023; border-radius: 12px; padding: 24px; width: 100%; max-width: 420px; box-shadow: 0 12px 32px rgba(0,0,0,0.6); text-align: center; }
+        .modal-box { background: #313338; border: 1px solid #1f2023; border-radius: 12px; padding: 24px; width: 100%; max-width: 440px; box-shadow: 0 12px 32px rgba(0,0,0,0.6); }
         .modal-box h3 { color: #f2f3f5; font-size: 20px; margin-bottom: 8px; }
         .modal-box p { color: #949ba4; font-size: 14px; margin-bottom: 24px; line-height: 1.4; }
-        .modal-box button { width: 100%; background: #5865F2; }
-        .modal-box button:hover { background: #4752c4; }
     </style>
 </head>
 <body>
 
-    <!-- Özel Bildirim Modalı -->
+    <!-- YAYIN BAŞLAT AYARLARI MODALI -->
+    <div id="streamSetupModal" class="modal-overlay">
+        <div class="modal-box" style="text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="margin:0;">Canlı Yayın Ayarları</h3>
+                <button onclick="closeStreamModal()" style="background: transparent; color: #949ba4; width: auto; padding: 4px 8px; font-size: 16px;">✕</button>
+            </div>
+            
+            <div class="input-group" style="margin-top: 0;">
+                <label>Oda / Yayın Adı</label>
+                <input type="text" id="roomNameInput" placeholder="Örn: Oyun Gecesi">
+                
+                <label style="margin-top: 12px;">Çözünürlük (Kalite)</label>
+                <select id="resolutionSelect">
+                    <option value="720">720p HD</option>
+                    <option value="1080" selected>1080p FHD</option>
+                    <option value="1440">1440p 2K QHD</option>
+                    <option value="4k">4K Ultra HD</option>
+                    <option value="max">Maksimum / Orijinal</option>
+                </select>
+
+                <label style="margin-top: 12px;">Yenileme Hızı (FPS)</label>
+                <select id="fpsSelect">
+                    <option value="30">30 FPS</option>
+                    <option value="60" selected>60 FPS (Akıcı)</option>
+                    <option value="120">120 FPS</option>
+                    <option value="144">144 FPS</option>
+                </select>
+
+                <button id="startHostBtn" style="margin-top: 20px; width: 100%;">Yayını Başlat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GENEL BİLDİRİM MODALI -->
     <div id="customModal" class="modal-overlay">
-        <div class="modal-box">
+        <div class="modal-box" style="text-align: center;">
             <h3 id="modalTitle">Bilgilendirme</h3>
             <p id="modalDesc">Mesaj içeriği buraya gelecek...</p>
-            <button onclick="closeModal()">Tamam</button>
+            <button onclick="closeModal()" style="width: 100%;">Tamam</button>
         </div>
     </div>
 
@@ -117,15 +150,12 @@
             
             <div class="channels-list">
                 <div class="channel-category">Ses / Yayın Kanalları</div>
-                <div class="channel-item active" id="btnTabList" onclick="switchMainTab('list')">
+                <div class="channel-item active" id="btnTabList">
                     <span>#</span> aktif-odalar
-                </div>
-                <div class="channel-item" id="btnTabHost" onclick="switchMainTab('host')">
-                    <span>+</span> yayın-başlat
                 </div>
             </div>
 
-            <!-- Sol Alt Kullanıcı Profili -->
+            <!-- Sol Alt Kullanıcı Profili ve Yayın Açma Butonu -->
             <div class="user-profile">
                 <div class="user-info-box">
                     <div class="user-avatar" id="userAvatarIcon">U</div>
@@ -134,7 +164,10 @@
                         <div class="user-status-text">Çevrimiçi</div>
                     </div>
                 </div>
-                <button class="logout-icon-btn" onclick="handleLogout()" title="Çıkış Yap">⎋</button>
+                <div class="profile-actions">
+                    <button class="action-icon-btn" onclick="openStreamModal()" title="Yayın Aç">📡</button>
+                    <button class="action-icon-btn logout" onclick="handleLogout()" title="Çıkış Yap">⎋</button>
+                </div>
             </div>
         </div>
 
@@ -153,37 +186,7 @@
                     <div class="room-grid" id="roomGrid"></div>
                 </div>
 
-                <!-- SEKME 2: Yayın Başlat Formu -->
-                <div id="tabContentHost" class="tab-pane" style="display: none;">
-                    <div class="host-form-container">
-                        <h3 style="color: #f2f3f5; margin-bottom: 12px;">Yeni Canlı Yayın Başlat</h3>
-                        <div class="input-group">
-                            <label>Oda / Yayın Adı</label>
-                            <input type="text" id="roomNameInput" placeholder="Örn: Oyun Gecesi">
-                            
-                            <label>Çözünürlük (Kalite)</label>
-                            <select id="resolutionSelect">
-                                <option value="720">720p HD</option>
-                                <option value="1080" selected>1080p FHD</option>
-                                <option value="1440">1440p 2K QHD</option>
-                                <option value="4k">4K Ultra HD</option>
-                                <option value="max">Maksimum / Orijinal</option>
-                            </select>
-
-                            <label>Yenileme Hızı (FPS)</label>
-                            <select id="fpsSelect">
-                                <option value="30">30 FPS</option>
-                                <option value="60" selected>60 FPS (Akıcı)</option>
-                                <option value="120">120 FPS</option>
-                                <option value="144">144 FPS</option>
-                            </select>
-
-                            <button id="startHostBtn" style="margin-top: 14px;">Yayını Başlat</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- SEKME 3: Aktif Yayın / İzleme Ekranı -->
+                <!-- SEKME 2: Aktif Yayın / İzleme Ekranı -->
                 <div id="active-stream-screen">
                     <div class="stream-layout">
                         <div>
@@ -223,7 +226,15 @@
             window.location.href = '/login.html';
         }
 
-        // Özel Modal Gösterme Fonksiyonu
+        // Modal Yönetimi
+        function openStreamModal() {
+            document.getElementById('streamSetupModal').style.display = 'flex';
+        }
+
+        function closeStreamModal() {
+            document.getElementById('streamSetupModal').style.display = 'none';
+        }
+
         function showModal(title, desc) {
             document.getElementById('modalTitle').innerText = title;
             document.getElementById('modalDesc').innerText = desc;
@@ -247,30 +258,12 @@
             ]
         };
 
-        function switchMainTab(tab) {
-            document.getElementById('tabContentList').style.display = 'none';
-            document.getElementById('tabContentHost').style.display = 'none';
-            document.getElementById('active-stream-screen').style.display = 'none';
-
-            document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
-
-            if (tab === 'list') {
-                document.getElementById('tabContentList').style.display = 'block';
-                document.getElementById('btnTabList').classList.add('active');
-                document.getElementById('channelHeaderTitle').innerHTML = '<span>#</span> aktif-odalar';
-            } else if (tab === 'host') {
-                document.getElementById('tabContentHost').style.display = 'block';
-                document.getElementById('btnTabHost').classList.add('active');
-                document.getElementById('channelHeaderTitle').innerHTML = '<span>+</span> yayın-başlat';
-            }
-        }
-
         socket.on('room-list', (rooms) => {
             const grid = document.getElementById('roomGrid');
             grid.innerHTML = "";
 
             if (rooms.length === 0) {
-                grid.innerHTML = `<p style="color:#949ba4;">Şu anda aktif bir LumoLive yayını bulunmuyor. Sol menüden <b>yayın-başlat</b> kanalına tıklayarak kendi yayınını açabilirsin!</p>`;
+                grid.innerHTML = `<p style="color:#949ba4;">Şu anda aktif bir LumoLive yayını bulunmuyor. Sol alttaki <b>📡</b> butonuna tıklayarak kendi yayınını açabilirsin!</p>`;
                 return;
             }
 
@@ -291,6 +284,7 @@
 
         socket.on('error-msg', (msg) => showModal("Hata", msg));
 
+        // Yayın Başlatma
         document.getElementById('startHostBtn').addEventListener('click', async () => {
             const roomName = document.getElementById('roomNameInput').value.trim();
             const resolution = document.getElementById('resolutionSelect').value;
@@ -318,8 +312,9 @@
                 isHost = true;
                 currentRoomId = roomName;
 
+                closeStreamModal();
+
                 document.getElementById('tabContentList').style.display = 'none';
-                document.getElementById('tabContentHost').style.display = 'none';
                 document.getElementById('active-stream-screen').style.display = 'flex';
                 document.getElementById('channelHeaderTitle').innerHTML = `<span>●</span> ${roomName} (Yayıncı)`;
                 document.getElementById('roleIndicator').innerText = `Canlı Yayın (${fps} FPS)`;
@@ -335,12 +330,12 @@
             }
         });
 
+        // Yayına Katılma
         function joinStream(roomId) {
             isHost = false;
             currentRoomId = roomId;
 
             document.getElementById('tabContentList').style.display = 'none';
-            document.getElementById('tabContentHost').style.display = 'none';
             document.getElementById('active-stream-screen').style.display = 'flex';
             document.getElementById('channelHeaderTitle').innerHTML = `<span>●</span> ${roomId} (İzleyici)`;
             document.getElementById('roleIndicator').innerText = "Canlı İzleniyor";
@@ -422,10 +417,10 @@
             isHost = false;
 
             document.getElementById('active-stream-screen').style.display = 'none';
-            switchMainTab('list');
+            document.getElementById('tabContentList').style.display = 'block';
+            document.getElementById('channelHeaderTitle').innerHTML = '<span>#</span> aktif-odalar';
         }
 
-        // SADECE İZLEYİCİLERE ÖZEL DİSCORD TARZI YAYIN KAPANDI BİLDİRİMİ
         socket.on('room-closed', () => {
             if (!isHost) {
                 showModal("Yayın Sona Erdi", "Yayıncı bu yayını kapattı. Ana lobiye yönlendiriliyorsun.");
