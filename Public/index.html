@@ -356,11 +356,20 @@ function renderVoice() {
     t.appendChild(ic); g.appendChild(t);
   });
 }
-socket.on('room-joined', ({ roomId, isLive, hostName, hostSocketId, members }) => {
+socket.on('room-joined', async ({ roomId, isLive, hostName, hostSocketId, members }) => {
   setNames(members); voiceMembers = members; hostSid = isLive ? hostSocketId : null;
-  $('vstat').style.display = 'flex'; $('vstatName').textContent = roomId;
+  $('vstat').style.display = 'flex';$('vstatName').textContent = roomId;
   showStage(isLive); $('who').textContent = isLive ? `${hostName} yayında` : '';
   renderVoice(); syncBtns(); vs(); play('join');
+  // Odaya katılan kişinin odadaki diğer mevcut kullanıcılara bağlantı (offer) göndermesi:
+  for (const m of members) {
+    if (m.id === socket.id) continue;
+    if (voice[m.id]) voice[m.id].close();
+    const pc = voice[m.id] = voicePC(m.id);
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    socket.emit('signal', { target: m.id, signal: { sdp: pc.localDescription }, type: 'voice' });
+  }
 });
 socket.on('update-room-members', ms => { setNames(ms); voiceMembers = ms; renderVoice(); });
 
