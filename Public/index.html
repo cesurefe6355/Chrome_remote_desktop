@@ -39,7 +39,8 @@
         .stream-layout { display: grid; grid-template-columns: 3fr 1fr; gap: 15px; }
         .video-wrapper { position: relative; background: #000; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
         
-        video { width: 100%; max-height: 70vh; display: block; pointer-events: none; }
+        /* Görüntünün sıkıştırılıp bulanıklaşmasını önleyen netleştirme filtresi */
+        video { width: 100%; max-height: 70vh; display: block; pointer-events: none; object-fit: contain; image-rendering: high-quality; }
         
         .stream-controls { margin-top: 15px; display: flex; gap: 10px; justify-content: space-between; align-items: center; }
         .stream-controls button { width: auto; }
@@ -85,10 +86,10 @@
                     <input type="text" id="roomNameInput" placeholder="Oda Adı Belirleyin...">
                     
                     <select id="qualitySelect">
-                        <option value="720">720p HD (Akıcı)</option>
-                        <option value="1080">1080p FHD (Önerilen)</option>
-                        <option value="4k">4K Ultra HD (3840x2160)</option>
-                        <option value="max" selected>Maksimum / Orijinal Çözünürlük</option>
+                        <option value="720">720p HD (60 FPS)</option>
+                        <option value="1080">1080p FHD (60 FPS - Önerilen)</option>
+                        <option value="4k">4K Ultra HD (3840x2160 - 60 FPS)</option>
+                        <option value="max" selected>Maksimum / Orijinal Ekran Çözünürlüğü</option>
                     </select>
 
                     <button id="startHostBtn">Yayını Başlat</button>
@@ -185,26 +186,29 @@
             alert(msg);
         });
 
-        // Yayın başlatma ve 4K/Kalite ayarları
+        // Maksimum Kalite ve Bitrate Ayarları ile Yayın Başlatma
         document.getElementById('startHostBtn').addEventListener('click', async () => {
             const roomName = document.getElementById('roomNameInput').value.trim();
             const quality = document.getElementById('qualitySelect').value;
             if (!roomName) return alert("Lütfen oda adı girin!");
 
-            let videoConstraints = { cursor: "always" };
+            let videoConstraints = { 
+                cursor: "always",
+                frameRate: { ideal: 60, max: 60 } // Akıcılık için 60 FPS
+            };
 
             if (quality === '720') {
                 videoConstraints.width = { ideal: 1280 };
                 videoConstraints.height = { ideal: 720 };
-                videoConstraints.frameRate = { ideal: 30 };
             } else if (quality === '1080') {
                 videoConstraints.width = { ideal: 1920 };
                 videoConstraints.height = { ideal: 1080 };
-                videoConstraints.frameRate = { ideal: 30 };
             } else if (quality === '4k') {
-                videoConstraints.width = { ideal: 3840 };
-                videoConstraints.height = { ideal: 2160 };
-                videoConstraints.frameRate = { ideal: 30 };
+                videoConstraints.width = { ideal: 3840, max: 3840 };
+                videoConstraints.height = { ideal: 2160, max: 2160 };
+            } else if (quality === 'max') {
+                videoConstraints.width = { max: 4096 };
+                videoConstraints.height = { max: 2160 };
             }
 
             try {
@@ -216,11 +220,9 @@
                 document.getElementById('lobby-panel').style.display = 'none';
                 document.getElementById('active-stream-screen').style.display = 'block';
                 document.getElementById('activeRoomTitle').innerText = `Oda: ${roomName} (Yayıncı)`;
-                document.getElementById('roleIndicator').innerText = "Yayın Yapılıyor";
+                document.getElementById('roleIndicator').innerText = "Yayın Yapılıyor (Yüksek Kalite)";
                 
-                // YAYINCI KENDİ EKRANINDA TAM EKRAN BUTONUNU GÖREMEZ
                 document.getElementById('fullscreenBtn').style.display = 'none';
-
                 document.getElementById('remoteVideo').srcObject = localStream;
 
                 localStream.getVideoTracks()[0].onended = () => {
@@ -244,7 +246,6 @@
             document.getElementById('activeRoomTitle').innerText = `Oda: ${roomId} (İzleyici)`;
             document.getElementById('roleIndicator').innerText = "Canlı İzleniyor";
 
-            // İZLEYİCİ TAM EKRAN BUTONUNU GÖRÜR
             document.getElementById('fullscreenBtn').style.display = 'inline-block';
 
             socket.emit('join-room', { roomId, username: currentUser });
@@ -263,11 +264,31 @@
             });
         });
 
+        // --- KRİTİK: WEB-RTC BİTRATE VE KALİTE ZORLAMA (MAX BANDWIDTH) ---
         socket.on('user-connected', async (viewerId) => {
             if (!isHost) return;
 
             peerConnection = new RTCPeerConnection(rtcConfig);
-            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+            
+            localStream.getTracks().forEach(track => {
+                const sender = peerConnection.addTrack(track, localStream);
+                
+                // Video kalitesini ve veri akışını (bitrate) en yüksek seviyeye zorla
+                if (track.kind === 'video') {
+                    try {
+                        const parameters = sender.getParameters();
+                        if (!parameters.encodings) {
+                            parameters.encodings = [{}];
+                        }
+                        // 15 Mbps (15,000,000 bps) bant genişliği vererek görüntü netliğini maksimuma çıkarıyoruz
+                        parameters.encodings[0].maxBitrate = 15000000; 
+                        parameters.encodings[0].maxFramerate = 60;
+                        sender.setParameters(parameters);
+                    } catch (e) {
+                        console.error("Bitrate artırılamadı:", e);
+                    }
+                }
+            });
 
             peerConnection.onicecandidate = (event) => {
                 if (event.candidate) {
