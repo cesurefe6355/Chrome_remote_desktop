@@ -3,32 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StreamHub - Discord Tarzı Yayın & Kontrol</title>
+    <title>LumoLive - Canlı Yayın & Ekran Paylaşımı</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif; }
         body { background-color: #313338; color: #dbdee1; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
         
-        .container { width: 100%; max-width: 1100px; background: #2b2d31; border-radius: 12px; padding: 24px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); border: 1px solid #1f2023; }
+        .container { width: 100%; max-width: 1150px; background: #2b2d31; border-radius: 12px; padding: 28px; box-shadow: 0 12px 32px rgba(0,0,0,0.5); border: 1px solid #1f2023; }
         
-        .input-group { margin-top: 20px; display: flex; flex-direction: column; gap: 12px; align-items: center; width: 100%; }
-        input[type="text"], select { padding: 12px 16px; border-radius: 8px; border: 1px solid transparent; background: #1e1f22; color: #dbdee1; font-size: 15px; outline: none; width: 100%; max-width: 400px; transition: 0.2s; }
+        /* Form Elemanları */
+        .input-group { margin-top: 15px; display: flex; flex-direction: column; gap: 8px; width: 100%; }
+        input[type="text"], select { padding: 12px 16px; border-radius: 8px; border: 1px solid transparent; background: #1e1f22; color: #dbdee1; font-size: 15px; outline: none; width: 100%; transition: 0.2s; }
         input[type="text"]:focus, select:focus { border-color: #5865F2; }
         
-        button { padding: 10px 16px; border-radius: 8px; border: none; background: #5865F2; color: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        button { padding: 12px 20px; border-radius: 8px; border: none; background: #5865F2; color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s; }
         button:hover { background: #4752c4; }
         
-        .btn-danger { background: #ed4245 !important; width: auto !important; }
+        .btn-danger { background: #ed4245 !important; }
         .btn-danger:hover { background: #c03537 !important; }
 
-        .btn-control { background: #23a55a; font-size: 12px; padding: 6px 10px; }
-        .btn-control.active { background: #f0b232; color: #000; }
+        /* Giriş Ekranı */
+        #login-screen { text-align: center; padding: 50px 20px; }
+        #login-screen h1 { color: #f2f3f5; font-size: 28px; margin-bottom: 6px; }
+        #login-screen p { color: #949ba4; margin-bottom: 24px; }
+        #login-screen .input-group { max-width: 400px; margin: 0 auto; }
 
-        #login-screen { text-align: center; padding: 40px 20px; }
-        #login-screen h1 { color: #f2f3f5; margin-bottom: 8px; }
-
+        /* Lobi Paneli */
         #lobby-panel { display: none; }
         .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #3f4147; padding-bottom: 15px; margin-bottom: 20px; }
-        .header h2 { color: #f2f3f5; }
+        .header h2 { color: #f2f3f5; display: flex; align-items: center; gap: 10px; }
         
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
         .tab-btn { background: #35363c; color: #949ba4; width: auto; font-weight: 500; }
@@ -37,32 +39,38 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        .room-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 15px; }
-        .room-card { background: #1e1f22; border: 1px solid #3f4147; border-radius: 8px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; transition: 0.2s; }
-        .room-card:hover { border-color: #5865F2; }
-        .room-card h3 { font-size: 18px; margin-bottom: 6px; color: #f2f3f5; }
+        /* Yayın Kartları (Grid) */
+        .room-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
+        .room-card { background: #1e1f22; border: 1px solid #3f4147; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; transition: 0.2s; }
+        .room-card:hover { border-color: #5865F2; transform: translateY(-2px); }
+        .room-card h3 { font-size: 18px; margin-bottom: 8px; color: #f2f3f5; }
         .room-card p { font-size: 14px; color: #949ba4; margin-bottom: 15px; }
-        .room-card button { width: 100%; max-width: none; }
+        .room-card button { width: 100%; }
 
+        /* Yayın Ayarları Formu */
+        .host-form-box { max-width: 500px; background: #1e1f22; padding: 24px; border-radius: 10px; border: 1px solid #3f4147; }
+
+        /* Aktif Yayın Ekranı */
         #active-stream-screen { display: none; }
-        .stream-layout { display: grid; grid-template-columns: 3fr 1fr; gap: 15px; }
-        .video-wrapper { position: relative; background: #000; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px solid #3f4147; }
+        .stream-layout { display: grid; grid-template-columns: 3fr 1fr; gap: 18px; }
+        .video-wrapper { position: relative; background: #000; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px solid #3f4147; }
         
-        /* İzleyici kontrol yetkisi aldığında video tıklanabilir hale gelir */
         video { width: 100%; max-height: 70vh; display: block; object-fit: contain; image-rendering: high-quality; }
         
         .stream-controls { margin-top: 15px; display: flex; gap: 10px; justify-content: space-between; align-items: center; }
         .stream-controls button { width: auto; background: #4e5058; }
         .stream-controls button:hover { background: #6d6f78; }
 
-        .viewers-panel { background: #1e1f22; border-radius: 8px; padding: 15px; border: 1px solid #3f4147; height: 100%; max-height: 70vh; overflow-y: auto; }
-        .viewers-panel h4 { border-bottom: 1px solid #3f4147; padding-bottom: 8px; margin-bottom: 10px; color: #f2f3f5; }
+        /* İzleyiciler Paneli */
+        .viewers-panel { background: #1e1f22; border-radius: 10px; padding: 18px; border: 1px solid #3f4147; height: 100%; max-height: 70vh; overflow-y: auto; }
+        .viewers-panel h4 { border-bottom: 1px solid #3f4147; padding-bottom: 10px; margin-bottom: 12px; color: #f2f3f5; font-size: 15px; }
         .viewer-list { list-style: none; }
-        .viewer-item { padding: 8px 10px; background: #2b2d31; margin-bottom: 6px; border-radius: 6px; font-size: 13px; display: flex; align-items: center; justify-content: space-between; color: #f2f3f5; }
-        .viewer-info { display: flex; align-items: center; gap: 8px; }
+        .viewer-item { padding: 10px 12px; background: #2b2d31; margin-bottom: 8px; border-radius: 6px; font-size: 14px; display: flex; align-items: center; justify-content: space-between; color: #f2f3f5; }
+        .viewer-info { display: flex; align-items: center; gap: 10px; }
         .status-dot { width: 8px; height: 8px; background: #23a55a; border-radius: 50%; }
 
-        label { font-size: 13px; font-weight: 600; color: #b5bac1; align-self: flex-start; max-width: 400px; width: 100%; margin-bottom: -6px; }
+        label { font-size: 13px; font-weight: 600; color: #b5bac1; margin-top: 10px; display: block; }
+        .brand-badge { color: #5865F2; font-weight: 700; }
     </style>
 </head>
 <body>
@@ -70,18 +78,18 @@
     <div class="container">
         <!-- 1. GİRİŞ EKRANI -->
         <div id="login-screen">
-            <h1>StreamHub'a Hoş Geldin</h1>
-            <p style="color: #949ba4; margin-top: 4px; margin-bottom: 24px;">Devam etmek için bir kullanıcı adı gir</p>
+            <h1>Lumo<span class="brand-badge">Live</span></h1>
+            <p>Discord tarzı yüksek kaliteli canlı yayın ve ekran paylaşım platformu</p>
             <div class="input-group">
-                <input type="text" id="usernameInput" placeholder="Kullanıcı Adın...">
-                <button id="loginBtn" style="max-width: 400px; width: 100%;">Giriş Yap</button>
+                <input type="text" id="usernameInput" placeholder="Kullanıcı Adını Gir...">
+                <button id="loginBtn" style="margin-top: 10px;">Bağlan</button>
             </div>
         </div>
 
         <!-- 2. LOBİ PANELİ -->
         <div id="lobby-panel">
             <div class="header">
-                <h2>Sunucu Odaları</h2>
+                <h2>🟢 Lumo<span class="brand-badge">Live</span> Odaları</h2>
                 <span id="userBadge" style="background: #1e1f22; color: #23a55a; padding: 6px 14px; border-radius: 20px; font-size: 14px; font-weight: 600; border: 1px solid #3f4147;"></span>
             </div>
 
@@ -95,29 +103,30 @@
             </div>
 
             <div id="host-tab" class="tab-content">
-                <div class="input-group">
-                    <label>Yayın / Oda Adı</label>
-                    <input type="text" id="roomNameInput" placeholder="Örn: Oyun Gecesi">
-                    
-                    <label>Video Çözünürlüğü (Kalite)</label>
-                    <select id="resolutionSelect">
-                        <option value="720">720p HD</option>
-                        <option value="1080">1080p FHD (Önerilen)</option>
-                        <option value="1440">1440p 2K QHD</option>
-                        <option value="4k">4K Ultra HD</option>
-                        <option value="max" selected>Maksimum / Orijinal</option>
-                    </select>
+                <div class="host-form-box">
+                    <div class="input-group" style="margin-top: 0;">
+                        <label>Yayın Oda Adı</label>
+                        <input type="text" id="roomNameInput" placeholder="Örn: Oyun Gecesi / Kodlama">
+                        
+                        <label>Görüntü Kalitesi (Çözünürlük)</label>
+                        <select id="resolutionSelect">
+                            <option value="720">720p HD</option>
+                            <option value="1080">1080p FHD (Önerilen)</option>
+                            <option value="1440">1440p 2K QHD</option>
+                            <option value="4k">4K Ultra HD</option>
+                            <option value="max" selected>Maksimum / Orijinal Ekran</option>
+                        </select>
 
-                    <label>Yenileme Hızı (FPS)</label>
-                    <select id="fpsSelect">
-                        <option value="30">30 FPS (Standart)</option>
-                        <option value="60" selected>60 FPS (Akıcı)</option>
-                        <option value="90">90 FPS (Yüksek)</option>
-                        <option value="120">120 FPS (Çok Akıcı)</option>
-                        <option value="144">144 FPS (Esports)</option>
-                    </select>
+                        <label>Yenileme Hızı (FPS)</label>
+                        <select id="fpsSelect">
+                            <option value="30">30 FPS</option>
+                            <option value="60" selected>60 FPS (Akıcı)</option>
+                            <option value="120">120 FPS (Yüksek)</option>
+                            <option value="144">144 FPS (Ultra)</option>
+                        </select>
 
-                    <button id="startHostBtn" style="margin-top: 10px; max-width: 400px; width: 100%;">Yayını Başlat</button>
+                        <button id="startHostBtn" style="margin-top: 18px;">Yayını Başlat</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -157,7 +166,6 @@
         let localStream = null;
         let peerConnection = null;
         let isHost = false;
-        let hasControlPermission = false;
 
         const rtcConfig = {
             iceServers: [
@@ -168,7 +176,7 @@
 
         document.getElementById('loginBtn').addEventListener('click', () => {
             const username = document.getElementById('usernameInput').value.trim();
-            if (!username) return alert("Lütfen kullanıcı adı gir!");
+            if (!username) return alert("Lütfen bir kullanıcı adı gir!");
             
             currentUser = username;
             document.getElementById('userBadge').innerText = `● ${currentUser}`;
@@ -189,7 +197,7 @@
             grid.innerHTML = "";
 
             if (rooms.length === 0) {
-                grid.innerHTML = `<p style="color:#949ba4;">Şu anda aktif bir yayın bulunmuyor.</p>`;
+                grid.innerHTML = `<p style="color:#949ba4;">Şu anda aktif bir LumoLive yayını bulunmuyor.</p>`;
                 return;
             }
 
@@ -239,7 +247,7 @@
 
                 document.getElementById('lobby-panel').style.display = 'none';
                 document.getElementById('active-stream-screen').style.display = 'block';
-                document.getElementById('activeRoomTitle').innerText = `Oda: ${roomName} (Yayıncısın)`;
+                document.getElementById('activeRoomTitle').innerText = `LumoLive Oda: ${roomName} (Yayıncısın)`;
                 document.getElementById('roleIndicator').innerText = `Canlı Yayın (${resolution === 'max' ? 'Orijinal' : resolution + 'p'} - ${fps} FPS)`;
                 
                 document.getElementById('fullscreenBtn').style.display = 'none';
@@ -260,14 +268,13 @@
 
             document.getElementById('lobby-panel').style.display = 'none';
             document.getElementById('active-stream-screen').style.display = 'block';
-            document.getElementById('activeRoomTitle').innerText = `Oda: ${roomId}`;
-            document.getElementById('roleIndicator').innerText = "Canlı İzleniyor (Kontrol Yok)";
+            document.getElementById('activeRoomTitle').innerText = `LumoLive Oda: ${roomId}`;
+            document.getElementById('roleIndicator').innerText = "Canlı İzleniyor";
 
             document.getElementById('fullscreenBtn').style.display = 'inline-block';
             socket.emit('join-room', { roomId, username: currentUser });
         }
 
-        // İzleyici listesi ve Host için "Kontrol Ver" butonları
         socket.on('update-viewers', (viewers) => {
             const list = document.getElementById('viewerList');
             document.getElementById('viewerCount').innerText = viewers.length;
@@ -276,71 +283,14 @@
             viewers.forEach(v => {
                 const li = document.createElement('li');
                 li.className = 'viewer-item';
-                
-                let controlBtnHtml = '';
-                // Sadece yayıncı (host) iseniz yanlarında kontrol verme butonu görünür
-                if (isHost) {
-                    const btnText = v.hasControl ? 'Kontrolü Al' : 'Kontrol Ver';
-                    const btnClass = v.hasControl ? 'btn-control active' : 'btn-control';
-                    controlBtnHtml = `<button class="${btnClass}" onclick="toggleControl('${v.id}')">${btnText}</button>`;
-                } else {
-                    if (v.username === currentUser && v.hasControl) {
-                        controlBtnHtml = `<span style="color:#f0b232; font-size:11px;">(Kontrol Sende)</span>`;
-                    }
-                }
-
                 li.innerHTML = `
                     <div class="viewer-info">
-                        <span class="status-dot" style="background: ${v.hasControl ? '#f0b232' : '#23a55a'}"></span> 
+                        <span class="status-dot"></span> 
                         <span>${v.username}</span>
                     </div>
-                    ${controlBtnHtml}
                 `;
                 list.appendChild(li);
             });
-        });
-
-        function toggleControl(viewerId) {
-            socket.emit('toggle-control', { roomId: currentRoomId, viewerId });
-        }
-
-        // İzleyicinin kontrol yetkisi durumu değiştiğinde
-        socket.on('control-status', ({ hasControl }) => {
-            hasControlPermission = hasControl;
-            const indicator = document.getElementById('roleIndicator');
-            if (hasControl) {
-                indicator.innerText = "⚡ Fare/Klavye Kontrol Yetkisi Verildi!";
-                indicator.style.color = "#f0b232";
-            } else {
-                indicator.innerText = "Canlı İzleniyor (Kontrol Alındı)";
-                indicator.style.color = "#949ba4";
-            }
-        });
-
-        // İzleyici video üzerine tıkladığında koordinatları gönder
-        const videoElement = document.getElementById('remoteVideo');
-        videoElement.addEventListener('click', (e) => {
-            if (isHost || !hasControlPermission) return; // Yayıncıysa veya yetkisi yoksa yoksay
-
-            const rect = videoElement.getBoundingClientRect();
-            const x = (e.clientX - rect.left) / videoElement.clientWidth;
-            const y = (e.clientY - rect.top) / videoElement.clientHeight;
-
-            socket.emit('remote-action', {
-                roomId: currentRoomId,
-                type: 'click',
-                x: x,
-                y: y
-            });
-        });
-
-        // Yayıncı tarafında izleyiciden gelen tıklama sinyalini yakalama
-        socket.on('remote-action', (data) => {
-            if (isHost) {
-                console.log(`İzleyiciden tıklama komutu geldi -> X: ${(data.x * 100).toFixed(1)}%, Y: ${(data.y * 100).toFixed(1)}%`);
-                // Web tabanlı ortamda bu koordinatları ekranda bir imleç göstererek veya 
-                // paylaşılan sayfa içinde simüle ederek kullanabilirsiniz.
-            }
         });
 
         socket.on('user-connected', async (viewerId) => {
@@ -402,7 +352,6 @@
             document.getElementById('remoteVideo').srcObject = null;
             currentRoomId = "";
             isHost = false;
-            hasControlPermission = false;
 
             document.getElementById('active-stream-screen').style.display = 'none';
             document.getElementById('lobby-panel').style.display = 'block';
