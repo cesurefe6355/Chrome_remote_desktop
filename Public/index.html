@@ -61,6 +61,7 @@ svg{width:20px;height:20px;fill:currentColor;display:block}
 #stage video{width:100%;height:100%;object-fit:contain}
 .bar{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:linear-gradient(transparent,rgba(0,0,0,.8));opacity:0;transition:.2s}
 #stage:hover .bar{opacity:1}
+.vwait{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#000;color:#dbdee1;text-align:center;padding:16px;font-size:15px}
 .tiles{flex:1;overflow:auto;padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));grid-auto-rows:150px;gap:12px;align-content:start}
 .tile{background:#2b2d31;border-radius:8px;display:flex;align-items:center;justify-content:center;position:relative;transition:box-shadow .12s;animation:fade .2s}
 .tile.speak{box-shadow:inset 0 0 0 3px #23a55a}
@@ -142,7 +143,7 @@ button:hover{background:#4752c4}button.red{background:#da373c}button.red:hover{b
       <div class="members"><h4>Çevrimiçi — <span id="cnt">0</span></h4><div id="mList"></div></div>
     </div>
     <div id="voiceView">
-      <div id="stage"><video id="vid" autoplay playsinline></video>
+      <div id="stage"><video id="vid" autoplay playsinline></video><div class="vwait" id="vwait"></div>
         <div class="bar"><span id="who"></span><span><button onclick="fsc()">Tam Ekran</button> <button class="red" id="btnStop" style="display:none" onclick="stopStream()">Yayını Durdur</button></span></div></div>
       <div class="tiles" id="tiles"></div>
       <div class="vctl">
@@ -188,7 +189,10 @@ let micStream = null, micOn = true, deaf = false, preMic = true, isHost = false,
 let soundOn = localStorage.getItem('lumolive_sound') !== '0', ac = null, names = {};
 const voice = {}, hostPCs = {}, watchers = {};
 let viewPC = null;
-const rtc = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
+const rtc = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }], iceCandidatePoolSize: 4 };
+// STUN/TURN listesi sunucudan gelir (/api/ice). Farklı ağlardaki izleyiciler için TURN gerekir.
+const iceReady = fetch('/api/ice', { headers: { Authorization: 'Bearer ' + token } }).then(r => r.json())
+  .then(s => { if (Array.isArray(s) && s.length) rtc.iceServers = s; }).catch(() => {});
 // Farklı ağlardaki kullanıcılar için kendi TURN sunucunu ekle:
 // rtc.iceServers.push({ urls: 'turn:SUNUCU:3478', username: '...', credential: '...' });
 
@@ -335,7 +339,7 @@ function cleanup() {
   $('audioBox').innerHTML = ''; if (!isHost) $('vid').srcObject = null;
 }
 async function joinVoice(id) {
-  if (isHost) stopStream(); cleanup(); await micReady; voiceId = id;
+  if (isHost) stopStream(); cleanup(); await Promise.all([micReady, iceReady]); voiceId = id;
   socket.emit('join-room', { roomId: id });
 }
 function openVoice(id) { if (voiceId !== id) joinVoice(id); setView('voice'); }
@@ -344,7 +348,16 @@ function leaveVoice() {
   socket.emit('leave-room'); voiceId = ''; voiceMembers = []; hostSid = null; cleanup(); play('leave');
   $('vstat').style.display = 'none'; setView('text');
 }
-function showStage(on) { $('stage').style.display = on ? 'block' : 'none'; }
+function showStage(on) { $('stage').style.display = on ? 'block' : 'none'; if (!on) waitMsg(null); }
+// İzleyici için "bağlanıyor" katmanı: ilk kare gelene kadar siyah ekran yerine durum gösterir
+let waitTimer = null, retries = 0;
+function waitMsg(t) {
+  clearTimeout(waitTimer); const w = $('vwait');
+  if (!t) { w.style.display = 'none'; return; }
+  w.textContent = t; w.style.display = 'flex';
+  waitTimer = setTimeout(() => { if (w.style.display === 'flex') w.textContent = 'Yayına bağlanılamıyor. Ağ doğrudan bağlantıyı engelliyor olabilir (TURN sunucusu gerekli).'; }, 10000);
+}
+$('vid').onplaying = () => { waitMsg(null); retries = 0; };
 function renderVoice() {
   const g = $('tiles'); g.innerHTML = '';
   voiceMembers.forEach(m => {
@@ -360,6 +373,7 @@ socket.on('room-joined', async ({ roomId, isLive, hostName, hostSocketId, member
   setNames(members); voiceMembers = members; hostSid = isLive ? hostSocketId : null;
   $('vstat').style.display = 'flex';$('vstatName').textContent = roomId;
   showStage(isLive); $('who').textContent = isLive ? `${hostName} yayında` : '';
+  if (isLive && hostSocketId !== socket.id) waitMsg('Yayına bağlanılıyor...');
   renderVoice(); syncBtns(); vs(); play('join');
   // Odaya katılan kişinin odadaki diğer mevcut kullanıcılara bağlantı (offer) göndermesi:
   for (const m of members) {
@@ -421,13 +435,13 @@ socket.on('viewer-wants-stream', async ({ viewerId }) => {
   const pc = hostPCs[viewerId] = new RTCPeerConnection(rtc);
   pc.onicecandidate = e => e.candidate && socket.emit('signal', { target: viewerId, signal: { candidate: e.candidate }, type: 'stream' });
   screen.getTracks().forEach(t => pc.addTrack(t, screen));
-  try {
+  await pc.setLocalDescription(await pc.createOffer());
+  socket.emit('signal', { target: viewerId, signal: { sdp: pc.localDescription }, type: 'stream' });
+  try { // bitrate sınırı, müzakereden sonra uygulanmalı
     const s = pc.getSenders().find(s => s.track && s.track.kind === 'video'), p = s.getParameters();
     p.encodings = p.encodings && p.encodings.length ? p.encodings : [{}];
     p.encodings[0].maxBitrate = screen._bitrate; await s.setParameters(p);
   } catch {}
-  await pc.setLocalDescription(await pc.createOffer());
-  socket.emit('signal', { target: viewerId, signal: { sdp: pc.localDescription }, type: 'stream' });
 });
 function stopStream() {
   if (!isHost) return;
@@ -440,7 +454,7 @@ socket.on('stream-started', ({ roomId, hostName, hostSocketId }) => {
   hostSid = hostSocketId; renderVoice();
   if (roomId !== voiceId || isHost) return;
   if (viewPC) { viewPC.close(); viewPC = null; }
-  showStage(true); $('who').textContent = `${hostName} yayında`;
+  showStage(true); $('who').textContent = `${hostName} yayında`; waitMsg('Yayına bağlanılıyor...');
   play('live'); toast(`${hostName} yayın başlattı`, 'live');
 });
 socket.on('room-stream-ended', () => {
@@ -465,6 +479,15 @@ socket.on('signal', async ({ sender, signal, type }) => {
         if (!viewPC) {
           viewPC = new RTCPeerConnection(rtc);
           viewPC.onicecandidate = e => e.candidate && socket.emit('signal', { target: sender, signal: { candidate: e.candidate }, type: 'stream' });
+          const vpc = viewPC;
+          vpc.onconnectionstatechange = () => {
+            console.log('izleme bağlantısı:', vpc.connectionState);
+            if (vpc.connectionState === 'failed' && viewPC === vpc) {
+              vpc.close(); viewPC = null;
+              if (retries++ < 3) { waitMsg('Bağlantı kurulamadı, yeniden deneniyor...'); socket.emit('want-stream'); }
+              else waitMsg('Yayına bağlanılamadı. Ağ doğrudan bağlantıyı engelliyor (TURN sunucusu gerekli).');
+            }
+          };
           viewPC.ontrack = e => {
             const v = $('vid'); v.srcObject = e.streams[0]; v.muted = deaf;
             v.play().catch(() => { v.muted = true; v.play(); info('Ses kapalı', 'Tarayıcı otomatik sesi engelledi. Videoya tıklayıp sesi açabilirsin.'); });
