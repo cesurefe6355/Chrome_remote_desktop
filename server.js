@@ -25,8 +25,6 @@ db.run(`CREATE TABLE IF NOT EXISTS users (
     password TEXT
 )`);
 
-// --- KİMLİK DOĞRULAMA (AUTH) API'LERİ ---
-
 // Kayıt Ol
 app.post('/api/register', (req, res) => {
     const { username, password } = req.body;
@@ -91,6 +89,12 @@ io.on('connection', (socket) => {
     socket.on('join-room', ({ roomId, username }) => {
         const room = rooms[roomId];
         if (room) {
+            // EK GÜVENLİK: Eğer yayını açan kişi (Host) kendi odasına katılmaya çalışıyorsa engelle
+            if (room.hostSocketId === socket.id) {
+                socket.emit('error-msg', 'Kendi yayınınıza izleyici olarak katılamazsınız!');
+                return;
+            }
+
             socket.join(roomId);
             room.viewers.push({ id: socket.id, username });
 
