@@ -482,6 +482,12 @@ socket.on('signal', async ({ sender, signal, type }) => {
           const vpc = viewPC;
           vpc.onconnectionstatechange = () => {
             console.log('izleme bağlantısı:', vpc.connectionState);
+            if (vpc.connectionState === 'connected') vpc.getStats().then(rep => { // bağlantı doğrudan mı, TURN üzerinden mi?
+              let pair; rep.forEach(r => { if (r.type === 'transport' && r.selectedCandidatePairId) pair = rep.get(r.selectedCandidatePairId); });
+              const lc = pair && rep.get(pair.localCandidateId); if (!lc) return;
+              console.log('izleme bağlantı türü:', lc.candidateType);
+              $('who').textContent = $('who').textContent.split(' · ')[0] + (lc.candidateType === 'relay' ? ' · TURN üzerinden' : ' · doğrudan');
+            }).catch(() => {});
             if (vpc.connectionState === 'failed' && viewPC === vpc) {
               vpc.close(); viewPC = null;
               if (retries++ < 3) { waitMsg('Bağlantı kurulamadı, yeniden deneniyor...'); socket.emit('want-stream'); }
@@ -490,7 +496,7 @@ socket.on('signal', async ({ sender, signal, type }) => {
           };
           viewPC.ontrack = e => {
             const v = $('vid'); v.srcObject = e.streams[0]; v.muted = deaf;
-            v.play().catch(() => { v.muted = true; v.play(); info('Ses kapalı', 'Tarayıcı otomatik sesi engelledi. Videoya tıklayıp sesi açabilirsin.'); });
+            v.play().catch(() => { v.muted = true; v.play(); toast('Ses kapalı: sesi açmak için videoya tıkla', 'live'); });
           };
         }
         if (signal.sdp) {
