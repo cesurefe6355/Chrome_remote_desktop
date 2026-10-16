@@ -8,7 +8,7 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 // 'public' klasörünü statik dosya sunucusu yapıyoruz
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'Public')));
 
 io.on('connection', (socket) => {
     console.log('Bir kullanıcı bağlandı:', socket.id);
