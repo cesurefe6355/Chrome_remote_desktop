@@ -39,7 +39,6 @@
         .stream-layout { display: grid; grid-template-columns: 3fr 1fr; gap: 15px; }
         .video-wrapper { position: relative; background: #000; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
         
-        /* Video tıklanınca durmasını engellemek için pointer-events ayarı eklendi */
         video { width: 100%; max-height: 70vh; display: block; pointer-events: none; }
         
         .stream-controls { margin-top: 15px; display: flex; gap: 10px; justify-content: space-between; align-items: center; }
@@ -86,9 +85,10 @@
                     <input type="text" id="roomNameInput" placeholder="Oda Adı Belirleyin...">
                     
                     <select id="qualitySelect">
-                        <option value="720">720p HD (Akıcı / Düşük Bant Genişliği)</option>
-                        <option value="1080" selected>1080p FHD (Önerilen)</option>
-                        <option value="max">Maksimum / Orijinal Çözünürlük</option>
+                        <option value="720">720p HD (Akıcı)</option>
+                        <option value="1080">1080p FHD (Önerilen)</option>
+                        <option value="4k">4K Ultra HD (3840x2160)</option>
+                        <option value="max" selected>Maksimum / Orijinal Çözünürlük</option>
                     </select>
 
                     <button id="startHostBtn">Yayını Başlat</button>
@@ -185,7 +185,7 @@
             alert(msg);
         });
 
-        // Kalite ayarlarına göre video constraint parametreleri
+        // Yayın başlatma ve 4K/Kalite ayarları
         document.getElementById('startHostBtn').addEventListener('click', async () => {
             const roomName = document.getElementById('roomNameInput').value.trim();
             const quality = document.getElementById('qualitySelect').value;
@@ -201,7 +201,11 @@
                 videoConstraints.width = { ideal: 1920 };
                 videoConstraints.height = { ideal: 1080 };
                 videoConstraints.frameRate = { ideal: 30 };
-            } // 'max' seçilirse varsayılan yüksek çözünürlük bırakılır
+            } else if (quality === '4k') {
+                videoConstraints.width = { ideal: 3840 };
+                videoConstraints.height = { ideal: 2160 };
+                videoConstraints.frameRate = { ideal: 30 };
+            }
 
             try {
                 localStream = await navigator.mediaDevices.getDisplayMedia({ video: videoConstraints, audio: false });
@@ -214,6 +218,9 @@
                 document.getElementById('activeRoomTitle').innerText = `Oda: ${roomName} (Yayıncı)`;
                 document.getElementById('roleIndicator').innerText = "Yayın Yapılıyor";
                 
+                // YAYINCI KENDİ EKRANINDA TAM EKRAN BUTONUNU GÖREMEZ
+                document.getElementById('fullscreenBtn').style.display = 'none';
+
                 document.getElementById('remoteVideo').srcObject = localStream;
 
                 localStream.getVideoTracks()[0].onended = () => {
@@ -236,6 +243,9 @@
             document.getElementById('active-stream-screen').style.display = 'block';
             document.getElementById('activeRoomTitle').innerText = `Oda: ${roomId} (İzleyici)`;
             document.getElementById('roleIndicator').innerText = "Canlı İzleniyor";
+
+            // İZLEYİCİ TAM EKRAN BUTONUNU GÖRÜR
+            document.getElementById('fullscreenBtn').style.display = 'inline-block';
 
             socket.emit('join-room', { roomId, username: currentUser });
         }
@@ -324,7 +334,6 @@
             document.getElementById('lobby-panel').style.display = 'block';
         }
 
-        // Yayın kapandığında izleyicilere mesaj gösterilmesi
         socket.on('room-closed', () => {
             alert("Yayın sona erdi! Yayıncı yayını kapattı.");
             leaveStream();
