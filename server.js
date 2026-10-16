@@ -157,10 +157,24 @@ io.on('connection', (socket) => {
         const room = rooms[socket.data.roomId];
         text = String(text || '').trim().slice(0, 500);
         if (!room || !text || limited('chat:' + socket.id, 8, 5000)) return;
-        const msg = { username, text, time: Date.now() };
+        const msg = { id: crypto.randomUUID(), username, text, time: Date.now(), reactions: {} };
         room.messages.push(msg);
         if (room.messages.length > 50) room.messages.shift();
         io.to(socket.data.roomId).emit('chat-message', msg);
+    });
+
+    const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
+    socket.on('react', ({ msgId, emoji } = {}) => {
+        const roomId = socket.data.roomId, room = rooms[roomId];
+        if (!room || !EMOJIS.includes(emoji) || limited('react:' + socket.id, 15, 5000)) return;
+        const msg = room.messages.find(m => m.id === msgId);
+        if (!msg) return;
+        const list = msg.reactions[emoji] = msg.reactions[emoji] || [];
+        const i = list.indexOf(username);
+        const added = i === -1;
+        if (added) list.push(username); else list.splice(i, 1);
+        if (!list.length) delete msg.reactions[emoji];
+        io.to(roomId).emit('reaction-update', { msgId, reactions: msg.reactions, emoji, by: username, added });
     });
 
     socket.on('start-stream-in-room', () => {
