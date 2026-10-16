@@ -132,14 +132,13 @@ button:hover{background:#4752c4}button.red{background:#da373c}button.red:hover{b
 const user = localStorage.getItem('lumolive_user'), token = localStorage.getItem('lumolive_token');
 if (!user || !token) location.replace('/login.html');
 const $ = id => document.getElementById(id);
-const openM = id => $(id).style.display = 'flex', closeM = id => $(id).style.display = 'none';
+const openM = id => $(id).style.display = 'flex', closeM = id =>$(id).style.display = 'none';
 const info = (t, d) => { $('infoT').textContent = t; $('infoD').textContent = d; openM('mInfo'); };
 const color = n => `hsl(${[...n].reduce((a, c) => a + c.charCodeAt(0) * 7, 0) % 360},55%,45%)`;
 function avatar(n, cls) { const d = document.createElement('div'); d.className = 'av ' + (cls || ''); d.style.background = color(n); d.textContent = n[0].toUpperCase(); return d; }
 const hhmm = t => new Date(t).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-$('meName').textContent = user; $('meAv').style.background = color(user); $('meAv').textContent = user[0].toUpperCase();
+$('meName').textContent = user; $('meAv').style.background = color(user);$('meAv').textContent = user[0].toUpperCase();
 
-// ----- Sesler, bildirimler, tepkiler -----
 let soundOn = localStorage.getItem('lumolive_sound') !== '0', ac = null, names = {};
 const getAC = () => ac = ac || new (window.AudioContext || window.webkitAudioContext)();
 document.addEventListener('click', () => { try { getAC().state === 'suspended' && ac.resume(); } catch {} });
@@ -159,7 +158,6 @@ function toast(t, k) { const d = document.createElement('div'); d.className = 't
   setTimeout(() => { d.style.opacity = 0; setTimeout(() => d.remove(), 300); }, 3000); }
 const setNames = ms => { names = {}; ms.forEach(m => names[m.id] = m.username); };
 
-// Konuşma göstergesi (konuşan kişinin avatarında yeşil halka)
 const watchers = {};
 function unwatch(k) { const w = watchers[k]; if (w) { try { w.src.disconnect(); } catch {} delete watchers[k]; } }
 function watch(k, stream) {
@@ -196,14 +194,12 @@ let roomId = '', rooms = [], micStream = null, micOn = true, deaf = false, isHos
 const voice = {}, hostPCs = {};
 let viewPC = null;
 const rtc = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
-// Farklı ağlardaki kullanıcıların bağlanabilmesi için buraya kendi TURN sunucunu ekle:
-// rtc.iceServers.push({ urls: 'turn:SUNUCU:3478', username: '...', credential: '...' });
 
 const micReady = navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
   .then(s => { micStream = s; watch('me', s); }).catch(() => { $('btnMic').classList.add('off'); });
 
 $('btnMic').onclick = () => {
-  if (!micStream) return info('Mikrofon yok', 'Mikrofon izni verilmedi veya mikrofon bulunamadı. Tarayıcı adres çubuğundan izin verip sayfayı yenile.');
+  if (!micStream) return info('Mikrofon yok', 'Mikrofon izni verilmedi veya mikrofon bulunamadı.');
   micOn = !micOn; micStream.getAudioTracks().forEach(t => t.enabled = micOn);
   $('btnMic').classList.toggle('off', !micOn); play(micOn ? 'unmute' : 'mute');
 };
@@ -213,7 +209,6 @@ $('btnDeaf').onclick = () => {
   if (!isHost) $('vid').muted = deaf;
 };
 
-// ----- Kanal listesi -----
 socket.on('room-list-update', list => { rooms = list; renderRooms(); if (!roomId && list.length) selectRoom(list[0].id); });
 function renderRooms() {
   const c = $('chList'); c.innerHTML = '';
@@ -228,15 +223,15 @@ function renderRooms() {
 }
 socket.on('channel-created', ({ roomId: id }) => selectRoom(id));
 
-$('btnCreate').onclick = () => { const v = $('newName').value.trim(); if (!v) return; socket.emit('create-channel', { roomName: v }); closeM('mCreate'); $('newName').value = ''; };
-$('newName').onkeydown = e => { if (e.key === 'Enter') $('btnCreate').click(); };
+$('btnCreate').onclick = () => { const v = $('newName').value.trim(); if (!v) return; socket.emit('create-channel', { roomName: v }); closeM('mCreate');$('newName').value = ''; };
+$('newName').onkeydown = e => { if (e.key === 'Enter')$('btnCreate').click(); };
 
 function cleanup() {
   Object.values(voice).forEach(p => p.close()); Object.keys(voice).forEach(k => delete voice[k]);
   Object.values(hostPCs).forEach(p => p.close()); Object.keys(hostPCs).forEach(k => delete hostPCs[k]);
   if (viewPC) { viewPC.close(); viewPC = null; }
   Object.keys(watchers).forEach(k => k !== 'me' && unwatch(k));
-  $('audioBox').innerHTML = ''; if (!isHost) $('vid').srcObject = null;
+  $('audioBox').innerHTML = ''; if (!isHost)$('vid').srcObject = null;
 }
 function selectRoom(id) {
   if (id === roomId) return;
@@ -257,11 +252,10 @@ socket.on('room-joined', ({ isLive, hostName, messages, members }) => {
 });
 function showStage(on) { $('stage').style.display = on ? 'block' : 'none'; }
 socket.on('update-room-members', ms => {
-  setNames(ms); $('cnt').textContent = ms.length; const l = $('mList'); l.innerHTML = '';
+  setNames(ms); $('cnt').textContent = ms.length; const l =$('mList'); l.innerHTML = '';
   ms.forEach(m => { const d = document.createElement('div'); d.className = 'mi'; const av = avatar(m.username); av.dataset.sid = m.id; d.appendChild(av); const s = document.createElement('span'); s.textContent = m.username; d.appendChild(s); l.appendChild(d); });
 });
 
-// ----- Metin sohbeti -----
 function addMsg(m) {
   const e = $('msgs').querySelector('.empty'); if (e) e.remove();
   const d = document.createElement('div'); d.className = 'msg'; d.appendChild(avatar(m.username));
@@ -279,7 +273,6 @@ socket.on('reaction-update', ({ msgId, reactions, emoji, added }) => {
 });
 $('chatIn').onkeydown = e => { if (e.key === 'Enter' && e.target.value.trim()) { socket.emit('chat-message', { text: e.target.value }); e.target.value = ''; } };
 
-// ----- Sesli sohbet (WebRTC) -----
 function flush(pc) { (pc._q || []).forEach(c => pc.addIceCandidate(c).catch(() => {})); pc._q = []; }
 function addCand(pc, c) { if (pc.remoteDescription) pc.addIceCandidate(c).catch(() => {}); else (pc._q = pc._q || []).push(c); }
 
@@ -310,18 +303,16 @@ socket.on('user-left-voice', id => {
   const a = $('a-' + id); if (a) a.remove();
 });
 
-// ----- Ekran yayını -----
 $('btnShare').onclick = () => isHost ? info('Yayındasın', 'Zaten ekran paylaşıyorsun.') : roomId ? openM('mStream') : 0;
 const BITRATE = { 720: 4e6, 1080: 8e6, 1440: 14e6, 2160: 25e6 };
 $('btnGo').onclick = async () => {
   const h = +$('resSel').value, fps = +$('fpsSel').value;
   try {
     screen = await navigator.mediaDevices.getDisplayMedia({ video: { width: { ideal: h * 16 / 9 }, height: { ideal: h }, frameRate: { ideal: fps, max: fps } }, audio: true });
-  } catch { return info('İzin Hatası', 'Ekran paylaşımı başlatılamadı veya iptal edildi.'); }
+  } catch { return info('İzin Hatası', 'Ekran paylaşımı başlatılamadı.'); }
   closeM('mStream'); isHost = true; screen._bitrate = BITRATE[h];
   const vt = screen.getVideoTracks()[0]; vt.contentHint = 'motion'; vt.onended = stopStream;
-  $('vid').srcObject = screen; $('vid').muted = true; showStage(true);
-  $('who').textContent = 'Yayıncı sensin'; $('btnStop').style.display = 'inline-block'; $('btnShare').classList.add('act');
+  $('vid').srcObject = screen; $('vid').muted = true; showStage(true);$('who').textContent = 'Yayıncı sensin'; $('btnStop').style.display = 'inline-block';$('btnShare').classList.add('act');
   play('live'); toast('Yayın başladı', 'live');
   socket.emit('start-stream-in-room');
 };
@@ -343,7 +334,7 @@ function stopStream() {
   if (!isHost) return;
   if (screen) { screen.getTracks().forEach(t => { t.onended = null; t.stop(); }); screen = null; }
   Object.values(hostPCs).forEach(p => p.close()); Object.keys(hostPCs).forEach(k => delete hostPCs[k]);
-  isHost = false; $('vid').srcObject = null; $('btnStop').style.display = 'none'; $('btnShare').classList.remove('act'); showStage(false);
+  isHost = false; $('vid').srcObject = null; $('btnStop').style.display = 'none';$('btnShare').classList.remove('act'); showStage(false);
   socket.emit('stop-stream');
 }
 socket.on('stream-started', ({ roomId: r, hostName }) => {
@@ -358,7 +349,6 @@ socket.on('room-stream-ended', () => {
   if (!isHost) { $('vid').srcObject = null; showStage(false); }
 });
 
-// ----- Sinyalleşme -----
 socket.on('signal', async ({ sender, signal, type }) => {
   try {
     if (type === 'voice') {
@@ -377,7 +367,7 @@ socket.on('signal', async ({ sender, signal, type }) => {
           viewPC.onicecandidate = e => e.candidate && socket.emit('signal', { target: sender, signal: { candidate: e.candidate }, type: 'stream' });
           viewPC.ontrack = e => {
             const v = $('vid'); v.srcObject = e.streams[0]; v.muted = deaf;
-            v.play().catch(() => { v.muted = true; v.play(); info('Ses kapalı', 'Tarayıcı otomatik sesi engelledi. Videoya tıklayıp sesi açabilirsin.'); });
+            v.play().catch(() => { v.muted = true; v.play(); });
           };
         }
         if (signal.sdp) {
