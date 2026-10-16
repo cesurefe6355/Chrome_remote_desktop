@@ -2,14 +2,71 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const sqlite3 = require('sqlite3').verbose();
+const bcrypt = require('bcryptjs');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+app.use(express.json());
 app.use(express.static(path.join(__dirname, 'Public')));
 
-const rooms = {}; // { roomId: { hostName, hostSocketId, viewers: [] } }
+// SQLite Veritabanı Bağlantısı
+const db = new sqlite3.Database('./lumolive.db', (err) => {
+    if (err) console.error('Veritabanı hatası:', err.message);
+    else console.log('SQLite veritabanına bağlanıldı.');
+});
+
+// Kullanıcılar Tablosunu Oluştur
+db.run(`CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE,
+    password TEXT
+)`);
+
+// --- KİMLİK DOĞRULAMA (AUTH) API'LERİ ---
+
+// Kayıt Ol
+app.post('/api/register', (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Kullanıcı adı ve şifre zorunludur.' });
+    }
+
+    const hashedPassword = bcrypt.hashSync(password, 8);
+
+    db.run(`INSERT INTO users (username, password) VALUES (?, ?)`, [username, hashedPassword], function(err) {
+        if (err) {
+            return res.status(400).json({ error: 'Bu kullanıcı adı zaten kullanımda.' });
+        }
+        res.json({ success: true, message: 'Kayıt başarılı!' });
+    });
+});
+
+// Giriş Yap
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Tüm alanları doldurun.' });
+    }
+
+    db.get(`SELECT * FROM users WHERE username = ?`, [username], (err, user) => {
+        if (err || !user) {
+            return res.status(400).json({ error: 'Kullanıcı bulunamadı veya şifre hatalı.' });
+        }
+
+        const passwordIsValid = bcrypt.compareSync(password, user.password);
+        if (!passwordIsValid) {
+            return res.status(400).json({ error: 'Kullanıcı bulunamadı veya şifre hatalı.' });
+        }
+
+        res.json({ success: true, username: user.username });
+    });
+});
+
+// --- CANLI YAYIN VE ODA SİSTEMİ (SOCKET.IO) ---
+const rooms = {};
 
 io.on('connection', (socket) => {
     socket.emit('room-list', getPublicRooms());
@@ -35,40 +92,13 @@ io.on('connection', (socket) => {
         const room = rooms[roomId];
         if (room) {
             socket.join(roomId);
-            room.viewers.push({ id: socket.id, username, hasControl: false });
+            room.viewers.push({ id: socket.id, username });
 
             io.to(roomId).emit('update-viewers', room.viewers);
             socket.to(room.hostSocketId).emit('user-connected', socket.id);
             socket.emit('join-success', { roomId });
         } else {
             socket.emit('error-msg', 'Oda bulunamadı veya kapatılmış.');
-        }
-    });
-
-    // Yayıncının bir izleyiciye kontrol yetkisi vermesi / alması
-    socket.on('toggle-control', ({ roomId, viewerId }) => {
-        const room = rooms[roomId];
-        if (room && room.hostSocketId === socket.id) {
-            const viewer = room.viewers.find(v => v.id === viewerId);
-            if (viewer) {
-                viewer.hasControl = !viewer.hasControl; // Yetkiyi tersine çevir
-                io.to(roomId).emit('update-viewers', room.viewers);
-                
-                // İlgili izleyiciye özel durum bildirimi
-                io.to(viewerId).emit('control-status', { hasControl: viewer.hasControl });
-            }
-        }
-    });
-
-    // İzleyiciden gelen tıklama/kontrol sinyali
-    socket.on('remote-action', (data) => {
-        const room = rooms[data.roomId];
-        if (room) {
-            const viewer = room.viewers.find(v => v.id === socket.id);
-            // Sadece yetkisi olan izleyicilerin komut geçmesine izin ver
-            if (viewer && viewer.hasControl) {
-                io.to(room.hostSocketId).emit('remote-action', data);
-            }
         }
     });
 
@@ -118,5 +148,5 @@ function getPublicRooms() {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Sunucu aktif: Port ${PORT}`);
+    console.log(`LumoLive Sunucusu aktif: Port ${PORT}`);
 });
