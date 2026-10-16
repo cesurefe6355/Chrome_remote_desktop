@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LumoLive - Giriş / Kayıt Ol</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        body { background-color: #313338; color: #dbdee1; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        
+        .auth-card { width: 100%; max-width: 440px; background: #2b2d31; border-radius: 12px; padding: 32px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); border: 1px solid #1f2023; text-align: center; }
+        
+        .logo { font-size: 26px; font-weight: 700; color: #f2f3f5; margin-bottom: 6px; }
+        .logo span { color: #5865F2; }
+        .subtitle { color: #949ba4; font-size: 14px; margin-bottom: 24px; }
+
+        .tabs { display: flex; background: #1e1f22; border-radius: 8px; padding: 4px; margin-bottom: 20px; }
+        .tab-btn { flex: 1; padding: 10px; background: transparent; border: none; color: #949ba4; font-size: 14px; font-weight: 600; cursor: pointer; border-radius: 6px; transition: 0.2s; }
+        .tab-btn.active { background: #35363c; color: #f2f3f5; }
+
+        .form-group { display: flex; flex-direction: column; gap: 14px; text-align: left; }
+        label { font-size: 12px; font-weight: 700; color: #b5bac1; text-transform: uppercase; letter-spacing: 0.5px; }
+        input { padding: 12px 16px; border-radius: 8px; border: 1px solid transparent; background: #1e1f22; color: #dbdee1; font-size: 15px; outline: none; width: 100%; transition: 0.2s; }
+        input:focus { border-color: #5865F2; }
+
+        .auth-btn { margin-top: 8px; padding: 12px; border-radius: 8px; border: none; background: #5865F2; color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s; width: 100%; }
+        .auth-btn:hover { background: #4752c4; }
+
+        .error-msg { color: #ed4245; font-size: 13px; margin-top: 10px; display: none; }
+        .success-msg { color: #23a55a; font-size: 13px; margin-top: 10px; display: none; }
+
+        .form-section { display: none; }
+        .form-section.active { display: block; }
+    </style>
+</head>
+<body>
+
+    <div class="auth-card">
+        <div class="logo">Lumo<span>Live</span></div>
+        <div class="subtitle">Canlı yayın dünyasına hoş geldin!</div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchForm('login', event)">Giriş Yap</button>
+            <button class="tab-btn" onclick="switchForm('register', event)">Kayıt Ol</button>
+        </div>
+
+        <!-- GİRİŞ FORMU -->
+        <div id="login-form" class="form-section active">
+            <div class="form-group">
+                <label>Kullanıcı Adı</label>
+                <input type="text" id="loginUsername" placeholder="Kullanıcı adını gir...">
+                
+                <label>Şifre</label>
+                <input type="password" id="loginPassword" placeholder="Şifreni gir...">
+
+                <button class="auth-btn" onclick="handleLogin()">Giriş Yap</button>
+            </div>
+        </div>
+
+        <!-- KAYIT FORMU -->
+        <div id="register-form" class="form-section">
+            <div class="form-group">
+                <label>Kullanıcı Adı Seç</label>
+                <input type="text" id="regUsername" placeholder="Bir kullanıcı adı belirle...">
+                
+                <label>Şifre Belirle</label>
+                <input type="password" id="regPassword" placeholder="Güçlü bir şifre gir...">
+
+                <button class="auth-btn" onclick="handleRegister()">Hesap Oluştur</button>
+            </div>
+        </div>
+
+        <div id="errorMsg" class="error-msg"></div>
+        <div id="successMsg" class="success-msg"></div>
+    </div>
+
+    <script>
+        function switchForm(type, event) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.form-section').forEach(sec => sec.classList.remove('active'));
+
+            event.target.classList.add('active');
+            if (type === 'login') {
+                document.getElementById('login-form').classList.add('active');
+            } else {
+                document.getElementById('register-form').classList.add('active');
+            }
+            hideMessages();
+        }
+
+        function showError(msg) {
+            const err = document.getElementById('errorMsg');
+            err.innerText = msg;
+            err.style.display = 'block';
+            document.getElementById('successMsg').style.display = 'none';
+        }
+
+        function showSuccess(msg) {
+            const succ = document.getElementById('successMsg');
+            succ.innerText = msg;
+            succ.style.display = 'block';
+            document.getElementById('errorMsg').style.display = 'none';
+        }
+
+        function hideMessages() {
+            document.getElementById('errorMsg').style.display = 'none';
+            document.getElementById('successMsg').style.display = 'none';
+        }
+
+        // Kayıt Ol İsteği
+        async function handleRegister() {
+            const username = document.getElementById('regUsername').value.trim();
+            const password = document.getElementById('regPassword').value.trim();
+
+            if (!username || !password) return showError("Lütfen tüm alanları doldurun!");
+
+            try {
+                const res = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    showSuccess("Kayıt başarılı! Şimdi giriş yapabilirsin.");
+                    document.getElementById('regUsername').value = '';
+                    document.getElementById('regPassword').value = '';
+                } else {
+                    showError(data.error || "Kayıt olma başarısız.");
+                }
+            } catch (err) {
+                showError("Sunucu bağlantı hatası!");
+            }
+        }
+
+        // Giriş Yap İsteği
+        async function handleLogin() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+
+            if (!username || !password) return showError("Lütfen kullanıcı adı ve şifreni gir!");
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    // Kullanıcı adını localStorage'da saklayıp ana lobi sayfasına yönlendiriyoruz
+                    localStorage.setItem('lumolive_user', data.username);
+                    window.location.href = '/index.html';
+                } else {
+                    showError(data.error || "Giriş bilgileri hatalı.");
+                }
+            } catch (err) {
+                showError("Sunucu bağlantı hatası!");
+            }
+        }
+    </script>
+</body>
+</html>
