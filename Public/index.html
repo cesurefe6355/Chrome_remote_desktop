@@ -10,12 +10,10 @@
         
         .app-layout { display: flex; width: 100vw; height: 100vh; overflow: hidden; }
         
-        /* 1. SÜTUN: Sunucu Çubuğu */
         .server-sidebar { width: 72px; background-color: #1e1f22; display: flex; flex-direction: column; align-items: center; padding-top: 12px; gap: 8px; border-right: 1px solid #1f2023; z-index: 10; flex-shrink: 0; }
-        .server-icon { width: 48px; height: 48px; border-radius: 50%; background: #313338; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 18px; cursor: pointer; transition: 0.2s; }
+        .server-icon { width: 48px; height: 48px; border-radius: 50%; background: #313338; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 18px; cursor: pointer; }
         .server-icon.active { border-radius: 16px; background: #5865F2; }
 
-        /* 2. SÜTUN: Kanal Listesi & Kullanıcı Paneli */
         .channel-sidebar { width: 240px; background-color: #2b2d31; display: flex; flex-direction: column; border-right: 1px solid #1f2023; z-index: 5; flex-shrink: 0; }
         .server-header { height: 48px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; font-weight: 700; color: #f2f3f5; border-bottom: 1px solid #1f2023; }
         .channels-list { flex: 1; padding: 16px 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
@@ -28,7 +26,6 @@
         .channel-item.active { background: #404249; color: #f2f3f5; }
         .live-badge { background: #ed4245; color: white; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
 
-        /* Sol Alt Profil ve Ses Kontrolleri */
         .user-profile { background: #232428; padding: 10px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #1f2023; flex-shrink: 0; }
         .user-info-box { display: flex; align-items: center; gap: 8px; overflow: hidden; }
         .user-avatar { width: 32px; height: 32px; background: #5865F2; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px; flex-shrink: 0; }
@@ -39,7 +36,6 @@
         .action-icon-btn:hover { background: #35363c; color: #f2f3f5; }
         .action-icon-btn.off { color: #ed4245 !important; background: rgba(237, 66, 69, 0.15); }
 
-        /* 3. SÜTUN: Ana İçerik Alanı */
         .main-content { flex: 1; background-color: #313338; display: flex; flex-direction: column; overflow: hidden; }
         .main-header-bar { height: 48px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1f2023; }
         .channel-title { font-weight: 700; color: #f2f3f5; font-size: 15px; display: flex; align-items: center; gap: 8px; }
@@ -70,10 +66,8 @@
 </head>
 <body>
 
-    <!-- GİZLİ SES ELEMENTLERİ KONTEYNERİ -->
     <div id="audioContainer" style="display: none;"></div>
 
-    <!-- ODA OLUŞTURMA MODALI -->
     <div id="createChannelModal" class="modal-overlay">
         <div class="modal-box">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -85,7 +79,6 @@
         </div>
     </div>
 
-    <!-- YAYIN AYARLARI MODALI -->
     <div id="streamSetupModal" class="modal-overlay">
         <div class="modal-box">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -115,7 +108,6 @@
         </div>
     </div>
 
-    <!-- UYARI MODALI -->
     <div id="customModal" class="modal-overlay">
         <div class="modal-box" style="text-align: center;">
             <h3 id="modalTitle" style="color:#fff;">Bilgilendirme</h3>
@@ -142,7 +134,6 @@
                 <div id="channelContainer"></div>
             </div>
 
-            <!-- Sol Alt Kullanıcı Profili ve Ses / Yayın Kontrolleri -->
             <div class="user-profile">
                 <div class="user-info-box">
                     <div class="user-avatar" id="userAvatarIcon">U</div>
@@ -152,8 +143,8 @@
                     </div>
                 </div>
                 <div class="profile-actions">
-                    <button class="action-icon-btn" id="micToggleBtn" onclick="toggleMicrophone()" title="Mikrofon Aç/Kapat">🎙️</button>
-                    <button class="action-icon-btn" id="deafenToggleBtn" onclick="toggleDeafen()" title="Gelen Sesleri Aç/Kapat">🎧</button>
+                    <button class="action-icon-btn" id="micToggleBtn" onclick="toggleMicrophone()" title="Mikrofon Aç/Kapa">🎙️</button>
+                    <button class="action-icon-btn" id="deafenToggleBtn" onclick="toggleDeafen()" title="Gelen Sesleri Aç/Kapa">🎧</button>
                     <button class="action-icon-btn" id="streamToggleBtn" onclick="openModal('streamSetupModal')" title="Ekran Paylaş">📡</button>
                     <button class="action-icon-btn" onclick="handleLogout()" title="Çıkış Yap">⎋</button>
                 </div>
@@ -168,14 +159,12 @@
             </div>
 
             <div class="main-body-area">
-                <!-- Yayın Yokken -->
                 <div id="noStreamView" class="no-stream-box">
                     <h2>Sesli sohbete bağlandınız! Odada henüz ekran yayını yok.</h2>
                     <p>Ekranınızı paylaşmak için aşağıdaki butona veya sol alttaki <b>📡</b> simgesine tıklayabilirsiniz.</p>
                     <button onclick="openModal('streamSetupModal')">Ekran Paylaşımı Başlat</button>
                 </div>
 
-                <!-- Yayın Ekranı -->
                 <div id="active-stream-screen">
                     <div class="stream-layout">
                         <div>
@@ -230,63 +219,45 @@
         let isDeafened = false;
         let isHost = false;
 
-        const voicePeerConnections = {}; // SocketID -> RTCPeerConnection (Sesli Sohbet için)
-        let streamPeerConnection = null;  // Ekran Paylaşımı için
+        const voicePeerConnections = {}; 
+        const streamPeerConnections = {}; // Yayıncı için çoklu izleyici bağlantı haritası
+        let viewerStreamPC = null; // İzleyici için yayın bağlantısı
 
         const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
-        // Tarayıcı Mikrofon Erişimi Başlatma
         async function initLocalAudio() {
             try {
                 localAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
             } catch (err) {
-                console.warn("Mikrofon erişimi verilmedi veya mikrofon bulunamadı.");
+                console.warn("Mikrofon erişimi verilmedi.");
             }
         }
         initLocalAudio();
 
-        // 1. MİKROFON AÇ / KAPA
         function toggleMicrophone() {
             if (!localAudioStream) return showModal("Uyarı", "Mikrofon bulunamadı!");
             isMicMuted = !isMicMuted;
             localAudioStream.getAudioTracks().forEach(t => t.enabled = !isMicMuted);
-
             const btn = document.getElementById('micToggleBtn');
-            if (isMicMuted) {
-                btn.innerText = '🔇';
-                btn.classList.add('off');
-            } else {
-                btn.innerText = '🎙️';
-                btn.classList.remove('off');
-            }
+            if (isMicMuted) { btn.innerText = '🔇'; btn.classList.add('off'); }
+            else { btn.innerText = '🎙️'; btn.classList.remove('off'); }
         }
 
-        // 2. GELEN SESLERİ AÇ / KAPA (DEAFEN)
         function toggleDeafen() {
             isDeafened = !isDeafened;
-            const audioElements = document.querySelectorAll('#audioContainer audio');
-            audioElements.forEach(a => a.muted = isDeafened);
-
+            document.querySelectorAll('#audioContainer audio').forEach(a => a.muted = isDeafened);
             const btn = document.getElementById('deafenToggleBtn');
-            if (isDeafened) {
-                btn.innerText = '🔇';
-                btn.classList.add('off');
-            } else {
-                btn.innerText = '🎧';
-                btn.classList.remove('off');
-            }
+            if (isDeafened) { btn.innerText = '🔇'; btn.classList.add('off'); }
+            else { btn.innerText = '🎧'; btn.classList.remove('off'); }
         }
 
-        // Oda Listesi Güncelleme
         socket.on('room-list-update', (rooms) => {
             const container = document.getElementById('channelContainer');
             container.innerHTML = "";
-
             rooms.forEach(room => {
                 const item = document.createElement('div');
                 item.className = `channel-item ${selectedRoomId === room.id ? 'active' : ''}`;
                 item.onclick = () => selectRoom(room.id);
-
                 item.innerHTML = `
                     <div style="display:flex; align-items:center; gap:6px;">
                         <span>#</span> <span>${room.id}</span>
@@ -295,28 +266,21 @@
                 `;
                 container.appendChild(item);
             });
-
-            if (!selectedRoomId && rooms.length > 0) {
-                selectRoom(rooms[0].id);
-            }
+            if (!selectedRoomId && rooms.length > 0) selectRoom(rooms[0].id);
         });
 
-        // Oda Seçme ve Sesli Sohbete Bağlanma
         function selectRoom(roomId) {
             if (selectedRoomId === roomId) return;
 
-            // Eski odadaki ses bağlantılarını kapat
-            Object.keys(voicePeerConnections).forEach(id => {
-                voicePeerConnections[id].close();
-                delete voicePeerConnections[id];
-            });
+            Object.keys(voicePeerConnections).forEach(id => { voicePeerConnections[id].close(); delete voicePeerConnections[id]; });
+            Object.keys(streamPeerConnections).forEach(id => { streamPeerConnections[id].close(); delete streamPeerConnections[id]; });
+            if (viewerStreamPC) { viewerStreamPC.close(); viewerStreamPC = null; }
             document.getElementById('audioContainer').innerHTML = "";
 
             if (selectedRoomId) socket.emit('leave-room', { roomId: selectedRoomId });
 
             selectedRoomId = roomId;
             document.getElementById('currentRoomTitle').innerText = roomId;
-
             socket.emit('join-room', { roomId, username: currentUser });
 
             document.querySelectorAll('.channel-item').forEach(el => {
@@ -325,7 +289,7 @@
             });
         }
 
-        socket.on('room-joined', ({ roomId, isLive, hostName, members }) => {
+        socket.on('room-joined', ({ roomId, isLive, hostName, hostSocketId, members }) => {
             if (isLive) {
                 document.getElementById('noStreamView').style.display = 'none';
                 document.getElementById('active-stream-screen').style.display = 'flex';
@@ -348,35 +312,29 @@
             });
         });
 
-        // --- SESLİ SOHBET MESH WEBRTC BAĞLANTILARI ---
+        // SESLİ SOHBET WEBRTC
         socket.on('user-joined-voice', async ({ socketId }) => {
             if (!localAudioStream) return;
             const pc = createVoicePeerConnection(socketId);
             voicePeerConnections[socketId] = pc;
-
             localAudioStream.getTracks().forEach(track => pc.addTrack(track, localAudioStream));
-
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
             socket.emit('signal', { target: socketId, signal: { sdp: pc.localDescription }, type: 'voice' });
         });
 
         socket.on('user-left-voice', (socketId) => {
-            if (voicePeerConnections[socketId]) {
-                voicePeerConnections[socketId].close();
-                delete voicePeerConnections[socketId];
-            }
+            if (voicePeerConnections[socketId]) { voicePeerConnections[socketId].close(); delete voicePeerConnections[socketId]; }
+            if (streamPeerConnections[socketId]) { streamPeerConnections[socketId].close(); delete streamPeerConnections[socketId]; }
             const audioElem = document.getElementById(`audio-${socketId}`);
             if (audioElem) audioElem.remove();
         });
 
         function createVoicePeerConnection(targetSocketId) {
             const pc = new RTCPeerConnection(rtcConfig);
-
             pc.onicecandidate = (e) => {
                 if (e.candidate) socket.emit('signal', { target: targetSocketId, signal: { candidate: e.candidate }, type: 'voice' });
             };
-
             pc.ontrack = (e) => {
                 let audioElem = document.getElementById(`audio-${targetSocketId}`);
                 if (!audioElem) {
@@ -388,14 +346,12 @@
                 }
                 audioElem.srcObject = e.streams[0];
             };
-
             return pc;
         }
 
-        // --- EKRAN PAYLAŞIMI YAYINI ---
+        // EKRAN PAYLAŞIMI (YAYINCI TARAFINDAN BAŞLATILIR)
         document.getElementById('startHostBtn').addEventListener('click', async () => {
             if (!selectedRoomId) return;
-
             const resolution = document.getElementById('resolutionSelect').value;
             const fps = parseInt(document.getElementById('fpsSelect').value);
 
@@ -408,7 +364,6 @@
             try {
                 localVideoStream = await navigator.mediaDevices.getDisplayMedia({ video: videoConstraints, audio: false });
                 isHost = true;
-
                 closeModal('streamSetupModal');
 
                 document.getElementById('noStreamView').style.display = 'none';
@@ -425,21 +380,31 @@
             }
         });
 
+        // Yayıncı için: İzleyici bağlandığında ekran akışını o izleyiciye teklif et (Offer gönder)
+        socket.on('viewer-wants-stream', async ({ viewerId }) => {
+            if (!isHost || !localVideoStream) return;
+            const pc = new RTCPeerConnection(rtcConfig);
+            streamPeerConnections[viewerId] = pc;
+
+            localVideoStream.getTracks().forEach(track => pc.addTrack(track, localVideoStream));
+
+            pc.onicecandidate = (e) => {
+                if (e.candidate) socket.emit('signal', { target: viewerId, signal: { candidate: e.candidate }, type: 'stream' });
+            };
+
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            socket.emit('signal', { target: viewerId, signal: { sdp: pc.localDescription }, type: 'stream' });
+        });
+
         function stopStream() {
-            if (localVideoStream) {
-                localVideoStream.getTracks().forEach(t => t.stop());
-                localVideoStream = null;
-            }
-            if (streamPeerConnection) {
-                streamPeerConnection.close();
-                streamPeerConnection = null;
-            }
+            if (localVideoStream) { localVideoStream.getTracks().forEach(t => t.stop()); localVideoStream = null; }
+            Object.keys(streamPeerConnections).forEach(id => { streamPeerConnections[id].close(); delete streamPeerConnections[id]; });
             isHost = false;
             document.getElementById('stopStreamBtn').style.display = 'none';
             document.getElementById('remoteVideo').srcObject = null;
             document.getElementById('active-stream-screen').style.display = 'none';
             document.getElementById('noStreamView').style.display = 'flex';
-
             if (selectedRoomId) socket.emit('leave-room', { roomId: selectedRoomId });
         }
 
@@ -451,7 +416,7 @@
             }
         });
 
-        // Genel Sinyalleşme Alıcısı
+        // GENEL SİNYALLEŞME YÖNETİCİSİ (SİYAH EKRANI ÇÖZEN KISIM)
         socket.on('signal', async (data) => {
             if (data.type === 'voice') {
                 let pc = voicePeerConnections[data.sender];
@@ -472,31 +437,45 @@
                     await pc.addIceCandidate(new RTCIceCandidate(data.signal.candidate));
                 }
             } else if (data.type === 'stream') {
-                if (!streamPeerConnection) {
-                    streamPeerConnection = new RTCPeerConnection(rtcConfig);
-                    streamPeerConnection.onicecandidate = (e) => {
-                        if (e.candidate) socket.emit('signal', { target: data.sender, signal: { candidate: e.candidate }, type: 'stream' });
-                    };
-                    streamPeerConnection.ontrack = (e) => {
-                        document.getElementById('remoteVideo').srcObject = e.streams[0];
-                    };
-                }
-
-                if (data.signal.sdp) {
-                    await streamPeerConnection.setRemoteDescription(new RTCSessionDescription(data.signal.sdp));
-                    if (data.signal.sdp.type === 'offer') {
-                        const answer = await streamPeerConnection.createAnswer();
-                        await streamPeerConnection.setLocalDescription(answer);
-                        socket.emit('signal', { target: data.sender, signal: { sdp: streamPeerConnection.localDescription }, type: 'stream' });
+                if (isHost) {
+                    // Yayıncı tarafı için izleyiciden gelen sinyal
+                    let pc = streamPeerConnections[data.sender];
+                    if (pc) {
+                        if (data.signal.sdp) {
+                            await pc.setRemoteDescription(new RTCSessionDescription(data.signal.sdp));
+                        } else if (data.signal.candidate) {
+                            await pc.addIceCandidate(new RTCIceCandidate(data.signal.candidate));
+                        }
                     }
-                } else if (data.signal.candidate) {
-                    await streamPeerConnection.addIceCandidate(new RTCIceCandidate(data.signal.candidate));
+                } else {
+                    // İzleyici tarafı için yayıncıdan gelen ekran akışı
+                    if (!viewerStreamPC) {
+                        viewerStreamPC = new RTCPeerConnection(rtcConfig);
+                        viewerStreamPC.onicecandidate = (e) => {
+                            if (e.candidate) socket.emit('signal', { target: data.sender, signal: { candidate: e.candidate }, type: 'stream' });
+                        };
+                        viewerStreamPC.ontrack = (e) => {
+                            document.getElementById('remoteVideo').srcObject = e.streams[0];
+                        };
+                    }
+
+                    if (data.signal.sdp) {
+                        await viewerStreamPC.setRemoteDescription(new RTCSessionDescription(data.signal.sdp));
+                        if (data.signal.sdp.type === 'offer') {
+                            const answer = await viewerStreamPC.createAnswer();
+                            await viewerStreamPC.setLocalDescription(answer);
+                            socket.emit('signal', { target: data.sender, signal: { sdp: viewerStreamPC.localDescription }, type: 'stream' });
+                        }
+                    } else if (data.signal.candidate) {
+                        await viewerStreamPC.addIceCandidate(new RTCIceCandidate(data.signal.candidate));
+                    }
                 }
             }
         });
 
         socket.on('room-stream-ended', () => {
             if (!isHost) showModal("Yayın Sona Erdi", "Yayını açan kullanıcı yayını kapattı.");
+            if (viewerStreamPC) { viewerStreamPC.close(); viewerStreamPC = null; }
             document.getElementById('active-stream-screen').style.display = 'none';
             document.getElementById('noStreamView').style.display = 'flex';
         });
