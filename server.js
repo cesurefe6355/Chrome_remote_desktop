@@ -46,27 +46,20 @@ app.post('/api/login', (req, res) => {
     });
 });
 
-// --- ODA & CANLI YAYIN SİSTEMİ ---
-// Global Odalar Veri Yapısı: { "Oda Adı": { createdBy: "user", isLive: false, hostSocketId: null, viewers: [] } }
+// --- ODA & SESLİ SOHBET / YAYIN SİSTEMİ ---
 const rooms = {
-    "Lobi": { createdBy: "Sistem", isLive: false, hostSocketId: null, viewers: [] },
-    "Oyun-Gecesi": { createdBy: "Sistem", isLive: false, hostSocketId: null, viewers: [] }
+    "Lobi": { createdBy: "Sistem", isLive: false, hostSocketId: null, hostName: null, members: [] },
+    "Oyun-Gecesi": { createdBy: "Sistem", isLive: false, hostSocketId: null, hostName: null, members: [] }
 };
 
 io.on('connection', (socket) => {
-    // Bağlanan kullanıcıya mevcut oda listesini gönder
     socket.emit('room-list-update', getRoomsList());
 
-    // 1. Yeni Oda (Kanal) Oluşturma
+    // Oda Oluşturma
     socket.on('create-channel', ({ roomName, username }) => {
         const formattedRoom = roomName.trim().replace(/\s+/g, '-').toLowerCase();
-        if (!formattedRoom) {
-            socket.emit('error-msg', 'Geçersiz oda adı.');
-            return;
-        }
-        if (rooms[formattedRoom]) {
-            socket.emit('error-msg', 'Bu oda adı zaten mevcut!');
-            return;
+        if (!formattedRoom || rooms[formattedRoom]) {
+            return socket.emit('error-msg', 'Geçersiz veya mevcut oda adı!');
         }
 
         rooms[formattedRoom] = {
@@ -74,36 +67,38 @@ io.on('connection', (socket) => {
             isLive: false,
             hostSocketId: null,
             hostName: null,
-            viewers: []
+            members: []
         };
 
         io.emit('room-list-update', getRoomsList());
         socket.emit('channel-created', { roomId: formattedRoom });
     });
 
-    // 2. Odaya Katılma (İzleyici veya Oda Sakini)
+    // Odaya Katılma (Sesli Sohbet Ağına Dahil Olma)
     socket.on('join-room', ({ roomId, username }) => {
         const room = rooms[roomId];
-        if (!room) {
-            socket.emit('error-msg', 'Oda bulunamadı.');
-            return;
-        }
+        if (!room) return socket.emit('error-msg', 'Oda bulunamadı.');
 
         socket.join(roomId);
+        
+        // Odadaki diğer kullanıcılara yeni birinin katıldığını haber ver (Sesli Sohbet Mesh Ağı için)
+        socket.to(roomId).emit('user-joined-voice', { socketId: socket.id, username });
 
-        // Eğer odada aktif yayın varsa ve yayıncı değilse izleyici listesine ekle
-        if (room.isLive && room.hostSocketId !== socket.id) {
-            if (!room.viewers.some(v => v.id === socket.id)) {
-                room.viewers.push({ id: socket.id, username });
-            }
-            io.to(roomId).emit('update-viewers', room.viewers);
-            socket.to(room.hostSocketId).emit('user-connected', socket.id);
+        if (!room.members.some(m => m.id === socket.id)) {
+            room.members.push({ id: socket.id, username });
         }
 
-        socket.emit('room-joined', { roomId, isLive: room.isLive, hostName: room.hostName });
+        socket.emit('room-joined', {
+            roomId,
+            isLive: room.isLive,
+            hostName: room.hostName,
+            members: room.members
+        });
+
+        io.to(roomId).emit('update-room-members', room.members);
     });
 
-    // 3. Odada Yayın Başlatma
+    // Odada Ekran Yayını Başlatma
     socket.on('start-stream-in-room', ({ roomId, username }) => {
         const room = rooms[roomId];
         if (!room) return socket.emit('error-msg', 'Oda bulunamadı.');
@@ -113,21 +108,21 @@ io.on('connection', (socket) => {
         room.hostSocketId = socket.id;
         room.hostName = username;
 
-        socket.join(roomId);
         io.emit('room-list-update', getRoomsList());
-        io.to(roomId).emit('stream-started', { roomId, hostName: username });
+        io.to(roomId).emit('stream-started', { roomId, hostName: username, hostSocketId: socket.id });
     });
 
-    // 4. Odadaki Yayını/Odayı Terk Etme
+    // Odayı/Yayını Terk Etme
     socket.on('leave-room', ({ roomId }) => {
         handleUserLeave(socket, roomId);
     });
 
-    // WebRTC Sinyalleşme
+    // WebRTC Sinyalleşmesi (Sesli Sohbet ve Ekran Paylaşımı İçin Ortak)
     socket.on('signal', (data) => {
         io.to(data.target).emit('signal', {
             sender: socket.id,
-            signal: data.signal
+            signal: data.signal,
+            type: data.type // 'voice' veya 'stream'
         });
     });
 
@@ -142,32 +137,29 @@ function handleUserLeave(socket, roomId) {
     const room = rooms[roomId];
     if (!room) return;
 
+    // Kullanıcının ayrıldığını odadakilere bildir
+    socket.to(roomId).emit('user-left-voice', socket.id);
+
+    const index = room.members.findIndex(m => m.id === socket.id);
+    if (index !== -1) room.members.splice(index, 1);
+
     if (room.hostSocketId === socket.id) {
-        // Yayıncı ayrıldıysa yayını durdur
         room.isLive = false;
         room.hostSocketId = null;
         room.hostName = null;
-        room.viewers = [];
-        
         io.to(roomId).emit('room-stream-ended');
-        io.emit('room-list-update', getRoomsList());
-    } else {
-        // İzleyici ayrıldıysa
-        const index = room.viewers.findIndex(v => v.id === socket.id);
-        if (index !== -1) {
-            room.viewers.splice(index, 1);
-            io.to(roomId).emit('update-viewers', room.viewers);
-        }
     }
+
+    io.to(roomId).emit('update-room-members', room.members);
+    io.emit('room-list-update', getRoomsList());
 }
 
 function getRoomsList() {
     return Object.keys(rooms).map(id => ({
         id,
-        createdBy: rooms[id].createdBy,
         isLive: rooms[id].isLive,
         hostName: rooms[id].hostName,
-        viewerCount: rooms[id].viewers.length
+        memberCount: rooms[id].members.length
     }));
 }
 
