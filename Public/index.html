@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LumoLive - Discord Tarzı Canlı Yayın</title>
+    <title>LumoLive - Discord Tarzı Oda & Canlı Yayın</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif; }
         body { background-color: #313338; color: #dbdee1; height: 100vh; overflow: hidden; }
@@ -14,32 +14,30 @@
         .server-sidebar { width: 72px; background-color: #1e1f22; display: flex; flex-direction: column; align-items: center; padding-top: 12px; gap: 8px; border-right: 1px solid #1f2023; z-index: 10; flex-shrink: 0; }
         .server-icon { width: 48px; height: 48px; border-radius: 50%; background: #313338; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 18px; cursor: pointer; transition: 0.2s; position: relative; }
         .server-icon:hover, .server-icon.active { border-radius: 16px; background: #5865F2; color: white; }
-        .server-icon::before { content: ""; position: absolute; left: -12px; width: 8px; height: 10px; background: white; border-radius: 0 4px 4px 0; transform: scale(0); transition: 0.2s; }
-        .server-icon.active::before { transform: scale(1); height: 40px; }
         .server-separator { width: 32px; height: 2px; background: #35363c; border-radius: 1px; margin: 4px 0; }
 
-        /* 2. SÜTUN: Kanal Listesi & Kullanıcı Paneli */
+        /* 2. SÜTUN: Kanal/Oda Listesi */
         .channel-sidebar { width: 240px; background-color: #2b2d31; display: flex; flex-direction: column; border-right: 1px solid #1f2023; z-index: 5; flex-shrink: 0; }
         .server-header { height: 48px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; font-weight: 700; color: #f2f3f5; border-bottom: 1px solid #1f2023; box-shadow: 0 1px 2px rgba(0,0,0,0.2); flex-shrink: 0; }
         .channels-list { flex: 1; padding: 16px 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
-        .channel-category { font-size: 12px; font-weight: 700; color: #949ba4; text-transform: uppercase; padding: 8px 8px 4px 8px; letter-spacing: 0.5px; }
-        .channel-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 4px; color: #949ba4; cursor: pointer; font-size: 14px; font-weight: 500; transition: 0.15s; }
+        .channel-category { font-size: 12px; font-weight: 700; color: #949ba4; text-transform: uppercase; padding: 8px; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
+        .add-channel-btn { cursor: pointer; font-size: 16px; color: #949ba4; }
+        .add-channel-btn:hover { color: #f2f3f5; }
+        
+        .channel-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 4px; color: #949ba4; cursor: pointer; font-size: 14px; font-weight: 500; transition: 0.15s; }
         .channel-item:hover { background: #35363c; color: #dbdee1; }
         .channel-item.active { background: #404249; color: #f2f3f5; }
+        .live-badge { background: #ed4245; color: white; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
 
-        /* Sol Alt Kullanıcı Profili */
+        /* Sol Alt Profil */
         .user-profile { background: #232428; padding: 10px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #1f2023; flex-shrink: 0; }
         .user-info-box { display: flex; align-items: center; gap: 8px; overflow: hidden; }
-        .user-avatar { width: 32px; height: 32px; background: #5865F2; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px; flex-shrink: 0; overflow: hidden; }
+        .user-avatar { width: 32px; height: 32px; background: #5865F2; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px; flex-shrink: 0; }
         .username-text { font-size: 14px; font-weight: 600; color: #f2f3f5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .user-status-text { font-size: 11px; color: #23a55a; font-weight: 500; }
-        
         .profile-actions { display: flex; gap: 4px; }
         .action-icon-btn { background: transparent; border: none; color: #949ba4; cursor: pointer; padding: 6px; border-radius: 4px; transition: 0.15s; font-size: 14px; }
         .action-icon-btn:hover { background: #35363c; color: #f2f3f5; }
         .action-icon-btn.active-stream { color: #ed4245 !important; background: rgba(237, 66, 69, 0.15); }
-        .action-icon-btn.active-stream:hover { background: rgba(237, 66, 69, 0.3); }
-        .action-icon-btn.logout:hover { color: #ed4245; }
 
         /* 3. SÜTUN: Ana İçerik Alanı */
         .main-content { flex: 1; background-color: #313338; display: flex; flex-direction: column; overflow: hidden; }
@@ -48,127 +46,125 @@
         
         .main-body-area { flex: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; }
 
-        /* Form ve Kontrol Elemanları */
+        /* Form Elemanları & Butonlar */
         input[type="text"], select { padding: 10px 14px; border-radius: 6px; border: 1px solid transparent; background: #1e1f22; color: #dbdee1; font-size: 14px; outline: none; width: 100%; transition: 0.2s; }
         input[type="text"]:focus, select:focus { border-color: #5865F2; }
         button { padding: 10px 18px; border-radius: 6px; border: none; background: #5865F2; color: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; }
         button:hover { background: #4752c4; }
         .btn-danger { background: #ed4245 !important; }
-        .btn-danger:hover { background: #c03537 !important; }
 
-        /* Oda Grid Tasarımı */
-        .room-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
-        .room-card { background: #2b2d31; border: 1px solid #1f2023; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; transition: 0.2s; }
-        .room-card:hover { border-color: #5865F2; transform: translateY(-2px); }
-        .room-card h3 { font-size: 16px; margin-bottom: 6px; color: #f2f3f5; }
-        .room-card p { font-size: 13px; color: #949ba4; margin-bottom: 12px; }
-        .room-card button { width: 100%; }
+        /* Oda İçeriği (Yayın Yokken) */
+        .no-stream-box { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #949ba4; gap: 16px; text-align: center; }
+        .no-stream-box h2 { color: #f2f3f5; font-size: 22px; }
 
-        .input-group { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; text-align: left; }
-        label { font-size: 12px; font-weight: 700; color: #b5bac1; text-transform: uppercase; letter-spacing: 0.5px; }
-
-        /* Aktif Yayın İzleme Alanı */
+        /* Yayın Alanı */
         #active-stream-screen { display: none; height: 100%; flex-direction: column; }
         .stream-layout { display: grid; grid-template-columns: 1fr 280px; gap: 16px; height: calc(100vh - 100px); }
         .video-wrapper { position: relative; background: #000; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px solid #1f2023; height: 100%; }
-        video { width: 100%; height: 100%; display: block; object-fit: contain; image-rendering: high-quality; }
-        
+        video { width: 100%; height: 100%; display: block; object-fit: contain; }
         .stream-bottom-bar { margin-top: 12px; display: flex; gap: 10px; justify-content: space-between; align-items: center; }
-        .stream-bottom-bar button { width: auto; background: #4e5058; }
-        .stream-bottom-bar button:hover { background: #6d6f78; }
 
-        /* İzleyiciler Yan Paneli */
-        .viewers-sidebar { background: #2b2d31; border-radius: 8px; padding: 14px; border: 1px solid #1f2023; height: 100%; max-height: calc(100vh - 100px); overflow-y: auto; }
-        .viewers-sidebar h4 { font-size: 13px; font-weight: 700; color: #949ba4; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px; }
+        .viewers-sidebar { background: #2b2d31; border-radius: 8px; padding: 14px; border: 1px solid #1f2023; height: 100%; overflow-y: auto; }
+        .viewers-sidebar h4 { font-size: 13px; font-weight: 700; color: #949ba4; text-transform: uppercase; margin-bottom: 10px; }
         .viewer-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
         .viewer-item { padding: 8px 10px; background: #1e1f22; border-radius: 4px; font-size: 13px; display: flex; align-items: center; gap: 8px; color: #f2f3f5; }
         .status-dot { width: 8px; height: 8px; background: #23a55a; border-radius: 50%; }
 
-        /* Discord Tarzı Özel Modallar */
+        /* Modallar */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.7); z-index: 1000; justify-content: center; align-items: center; }
         .modal-box { background: #313338; border: 1px solid #1f2023; border-radius: 12px; padding: 24px; width: 100%; max-width: 440px; box-shadow: 0 12px 32px rgba(0,0,0,0.6); }
         .modal-box h3 { color: #f2f3f5; font-size: 20px; margin-bottom: 8px; }
-        .modal-box p { color: #949ba4; font-size: 14px; margin-bottom: 24px; line-height: 1.4; }
     </style>
 </head>
 <body>
 
-    <!-- YAYIN BAŞLAT AYARLARI MODALI -->
-    <div id="streamSetupModal" class="modal-overlay">
-        <div class="modal-box" style="text-align: left;">
+    <!-- YENİ ODA (KANAL) OLUŞTURMA MODALI -->
+    <div id="createChannelModal" class="modal-overlay">
+        <div class="modal-box">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <h3 style="margin:0;">Canlı Yayın Ayarları</h3>
-                <button onclick="closeStreamModal()" style="background: transparent; color: #949ba4; width: auto; padding: 4px 8px; font-size: 16px;">✕</button>
+                <h3>Oda Oluştur</h3>
+                <button onclick="closeModal('createChannelModal')" style="background: transparent; color: #949ba4; padding: 4px 8px;">✕</button>
             </div>
-            
-            <div class="input-group" style="margin-top: 0;">
-                <label>Oda / Yayın Adı</label>
-                <input type="text" id="roomNameInput" placeholder="Örn: Oyun Gecesi">
-                
-                <label style="margin-top: 12px;">Çözünürlük (Kalite)</label>
-                <select id="resolutionSelect">
-                    <option value="720">720p HD</option>
-                    <option value="1080" selected>1080p FHD</option>
-                    <option value="1440">1440p 2K QHD</option>
-                    <option value="4k">4K Ultra HD</option>
-                    <option value="max">Maksimum / Orijinal</option>
-                </select>
-
-                <label style="margin-top: 12px;">Yenileme Hızı (FPS)</label>
-                <select id="fpsSelect">
-                    <option value="30">30 FPS</option>
-                    <option value="60" selected>60 FPS (Akıcı)</option>
-                    <option value="120">120 FPS</option>
-                    <option value="144">144 FPS</option>
-                </select>
-
-                <button id="startHostBtn" style="margin-top: 20px; width: 100%;">Yayını Başlat</button>
+            <div class="input-group">
+                <label style="font-size: 12px; font-weight: 700; color: #b5bac1; text-transform: uppercase;">Oda / Kanal Adı</label>
+                <input type="text" id="newChannelNameInput" placeholder="Örn: Sohbet-Odasi" style="margin-top: 6px;">
+                <button id="btnCreateChannelConfirm" style="margin-top: 16px; width: 100%;">Oluştur</button>
             </div>
         </div>
     </div>
 
-    <!-- GENEL BİLDİRİM MODALI -->
+    <!-- YAYIN AYARLARI MODALI -->
+    <div id="streamSetupModal" class="modal-overlay">
+        <div class="modal-box">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3>Bu Odada Yayın Başlat</h3>
+                <button onclick="closeModal('streamSetupModal')" style="background: transparent; color: #949ba4; padding: 4px 8px;">✕</button>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div>
+                    <label style="font-size: 12px; font-weight: 700; color: #b5bac1; text-transform: uppercase;">Çözünürlük</label>
+                    <select id="resolutionSelect" style="margin-top: 4px;">
+                        <option value="720">720p HD</option>
+                        <option value="1080" selected>1080p FHD</option>
+                        <option value="1440">1440p 2K QHD</option>
+                        <option value="4k">4K Ultra HD</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 12px; font-weight: 700; color: #b5bac1; text-transform: uppercase;">Yenileme Hızı (FPS)</label>
+                    <select id="fpsSelect" style="margin-top: 4px;">
+                        <option value="30">30 FPS</option>
+                        <option value="60" selected>60 FPS</option>
+                        <option value="120">120 FPS</option>
+                        <option value="144">144 FPS</option>
+                    </select>
+                </div>
+                <button id="startHostBtn" style="margin-top: 12px; width: 100%;">Yayını Başlat</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- UYARI MODALI -->
     <div id="customModal" class="modal-overlay">
         <div class="modal-box" style="text-align: center;">
             <h3 id="modalTitle">Bilgilendirme</h3>
-            <p id="modalDesc">Mesaj içeriği buraya gelecek...</p>
-            <button onclick="closeModal()" style="width: 100%;">Tamam</button>
+            <p id="modalDesc" style="color: #949ba4; margin: 12px 0 20px 0; font-size: 14px;"></p>
+            <button onclick="closeModal('customModal')" style="width: 100%;">Tamam</button>
         </div>
     </div>
 
     <div class="app-layout">
-        <!-- 1. SÜTUN: SUNUCU ÇUBUĞU -->
+        <!-- 1. SÜTUN -->
         <div class="server-sidebar">
-            <div class="server-icon active" title="LumoLive Ana Sunucu">LL</div>
-            <div class="server-separator"></div>
-            <div class="server-icon" title="Yeni Sunucu Ekle">+</div>
+            <div class="server-icon active" title="LumoLive Main">LL</div>
         </div>
 
-        <!-- 2. SÜTUN: KANAL LİSTESİ VE KULLANICI PANELİ -->
+        <!-- 2. SÜTUN: KANAL & ODA LİSTESİ -->
         <div class="channel-sidebar">
             <div class="server-header">
                 <span>LumoLive</span>
             </div>
             
             <div class="channels-list">
-                <div class="channel-category">Ses / Yayın Kanalları</div>
-                <div class="channel-item active" id="btnTabList">
-                    <span>#</span> aktif-odalar
+                <div class="channel-category">
+                    <span>Odalar / Kanallar</span>
+                    <span class="add-channel-btn" onclick="openModal('createChannelModal')" title="Yeni Oda Oluştur">+</span>
                 </div>
+                <div id="channelContainer"></div>
             </div>
 
-            <!-- Sol Alt Kullanıcı Profili ve Yayın Açma / Kapatma Butonu -->
+            <!-- Sol Alt Kullanıcı Profili -->
             <div class="user-profile">
                 <div class="user-info-box">
                     <div class="user-avatar" id="userAvatarIcon">U</div>
                     <div>
                         <div class="username-text" id="usernameDisplay">Kullanıcı</div>
-                        <div class="user-status-text">Çevrimiçi</div>
+                        <div style="font-size: 11px; color: #23a55a;">Çevrimiçi</div>
                     </div>
                 </div>
                 <div class="profile-actions">
-                    <button class="action-icon-btn" id="streamToggleBtn" onclick="handleStreamToggle()" title="Yayın Aç">📡</button>
-                    <button class="action-icon-btn logout" onclick="handleLogout()" title="Çıkış Yap">⎋</button>
+                    <button class="action-icon-btn" id="streamToggleBtn" onclick="handleStreamToggle()" title="Yayını Yönet">📡</button>
+                    <button class="action-icon-btn" onclick="handleLogout()" title="Çıkış Yap">⎋</button>
                 </div>
             </div>
         </div>
@@ -177,18 +173,19 @@
         <div class="main-content">
             <div class="main-header-bar">
                 <div class="channel-title" id="channelHeaderTitle">
-                    <span>#</span> aktif-odalar
+                    <span>#</span> <span id="currentRoomTitle">Oda Seçilmedi</span>
                 </div>
-                <div id="headerActions"></div>
             </div>
 
             <div class="main-body-area">
-                <!-- SEKME 1: Aktif Odalar / Yayın Listesi -->
-                <div id="tabContentList" class="tab-pane">
-                    <div class="room-grid" id="roomGrid"></div>
+                <!-- Durum 1: Odada Yayın Yoksa -->
+                <div id="noStreamView" class="no-stream-box">
+                    <h2>Bu odada henüz canlı yayın bulunmuyor.</h2>
+                    <p>Yayını başlatmak için sol alttaki <b>📡</b> butonuna tıklayabilirsiniz.</p>
+                    <button onclick="openModal('streamSetupModal')">Bu Odada Yayın Aç</button>
                 </div>
 
-                <!-- SEKME 2: Aktif Yayın / İzleme Ekranı -->
+                <!-- Durum 2: Aktif Yayın Ekranı -->
                 <div id="active-stream-screen">
                     <div class="stream-layout">
                         <div>
@@ -214,163 +211,162 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        // Oturum Kontrolü
         const currentUser = localStorage.getItem('lumolive_user');
-        if (!currentUser) {
-            window.location.href = '/login.html';
-        } else {
+        if (!currentUser) window.location.href = '/login.html';
+        else {
             document.getElementById('usernameDisplay').innerText = currentUser;
             document.getElementById('userAvatarIcon').innerText = currentUser.charAt(0).toUpperCase();
         }
 
         function handleLogout() {
-            if (currentRoomId) leaveStream();
+            if (selectedRoomId) leaveStream();
             localStorage.removeItem('lumolive_user');
             window.location.href = '/login.html';
         }
 
-        // Modal Yönetimi
-        function openStreamModal() {
-            document.getElementById('streamSetupModal').style.display = 'flex';
-        }
-
-        function closeStreamModal() {
-            document.getElementById('streamSetupModal').style.display = 'none';
-        }
-
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
         function showModal(title, desc) {
             document.getElementById('modalTitle').innerText = title;
             document.getElementById('modalDesc').innerText = desc;
-            document.getElementById('customModal').style.display = 'flex';
-        }
-
-        function closeModal() {
-            document.getElementById('customModal').style.display = 'none';
+            openModal('customModal');
         }
 
         const socket = io();
-        let currentRoomId = "";
+        let selectedRoomId = "";
         let localStream = null;
         let peerConnection = null;
         let isHost = false;
 
-        const rtcConfig = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
-            ]
-        };
+        const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
-        // Sol Alttaki Yayın Butonu Yönetimi (Aç/Kapat)
-        function handleStreamToggle() {
-            if (isHost) {
-                // Eğer zaten yayın açılmışsa butona basınca yayını kapat
-                leaveStream();
-            } else if (currentRoomId) {
-                // İzleyici olarak bir yayındaysa uyarı ver
-                showModal("Bilgi", "Şu anda bir yayını izliyorsunuz. Önce yayından ayrılmalısınız.");
-            } else {
-                // Yayın yoksa yeni yayın açma modalını göster
-                openStreamModal();
+        // Oda Listesi Güncellendiğinde
+        socket.on('room-list-update', (rooms) => {
+            const container = document.getElementById('channelContainer');
+            container.innerHTML = "";
+
+            rooms.forEach(room => {
+                const item = document.createElement('div');
+                item.className = `channel-item ${selectedRoomId === room.id ? 'active' : ''}`;
+                item.onclick = () => selectRoom(room.id);
+
+                item.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span>#</span> <span>${room.id}</span>
+                    </div>
+                    ${room.isLive ? `<span class="live-badge">CANLI</span>` : ''}
+                `;
+                container.appendChild(item);
+            });
+
+            // İlk yüklemede bir oda seçilmediyse ilki seçilsin
+            if (!selectedRoomId && rooms.length > 0) {
+                selectRoom(rooms[0].id);
             }
-        }
+        });
 
-        socket.on('room-list', (rooms) => {
-            const grid = document.getElementById('roomGrid');
-            grid.innerHTML = "";
-
-            if (rooms.length === 0) {
-                grid.innerHTML = `<p style="color:#949ba4;">Şu anda aktif bir LumoLive yayını bulunmuyor. Sol alttaki <b>📡</b> butonuna tıklayarak kendi yayınını açabilirsin!</p>`;
+        // Odaya Seçme ve Katılma
+        function selectRoom(roomId) {
+            if (selectedRoomId === roomId) return;
+            if (isHost) {
+                showModal("Bilgi", "Aktif yayınınız var. Başka odaya geçmek için önce yayınınızı kapatmalısınız.");
                 return;
             }
 
-            rooms.forEach(room => {
-                const card = document.createElement('div');
-                card.className = 'room-card';
-                card.innerHTML = `
-                    <div>
-                        <h3>${room.id}</h3>
-                        <p>Yayıncı: <b>${room.hostName}</b></p>
-                        <p>İzleyici: ${room.viewerCount} Kişi</p>
-                    </div>
-                    <button onclick="joinStream('${room.id}')">Yayına Katıl</button>
-                `;
-                grid.appendChild(card);
+            if (selectedRoomId) socket.emit('leave-room', { roomId: selectedRoomId });
+
+            selectedRoomId = roomId;
+            document.getElementById('currentRoomTitle').innerText = roomId;
+
+            socket.emit('join-room', { roomId, username: currentUser });
+            
+            // Kanal listesindeki aktif görünümü güncelle
+            document.querySelectorAll('.channel-item').forEach(el => {
+                if (el.innerText.includes(roomId)) el.classList.add('active');
+                else el.classList.remove('active');
             });
+        }
+
+        socket.on('room-joined', ({ roomId, isLive, hostName }) => {
+            if (isLive) {
+                document.getElementById('noStreamView').style.display = 'none';
+                document.getElementById('active-stream-screen').style.display = 'flex';
+                document.getElementById('roleIndicator').innerText = `Yayıncı: ${hostName}`;
+            } else {
+                document.getElementById('noStreamView').style.display = 'flex';
+                document.getElementById('active-stream-screen').style.display = 'none';
+            }
         });
 
-        socket.on('error-msg', (msg) => showModal("Hata", msg));
+        // Oda Oluşturma Onayı
+        document.getElementById('btnCreateChannelConfirm').addEventListener('click', () => {
+            const roomName = document.getElementById('newChannelNameInput').value;
+            if (!roomName) return showModal("Hata", "Oda adı boş olamaz!");
+            socket.emit('create-channel', { roomName, username: currentUser });
+            closeModal('createChannelModal');
+            document.getElementById('newChannelNameInput').value = "";
+        });
+
+        socket.on('channel-created', ({ roomId }) => {
+            selectRoom(roomId);
+        });
 
         // Yayın Başlatma
+        function handleStreamToggle() {
+            if (isHost) {
+                leaveStream();
+            } else {
+                openModal('streamSetupModal');
+            }
+        }
+
         document.getElementById('startHostBtn').addEventListener('click', async () => {
-            const roomName = document.getElementById('roomNameInput').value.trim();
+            if (!selectedRoomId) return showModal("Hata", "Önce bir oda seçmelisiniz.");
+
             const resolution = document.getElementById('resolutionSelect').value;
             const fps = parseInt(document.getElementById('fpsSelect').value);
             
-            if (!roomName) return showModal("Uyarı", "Lütfen bir oda adı gir!");
-
             let videoConstraints = { cursor: "always", frameRate: { ideal: fps, max: fps } };
-
-            if (resolution === '720') {
-                videoConstraints.width = { ideal: 1280 }; videoConstraints.height = { ideal: 720 };
-            } else if (resolution === '1080') {
-                videoConstraints.width = { ideal: 1920 }; videoConstraints.height = { ideal: 1080 };
-            } else if (resolution === '1440') {
-                videoConstraints.width = { ideal: 2560 }; videoConstraints.height = { ideal: 1440 };
-            } else if (resolution === '4k') {
-                videoConstraints.width = { ideal: 3840 }; videoConstraints.height = { ideal: 2160 };
-            } else if (resolution === 'max') {
-                videoConstraints.width = { max: 4096 }; videoConstraints.height = { max: 2160 };
-            }
+            if (resolution === '720') { videoConstraints.width = { ideal: 1280 }; videoConstraints.height = { ideal: 720 }; }
+            else if (resolution === '1080') { videoConstraints.width = { ideal: 1920 }; videoConstraints.height = { ideal: 1080 }; }
+            else if (resolution === '1440') { videoConstraints.width = { ideal: 2560 }; videoConstraints.height = { ideal: 1440 }; }
+            else if (resolution === '4k') { videoConstraints.width = { ideal: 3840 }; videoConstraints.height = { ideal: 2160 }; }
 
             try {
                 localStream = await navigator.mediaDevices.getDisplayMedia({ video: videoConstraints, audio: false });
                 
                 isHost = true;
-                currentRoomId = roomName;
+                closeModal('streamSetupModal');
 
-                closeStreamModal();
-
-                // Sol alttaki butonu Yayını Kapat moduna geçir
                 const toggleBtn = document.getElementById('streamToggleBtn');
                 toggleBtn.innerText = '⏹';
-                toggleBtn.title = 'Yayını Kapat';
                 toggleBtn.classList.add('active-stream');
 
-                document.getElementById('tabContentList').style.display = 'none';
+                document.getElementById('noStreamView').style.display = 'none';
                 document.getElementById('active-stream-screen').style.display = 'flex';
-                document.getElementById('channelHeaderTitle').innerHTML = `<span>●</span> ${roomName} (Yayıncı)`;
-                document.getElementById('roleIndicator').innerText = `Canlı Yayın (${fps} FPS)`;
-                
+                document.getElementById('roleIndicator').innerText = `Yayıncı Sizsiniz (${fps} FPS)`;
                 document.getElementById('remoteVideo').srcObject = localStream;
 
                 localStream.getVideoTracks()[0].onended = () => leaveStream();
-                socket.emit('create-room', { roomId: roomName, username: currentUser });
+                socket.emit('start-stream-in-room', { roomId: selectedRoomId, username: currentUser });
 
             } catch (err) {
-                console.error(err);
-                showModal("İzin Hatası", "Ekran paylaşımı izni verilmedi.");
+                showModal("İzin Hatası", "Ekran paylaşımı başlatılamadı.");
             }
         });
 
-        // Yayına Katılma
-        function joinStream(roomId) {
-            isHost = false;
-            currentRoomId = roomId;
-
-            document.getElementById('tabContentList').style.display = 'none';
-            document.getElementById('active-stream-screen').style.display = 'flex';
-            document.getElementById('channelHeaderTitle').innerHTML = `<span>●</span> ${roomId} (İzleyici)`;
-            document.getElementById('roleIndicator').innerText = "Canlı İzleniyor";
-
-            socket.emit('join-room', { roomId, username: currentUser });
-        }
+        socket.on('stream-started', ({ roomId, hostName }) => {
+            if (selectedRoomId === roomId && !isHost) {
+                document.getElementById('noStreamView').style.display = 'none';
+                document.getElementById('active-stream-screen').style.display = 'flex';
+                document.getElementById('roleIndicator').innerText = `Yayıncı: ${hostName}`;
+            }
+        });
 
         socket.on('update-viewers', (viewers) => {
             const list = document.getElementById('viewerList');
             document.getElementById('viewerCount').innerText = viewers.length;
             list.innerHTML = "";
-
             viewers.forEach(v => {
                 const li = document.createElement('li');
                 li.className = 'viewer-item';
@@ -379,25 +375,14 @@
             });
         });
 
+        // WebRTC Bağlantı Adımları
         socket.on('user-connected', async (viewerId) => {
             if (!isHost) return;
-
             peerConnection = new RTCPeerConnection(rtcConfig);
-            localStream.getTracks().forEach(track => {
-                const sender = peerConnection.addTrack(track, localStream);
-                if (track.kind === 'video') {
-                    try {
-                        const parameters = sender.getParameters();
-                        if (!parameters.encodings) parameters.encodings = [{}];
-                        parameters.encodings[0].maxBitrate = 25000000;
-                        parameters.encodings[0].maxFramerate = parseInt(document.getElementById('fpsSelect').value);
-                        sender.setParameters(parameters);
-                    } catch (e) {}
-                }
-            });
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
-            peerConnection.onicecandidate = (event) => {
-                if (event.candidate) socket.emit('signal', { target: viewerId, signal: { candidate: event.candidate } });
+            peerConnection.onicecandidate = (e) => {
+                if (e.candidate) socket.emit('signal', { target: viewerId, signal: { candidate: e.candidate } });
             };
 
             const offer = await peerConnection.createOffer();
@@ -408,11 +393,11 @@
         socket.on('signal', async (data) => {
             if (!peerConnection) {
                 peerConnection = new RTCPeerConnection(rtcConfig);
-                peerConnection.onicecandidate = (event) => {
-                    if (event.candidate) socket.emit('signal', { target: data.sender, signal: { candidate: event.candidate } });
+                peerConnection.onicecandidate = (e) => {
+                    if (e.candidate) socket.emit('signal', { target: data.sender, signal: { candidate: e.candidate } });
                 };
-                peerConnection.ontrack = (event) => {
-                    document.getElementById('remoteVideo').srcObject = event.streams[0];
+                peerConnection.ontrack = (e) => {
+                    document.getElementById('remoteVideo').srcObject = e.streams[0];
                 };
             }
 
@@ -429,36 +414,33 @@
         });
 
         function leaveStream() {
-            if (currentRoomId) socket.emit('leave-room', { roomId: currentRoomId });
+            if (selectedRoomId) socket.emit('leave-room', { roomId: selectedRoomId });
             if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
             if (peerConnection) { peerConnection.close(); peerConnection = null; }
 
             document.getElementById('remoteVideo').srcObject = null;
-            currentRoomId = "";
             isHost = false;
 
-            // Sol alttaki butonu tekrar varsayılan Yayın Aç moduna getir
             const toggleBtn = document.getElementById('streamToggleBtn');
             toggleBtn.innerText = '📡';
-            toggleBtn.title = 'Yayın Aç';
             toggleBtn.classList.remove('active-stream');
 
             document.getElementById('active-stream-screen').style.display = 'none';
-            document.getElementById('tabContentList').style.display = 'block';
-            document.getElementById('channelHeaderTitle').innerHTML = '<span>#</span> aktif-odalar';
+            document.getElementById('noStreamView').style.display = 'flex';
         }
 
-        socket.on('room-closed', () => {
+        socket.on('room-stream-ended', () => {
             if (!isHost) {
-                showModal("Yayın Sona Erdi", "Yayıncı bu yayını kapattı. Ana lobiye yönlendiriliyorsun.");
+                showModal("Yayın Sona Erdi", "Odadaki canlı yayın kapatıldı.");
             }
             leaveStream();
         });
 
+        socket.on('error-msg', (msg) => showModal("Hata", msg));
+
         document.getElementById('fullscreenBtn').addEventListener('click', () => {
             const videoElem = document.getElementById('remoteVideo');
             if (videoElem.requestFullscreen) videoElem.requestFullscreen();
-            else if (videoElem.webkitRequestFullscreen) videoElem.webkitRequestFullscreen();
         });
     </script>
 </body>
