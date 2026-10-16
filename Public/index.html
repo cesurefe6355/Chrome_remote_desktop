@@ -5,13 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LumoLive - Discord Tarzı Canlı Yayın</title>
     <style>
-        /* ANA DİSCORD DÜZENİ (3 SÜTUN) */
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif; }
         body { background-color: #313338; color: #dbdee1; height: 100vh; overflow: hidden; }
         
         .app-layout { display: flex; width: 100vw; height: 100vh; overflow: hidden; }
         
-        /* 1. SÜTUN: Sunucu Çubuğu (Server Sidebar) */
+        /* 1. SÜTUN: Sunucu Çubuğu */
         .server-sidebar { width: 72px; background-color: #1e1f22; display: flex; flex-direction: column; align-items: center; padding-top: 12px; gap: 8px; border-right: 1px solid #1f2023; z-index: 10; flex-shrink: 0; }
         .server-icon { width: 48px; height: 48px; border-radius: 50%; background: #313338; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 18px; cursor: pointer; transition: 0.2s; position: relative; }
         .server-icon:hover, .server-icon.active { border-radius: 16px; background: #5865F2; color: white; }
@@ -19,7 +18,7 @@
         .server-icon.active::before { transform: scale(1); height: 40px; }
         .server-separator { width: 32px; height: 2px; background: #35363c; border-radius: 1px; margin: 4px 0; }
 
-        /* 2. SÜTUN: Kanal Listesi & Kullanıcı Paneli (Channel Sidebar) */
+        /* 2. SÜTUN: Kanal Listesi & Kullanıcı Paneli */
         .channel-sidebar { width: 240px; background-color: #2b2d31; display: flex; flex-direction: column; border-right: 1px solid #1f2023; z-index: 5; flex-shrink: 0; }
         .server-header { height: 48px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; font-weight: 700; color: #f2f3f5; border-bottom: 1px solid #1f2023; box-shadow: 0 1px 2px rgba(0,0,0,0.2); flex-shrink: 0; }
         .channels-list { flex: 1; padding: 16px 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
@@ -28,7 +27,7 @@
         .channel-item:hover { background: #35363c; color: #dbdee1; }
         .channel-item.active { background: #404249; color: #f2f3f5; }
 
-        /* Sol Alt Kullanıcı Profili (User Profile Footer) */
+        /* Sol Alt Kullanıcı Profili */
         .user-profile { background: #232428; padding: 10px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #1f2023; flex-shrink: 0; }
         .user-info-box { display: flex; align-items: center; gap: 8px; overflow: hidden; }
         .user-avatar { width: 32px; height: 32px; background: #5865F2; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px; flex-shrink: 0; overflow: hidden; }
@@ -37,7 +36,7 @@
         .logout-icon-btn { background: transparent; border: none; color: #949ba4; cursor: pointer; padding: 6px; border-radius: 4px; transition: 0.15s; font-size: 14px; }
         .logout-icon-btn:hover { background: #35363c; color: #ed4245; }
 
-        /* 3. SÜTUN: Ana İçerik Alanı (Content Area) */
+        /* 3. SÜTUN: Ana İçerik Alanı */
         .main-content { flex: 1; background-color: #313338; display: flex; flex-direction: column; overflow: hidden; }
         .main-header-bar { height: 48px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1f2023; box-shadow: 0 1px 2px rgba(0,0,0,0.2); flex-shrink: 0; }
         .channel-title { font-weight: 700; color: #f2f3f5; font-size: 15px; display: flex; align-items: center; gap: 8px; }
@@ -81,9 +80,26 @@
         .viewer-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
         .viewer-item { padding: 8px 10px; background: #1e1f22; border-radius: 4px; font-size: 13px; display: flex; align-items: center; gap: 8px; color: #f2f3f5; }
         .status-dot { width: 8px; height: 8px; background: #23a55a; border-radius: 50%; }
+
+        /* Discord Tarzı Özel Bildirim Modalı */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.7); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-box { background: #313338; border: 1px solid #1f2023; border-radius: 12px; padding: 24px; width: 100%; max-width: 420px; box-shadow: 0 12px 32px rgba(0,0,0,0.6); text-align: center; }
+        .modal-box h3 { color: #f2f3f5; font-size: 20px; margin-bottom: 8px; }
+        .modal-box p { color: #949ba4; font-size: 14px; margin-bottom: 24px; line-height: 1.4; }
+        .modal-box button { width: 100%; background: #5865F2; }
+        .modal-box button:hover { background: #4752c4; }
     </style>
 </head>
 <body>
+
+    <!-- Özel Bildirim Modalı -->
+    <div id="customModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 id="modalTitle">Bilgilendirme</h3>
+            <p id="modalDesc">Mesaj içeriği buraya gelecek...</p>
+            <button onclick="closeModal()">Tamam</button>
+        </div>
+    </div>
 
     <div class="app-layout">
         <!-- 1. SÜTUN: SUNUCU ÇUBUĞU -->
@@ -207,6 +223,17 @@
             window.location.href = '/login.html';
         }
 
+        // Özel Modal Gösterme Fonksiyonu
+        function showModal(title, desc) {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalDesc').innerText = desc;
+            document.getElementById('customModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('customModal').style.display = 'none';
+        }
+
         const socket = io();
         let currentRoomId = "";
         let localStream = null;
@@ -220,7 +247,6 @@
             ]
         };
 
-        // Sekme Değiştirme (Discord Kanalları Arası Geçiş)
         function switchMainTab(tab) {
             document.getElementById('tabContentList').style.display = 'none';
             document.getElementById('tabContentHost').style.display = 'none';
@@ -239,7 +265,6 @@
             }
         }
 
-        // Oda Listesi Güncelleme
         socket.on('room-list', (rooms) => {
             const grid = document.getElementById('roomGrid');
             grid.innerHTML = "";
@@ -264,15 +289,14 @@
             });
         });
 
-        socket.on('error-msg', (msg) => alert(msg));
+        socket.on('error-msg', (msg) => showModal("Hata", msg));
 
-        // Yayın Başlatma
         document.getElementById('startHostBtn').addEventListener('click', async () => {
             const roomName = document.getElementById('roomNameInput').value.trim();
             const resolution = document.getElementById('resolutionSelect').value;
             const fps = parseInt(document.getElementById('fpsSelect').value);
             
-            if (!roomName) return alert("Lütfen oda adı gir!");
+            if (!roomName) return showModal("Uyarı", "Lütfen bir oda adı gir!");
 
             let videoConstraints = { cursor: "always", frameRate: { ideal: fps, max: fps } };
 
@@ -294,7 +318,6 @@
                 isHost = true;
                 currentRoomId = roomName;
 
-                // Arayüzü Yayın Moduna Çevir
                 document.getElementById('tabContentList').style.display = 'none';
                 document.getElementById('tabContentHost').style.display = 'none';
                 document.getElementById('active-stream-screen').style.display = 'flex';
@@ -308,11 +331,10 @@
 
             } catch (err) {
                 console.error(err);
-                alert("Ekran paylaşımı izni verilmedi.");
+                showModal("İzin Hatası", "Ekran paylaşımı izni verilmedi.");
             }
         });
 
-        // Yayına Katılma
         function joinStream(roomId) {
             isHost = false;
             currentRoomId = roomId;
@@ -403,8 +425,11 @@
             switchMainTab('list');
         }
 
+        // SADECE İZLEYİCİLERE ÖZEL DİSCORD TARZI YAYIN KAPANDI BİLDİRİMİ
         socket.on('room-closed', () => {
-            alert("Yayın sona erdi! Yayıncı yayını kapattı.");
+            if (!isHost) {
+                showModal("Yayın Sona Erdi", "Yayıncı bu yayını kapattı. Ana lobiye yönlendiriliyorsun.");
+            }
             leaveStream();
         });
 
