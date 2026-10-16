@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Web Uzaktan Masaüstü</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #121212; color: #fff; text-align: center; margin: 0; padding: 20px; }
+        .setup { margin: 20px 0; background: #1e1e1e; padding: 15px; display: inline-block; border-radius: 8px; }
+        input, button { padding: 10px; font-size: 15px; margin: 5px; }
+        button { background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        #video-container { position: relative; display: inline-block; margin-top: 10px; }
+        #remoteVideo { width: 100%; max-width: 1000px; border: 2px solid #444; background: #000; display: block; }
+    </style>
+</head>
+<body>
+
+    <h1>Web Tabanlı Uzaktan Masaüstü</h1>
+
+    <div class="setup" id="setupDiv">
+        <input type="text" id="roomInput" placeholder="Oda Adı Girin (Örn: oda123)">
+        <br>
+        <button id="shareBtn">Ekranımı Paylaş (Host)</button>
+        <button id="connectBtn">Ekranı İzle & Kontrol Et (Viewer)</button>
+    </div>
+
+    <div id="video-container">
+        <!-- Karşı tarafın ekranı buraya gelecek -->
+        <video id="remoteVideo" autoplay playsinline></video>
+    </div>
+
+    <!-- Socket.io kütüphanesini ekliyoruz -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        const roomInput = document.getElementById('roomInput');
+        const shareBtn = document.getElementById('shareBtn');
+        const connectBtn = document.getElementById('connectBtn');
+        const remoteVideo = document.getElementById('remoteVideo');
+
+        let localStream;
+        let peerConnection;
+        let roomId;
+        let isHost = false;
+
+        // Ücretsiz STUN sunucuları (WebRTC bağlantısı için gerekli)
+        const rtcConfig = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
+
+        // 1. HOST: Ekranını Paylaşmak İsteyen Taraf
+        shareBtn.addEventListener('click', async () => {
+            roomId = roomInput.value.trim();
+            if (!roomId) return alert("Lütfen bir oda adı girin!");
+            isHost = true;
+
+            try {
+                localStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: { cursor: "always" },
+                    audio: false
+                });
+
+                // Kendi paylaştığımız ekranı kendi video elementimizde görebiliriz (isteğe bağlı)
+                remoteVideo.srcObject = localStream;
+
+                socket.emit('join-room', roomId);
+                setupHostPeerConnection();
+                alert("Ekran paylaşımı başlatıldı. İzleyicinin bağlanması bekleniyor...");
+            } catch (err) {
+                console.error("Ekran paylaşımı hatası:", err);
+            }
+        });
+
+        // 2. VIEWER: Ekranı İzlemek ve Kontrol Etmek İsteyen Taraf
+        connectBtn.addEventListener('click', () => {
+            roomId = roomInput.value.trim();
+            if (!roomId) return alert("Lütfen bir oda adı girin!");
+            isHost = false;
+
+            socket.emit('join-room', roomId);
+            setupViewerPeerConnection();
+            alert("Odaya bağlanıldı, yayın bekleniyor...");
+        });
+
+        // --- WebRTC Mantığı (Host Tarafı) ---
+        function setupHostPeerConnection() {
+            socket.on('user-connected', async (viewerId) => {
+                peerConnection = new RTCPeerConnection(rtcConfig);
+
+                // Yerel ekran akışını WebRTC üzerinden gönder
+                localStream.getTracks().forEach(track => {
+                    peerConnection.addTrack(track, localStream);
+                });
+
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        socket.emit('signal', { target: viewerId, signal: { candidate: event.candidate } });
+                    }
+                };
+
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                socket.emit('signal', { target: viewerId, signal: { sdp: peerConnection.localDescription } });
+            });
+
+            socket.on('signal', async (data) => {
+                if (data.signal.sdp) {
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal.sdp));
+                } else if (data.signal.candidate) {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(data.signal.candidate));
+                }
+            });
+
+            // Host tarafında: İzleyiciden gelen fare tıklama komutlarını yakala
+            socket.on('remote-control', (data) => {
+                if (data.type === 'click') {
+                    console.log(`Tıklama alındı -> X: ${data.x}, Y: ${data.y}`);
+                    // Not: Tarayıcı güvenliği nedeniyle host tarayıcısı kendi içindeki 
+                    // web elementlerine tıklatabilir, ancak masaüstünün tamamına tıklatamaz.
+                    // Tam masaüstü için tarayıcı sekmesi içinde simülasyon yapılabilir.
+                }
+            });
+        }
+
+        // --- WebRTC Mantığı (Viewer Tarafı) ---
+        function setupViewerPeerConnection() {
+            socket.on('signal', async (data) => {
+                if (!peerConnection) {
+                    peerConnection = new RTCPeerConnection(rtcConfig);
+
+                    peerConnection.onicecandidate = (event) => {
+                        if (event.candidate) {
+                            socket.emit('signal', { target: data.sender, signal: { candidate: event.candidate } });
+                        }
+                    };
+
+                    peerConnection.ontrack = (event) => {
+                        remoteVideo.srcObject = event.streams[0];
+                    };
+                }
+
+                if (data.signal.sdp) {
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal.sdp));
+                    if (data.signal.sdp.type === 'offer') {
+                        const answer = await peerConnection.createAnswer();
+                        await peerConnection.setLocalDescription(answer);
+                        socket.emit('signal', { target: data.sender, signal: { sdp: peerConnection.localDescription } });
+                    }
+                } else if (data.signal.candidate) {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(data.signal.candidate));
+                }
+            });
+
+            // İzleyicinin videoya tıklama koordinatlarını hesaplayıp sunucuya göndermesi
+            remoteVideo.addEventListener('click', (e) => {
+                const rect = remoteVideo.getBoundingClientRect();
+                // Video üzerindeki göreceli oranlar (0 ile 1 arasında)
+                const x = (e.clientX - rect.left) / remoteVideo.clientWidth;
+                const y = (e.clientY - rect.top) / remoteVideo.clientHeight;
+
+                socket.emit('remote-control', {
+                    roomId: roomId,
+                    type: 'click',
+                    x: x,
+                    y: y
+                });
+            });
+        }
+    </script>
+</body>
+</html>
