@@ -10,7 +10,6 @@
         
         .container { width: 100%; max-width: 1150px; background: #2b2d31; border-radius: 12px; padding: 28px; box-shadow: 0 12px 32px rgba(0,0,0,0.5); border: 1px solid #1f2023; }
         
-        /* Form Elemanları */
         .input-group { margin-top: 15px; display: flex; flex-direction: column; gap: 8px; width: 100%; }
         input[type="text"], select { padding: 12px 16px; border-radius: 8px; border: 1px solid transparent; background: #1e1f22; color: #dbdee1; font-size: 15px; outline: none; width: 100%; transition: 0.2s; }
         input[type="text"]:focus, select:focus { border-color: #5865F2; }
@@ -21,17 +20,15 @@
         .btn-danger { background: #ed4245 !important; }
         .btn-danger:hover { background: #c03537 !important; }
 
-        /* Giriş Ekranı */
-        #login-screen { text-align: center; padding: 50px 20px; }
-        #login-screen h1 { color: #f2f3f5; font-size: 28px; margin-bottom: 6px; }
-        #login-screen p { color: #949ba4; margin-bottom: 24px; }
-        #login-screen .input-group { max-width: 400px; margin: 0 auto; }
+        .btn-logout { background: #4e5058; font-size: 13px; padding: 6px 12px; }
+        .btn-logout:hover { background: #6d6f78; }
 
         /* Lobi Paneli */
-        #lobby-panel { display: none; }
         .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #3f4147; padding-bottom: 15px; margin-bottom: 20px; }
         .header h2 { color: #f2f3f5; display: flex; align-items: center; gap: 10px; }
         
+        .user-panel-info { display: flex; align-items: center; gap: 12px; }
+
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
         .tab-btn { background: #35363c; color: #949ba4; width: auto; font-weight: 500; }
         .tab-btn.active { background: #5865F2; color: white; }
@@ -39,7 +36,6 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* Yayın Kartları (Grid) */
         .room-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
         .room-card { background: #1e1f22; border: 1px solid #3f4147; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; transition: 0.2s; }
         .room-card:hover { border-color: #5865F2; transform: translateY(-2px); }
@@ -47,7 +43,6 @@
         .room-card p { font-size: 14px; color: #949ba4; margin-bottom: 15px; }
         .room-card button { width: 100%; }
 
-        /* Yayın Ayarları Formu */
         .host-form-box { max-width: 500px; background: #1e1f22; padding: 24px; border-radius: 10px; border: 1px solid #3f4147; }
 
         /* Aktif Yayın Ekranı */
@@ -61,7 +56,6 @@
         .stream-controls button { width: auto; background: #4e5058; }
         .stream-controls button:hover { background: #6d6f78; }
 
-        /* İzleyiciler Paneli */
         .viewers-panel { background: #1e1f22; border-radius: 10px; padding: 18px; border: 1px solid #3f4147; height: 100%; max-height: 70vh; overflow-y: auto; }
         .viewers-panel h4 { border-bottom: 1px solid #3f4147; padding-bottom: 10px; margin-bottom: 12px; color: #f2f3f5; font-size: 15px; }
         .viewer-list { list-style: none; }
@@ -76,21 +70,14 @@
 <body>
 
     <div class="container">
-        <!-- 1. GİRİŞ EKRANI -->
-        <div id="login-screen">
-            <h1>Lumo<span class="brand-badge">Live</span></h1>
-            <p>Discord tarzı yüksek kaliteli canlı yayın ve ekran paylaşım platformu</p>
-            <div class="input-group">
-                <input type="text" id="usernameInput" placeholder="Kullanıcı Adını Gir...">
-                <button id="loginBtn" style="margin-top: 10px;">Bağlan</button>
-            </div>
-        </div>
-
-        <!-- 2. LOBİ PANELİ -->
+        <!-- LOBİ PANELİ -->
         <div id="lobby-panel">
             <div class="header">
                 <h2>🟢 Lumo<span class="brand-badge">Live</span> Odaları</h2>
-                <span id="userBadge" style="background: #1e1f22; color: #23a55a; padding: 6px 14px; border-radius: 20px; font-size: 14px; font-weight: 600; border: 1px solid #3f4147;"></span>
+                <div class="user-panel-info">
+                    <span id="userBadge" style="background: #1e1f22; color: #23a55a; padding: 6px 14px; border-radius: 20px; font-size: 14px; font-weight: 600; border: 1px solid #3f4147;"></span>
+                    <button class="btn-logout" onclick="handleLogout()">Çıkış Yap</button>
+                </div>
             </div>
 
             <div class="tabs">
@@ -131,7 +118,7 @@
             </div>
         </div>
 
-        <!-- 3. AKTİF YAYIN EKRANI -->
+        <!-- AKTİF YAYIN EKRANI -->
         <div id="active-stream-screen">
             <div class="header">
                 <h3 id="activeRoomTitle" style="color: #f2f3f5;">Oda: -</h3>
@@ -159,9 +146,22 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
+        // --- OTURUM KONTROLÜ ---
+        const currentUser = localStorage.getItem('lumolive_user');
+        if (!currentUser) {
+            // Eğer giriş yapılmamışsa doğrudan login sayfasına yönlendir
+            window.location.href = '/login.html';
+        } else {
+            document.getElementById('userBadge').innerText = `● ${currentUser}`;
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('lumolive_user');
+            window.location.href = '/login.html';
+        }
+
         const socket = io();
 
-        let currentUser = "";
         let currentRoomId = "";
         let localStream = null;
         let peerConnection = null;
@@ -173,16 +173,6 @@
                 { urls: 'stun:stun1.l.google.com:19302' }
             ]
         };
-
-        document.getElementById('loginBtn').addEventListener('click', () => {
-            const username = document.getElementById('usernameInput').value.trim();
-            if (!username) return alert("Lütfen bir kullanıcı adı gir!");
-            
-            currentUser = username;
-            document.getElementById('userBadge').innerText = `● ${currentUser}`;
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('lobby-panel').style.display = 'block';
-        });
 
         function switchTab(tabId, event) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
