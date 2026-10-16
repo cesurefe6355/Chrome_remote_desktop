@@ -387,12 +387,10 @@ function voicePC(id) {
   if (micStream) micStream.getTracks().forEach(t => pc.addTrack(t, micStream)); else pc.addTransceiver('audio', { direction: 'recvonly' });
   return pc;
 }
-socket.on('user-joined-voice', async ({ socketId, username }) => {
+socket.on('user-joined-voice', ({ socketId, username }) => {
   play('join'); toast(`${username} ses kanalına katıldı`, 'join');
   if (voice[socketId]) voice[socketId].close();
-  const pc = voice[socketId] = voicePC(socketId);
-  await pc.setLocalDescription(await pc.createOffer());
-  socket.emit('signal', { target: socketId, signal: { sdp: pc.localDescription }, type: 'voice' });
+  voice[socketId] = voicePC(socketId);
 });
 socket.on('user-left-voice', id => {
   if (names[id]) { play('leave'); toast(`${names[id]} ses kanalından ayrıldı`, 'leave'); }
