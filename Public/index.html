@@ -380,4 +380,141 @@
             pc.ontrack = (e) => {
                 let audioElem = document.getElementById(`audio-${targetSocketId}`);
                 if (!audioElem) {
-                    audio
+                    audioElem = document.createElement('audio');
+                    audioElem.id = `audio-${targetSocketId}`;
+                    audioElem.autoplay = true;
+                    audioElem.muted = isDeafened;
+                    document.getElementById('audioContainer').appendChild(audioElem);
+                }
+                audioElem.srcObject = e.streams[0];
+            };
+
+            return pc;
+        }
+
+        // --- EKRAN PAYLAŞIMI YAYINI ---
+        document.getElementById('startHostBtn').addEventListener('click', async () => {
+            if (!selectedRoomId) return;
+
+            const resolution = document.getElementById('resolutionSelect').value;
+            const fps = parseInt(document.getElementById('fpsSelect').value);
+
+            let videoConstraints = { cursor: "always", frameRate: { ideal: fps, max: fps } };
+            if (resolution === '720') { videoConstraints.width = { ideal: 1280 }; videoConstraints.height = { ideal: 720 }; }
+            else if (resolution === '1080') { videoConstraints.width = { ideal: 1920 }; videoConstraints.height = { ideal: 1080 }; }
+            else if (resolution === '1440') { videoConstraints.width = { ideal: 2560 }; videoConstraints.height = { ideal: 1440 }; }
+            else if (resolution === '4k') { videoConstraints.width = { ideal: 3840 }; videoConstraints.height = { ideal: 2160 }; }
+
+            try {
+                localVideoStream = await navigator.mediaDevices.getDisplayMedia({ video: videoConstraints, audio: false });
+                isHost = true;
+
+                closeModal('streamSetupModal');
+
+                document.getElementById('noStreamView').style.display = 'none';
+                document.getElementById('active-stream-screen').style.display = 'flex';
+                document.getElementById('roleIndicator').innerText = `Yayıncı Sizsiniz (${fps} FPS)`;
+                document.getElementById('stopStreamBtn').style.display = 'inline-block';
+                document.getElementById('remoteVideo').srcObject = localVideoStream;
+
+                localVideoStream.getVideoTracks()[0].onended = () => stopStream();
+                socket.emit('start-stream-in-room', { roomId: selectedRoomId, username: currentUser });
+
+            } catch (err) {
+                showModal("İzin Hatası", "Ekran paylaşımı başlatılamadı.");
+            }
+        });
+
+        function stopStream() {
+            if (localVideoStream) {
+                localVideoStream.getTracks().forEach(t => t.stop());
+                localVideoStream = null;
+            }
+            if (streamPeerConnection) {
+                streamPeerConnection.close();
+                streamPeerConnection = null;
+            }
+            isHost = false;
+            document.getElementById('stopStreamBtn').style.display = 'none';
+            document.getElementById('remoteVideo').srcObject = null;
+            document.getElementById('active-stream-screen').style.display = 'none';
+            document.getElementById('noStreamView').style.display = 'flex';
+
+            if (selectedRoomId) socket.emit('leave-room', { roomId: selectedRoomId });
+        }
+
+        socket.on('stream-started', ({ roomId, hostName, hostSocketId }) => {
+            if (selectedRoomId === roomId && !isHost) {
+                document.getElementById('noStreamView').style.display = 'none';
+                document.getElementById('active-stream-screen').style.display = 'flex';
+                document.getElementById('roleIndicator').innerText = `Yayıncı: ${hostName}`;
+            }
+        });
+
+        // Genel Sinyalleşme Alıcısı
+        socket.on('signal', async (data) => {
+            if (data.type === 'voice') {
+                let pc = voicePeerConnections[data.sender];
+                if (!pc) {
+                    pc = createVoicePeerConnection(data.sender);
+                    voicePeerConnections[data.sender] = pc;
+                    if (localAudioStream) localAudioStream.getTracks().forEach(t => pc.addTrack(t, localAudioStream));
+                }
+
+                if (data.signal.sdp) {
+                    await pc.setRemoteDescription(new RTCSessionDescription(data.signal.sdp));
+                    if (data.signal.sdp.type === 'offer') {
+                        const answer = await pc.createAnswer();
+                        await pc.setLocalDescription(answer);
+                        socket.emit('signal', { target: data.sender, signal: { sdp: pc.localDescription }, type: 'voice' });
+                    }
+                } else if (data.signal.candidate) {
+                    await pc.addIceCandidate(new RTCIceCandidate(data.signal.candidate));
+                }
+            } else if (data.type === 'stream') {
+                if (!streamPeerConnection) {
+                    streamPeerConnection = new RTCPeerConnection(rtcConfig);
+                    streamPeerConnection.onicecandidate = (e) => {
+                        if (e.candidate) socket.emit('signal', { target: data.sender, signal: { candidate: e.candidate }, type: 'stream' });
+                    };
+                    streamPeerConnection.ontrack = (e) => {
+                        document.getElementById('remoteVideo').srcObject = e.streams[0];
+                    };
+                }
+
+                if (data.signal.sdp) {
+                    await streamPeerConnection.setRemoteDescription(new RTCSessionDescription(data.signal.sdp));
+                    if (data.signal.sdp.type === 'offer') {
+                        const answer = await streamPeerConnection.createAnswer();
+                        await streamPeerConnection.setLocalDescription(answer);
+                        socket.emit('signal', { target: data.sender, signal: { sdp: streamPeerConnection.localDescription }, type: 'stream' });
+                    }
+                } else if (data.signal.candidate) {
+                    await streamPeerConnection.addIceCandidate(new RTCIceCandidate(data.signal.candidate));
+                }
+            }
+        });
+
+        socket.on('room-stream-ended', () => {
+            if (!isHost) showModal("Yayın Sona Erdi", "Yayını açan kullanıcı yayını kapattı.");
+            document.getElementById('active-stream-screen').style.display = 'none';
+            document.getElementById('noStreamView').style.display = 'flex';
+        });
+
+        socket.on('error-msg', (msg) => showModal("Hata", msg));
+
+        function toggleFullscreen() {
+            const videoElem = document.getElementById('remoteVideo');
+            if (videoElem.requestFullscreen) videoElem.requestFullscreen();
+        }
+
+        document.getElementById('btnCreateChannelConfirm').addEventListener('click', () => {
+            const roomName = document.getElementById('newChannelNameInput').value;
+            if (!roomName) return showModal("Hata", "Oda adı boş olamaz!");
+            socket.emit('create-channel', { roomName, username: currentUser });
+            closeModal('createChannelModal');
+            document.getElementById('newChannelNameInput').value = "";
+        });
+    </script>
+</body>
+</html>
