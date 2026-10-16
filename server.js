@@ -1,35 +1,47 @@
 const express = require('express');
-const { WebSocketServer } = require('ws');
 const http = require('http');
+const { Server } = require('socket.io');
 const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocketServer({ server });
+const io = new Server(server);
 
-// Statik dosyaları sunmak için public klasörü veya ana dizin kullanılır
-app.use(express.static(path.join(__dirname)));
+// 'public' klasörünü statik dosya sunucusu yapıyoruz
+app.use(express.static(path.join(__dirname, 'public')));
 
-// WebSocket bağlantı yönetimi
-wss.on('connection', (ws) => {
-    console.log('Yeni bir istemci bağlandı.');
+io.on('connection', (socket) => {
+    console.log('Bir kullanıcı bağlandı:', socket.id);
 
-    ws.on('message', (message) => {
-        // İstemciden gelen verileri (klavye/fare hareketleri vb.) burada işleyebilirsiniz
-        // Örneğin diğer bağlı hedeflere iletebilirsiniz.
-        wss.clients.forEach((client) => {
-            if (client !== ws && client.readyState === WebSocket.OPEN) {
-                client.send(message);
-            }
+    // Bir odaya katılma (Host ve Viewer eşleşmesi için)
+    socket.on('join-room', (roomId) => {
+        socket.join(roomId);
+        console.log(`Kullanıcı ${socket.id}, ${roomId} odasına katıldı.`);
+        
+        // Odadaki diğer kullanıcılara haber ver
+        socket.to(roomId).emit('user-connected', socket.id);
+    });
+
+    // WebRTC Sinyalleşme mesajları (offer, answer, candidate)
+    socket.on('signal', (data) => {
+        io.to(data.target).emit('signal', {
+            sender: socket.id,
+            signal: data.signal
         });
     });
 
-    ws.on('close', () => {
-        console.log('İstemci bağlantısı kesildi.');
+    // İzleyiciden gelen fare/klavye komutlarını hedef bilgisayara (Host) ilet
+    socket.on('remote-control', (data) => {
+        // data: { roomId, type, x, y, key, etc. }
+        socket.to(data.roomId).emit('remote-control', data);
+    });
+
+    socket.on('disconnect', () => {
+        console.log('Kullanıcı ayrıldı:', socket.id);
     });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 server.listen(PORT, () => {
-    console.log(`Sunucu ${PORT} portunda çalışıyor.`);
+    console.log(`Sunucu çalışıyor: http://localhost:${PORT}`);
 });
