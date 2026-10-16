@@ -3,53 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StreamHub - Uzaktan Masaüstü & Yayın</title>
+    <title>StreamHub - Discord Tarzı Yayın</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: #0f172a; color: #f8fafc; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        body { background-color: #313338; color: #dbdee1; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
         
-        .container { width: 100%; max-width: 1100px; background: #1e293b; border-radius: 12px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .container { width: 100%; max-width: 1100px; background: #2b2d31; border-radius: 12px; padding: 24px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); border: 1px solid #1f2023; }
         
-        .input-group { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; align-items: center; }
-        input[type="text"], select { padding: 12px 16px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #fff; font-size: 16px; outline: none; width: 100%; max-width: 350px; }
-        button { padding: 12px 20px; border-radius: 6px; border: none; background: #3b82f6; color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s; width: 100%; max-width: 350px; }
-        button:hover { background: #2563eb; }
-        .btn-danger { background: #ef4444 !important; width: auto !important; }
-        .btn-danger:hover { background: #dc2626 !important; }
+        .input-group { margin-top: 20px; display: flex; flex-direction: column; gap: 12px; align-items: center; width: 100%; }
+        input[type="text"], select { padding: 12px 16px; border-radius: 8px; border: 1px solid transparent; background: #1e1f22; color: #dbdee1; font-size: 15px; outline: none; width: 100%; max-width: 400px; transition: 0.2s; }
+        input[type="text"]:focus, select:focus { border-color: #5865F2; }
+        
+        button { padding: 12px 20px; border-radius: 8px; border: none; background: #5865F2; color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s; width: 100%; max-width: 400px; }
+        button:hover { background: #4752c4; }
+        
+        .btn-danger { background: #ed4245 !important; width: auto !important; }
+        .btn-danger:hover { background: #c03537 !important; }
 
         #login-screen { text-align: center; padding: 40px 20px; }
+        #login-screen h1 { color: #f2f3f5; margin-bottom: 8px; }
 
         #lobby-panel { display: none; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 15px; margin-bottom: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #3f4147; padding-bottom: 15px; margin-bottom: 20px; }
+        .header h2 { color: #f2f3f5; }
         
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-        .tab-btn { background: #334155; color: #94a3b8; width: auto; }
-        .tab-btn.active { background: #3b82f6; color: white; }
+        .tab-btn { background: #35363c; color: #949ba4; width: auto; font-weight: 500; }
+        .tab-btn.active { background: #5865F2; color: white; }
 
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
         .room-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 15px; }
-        .room-card { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; }
-        .room-card h3 { font-size: 18px; margin-bottom: 6px; color: #38bdf8; }
-        .room-card p { font-size: 14px; color: #94a3b8; margin-bottom: 15px; }
+        .room-card { background: #1e1f22; border: 1px solid #3f4147; border-radius: 8px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; transition: 0.2s; }
+        .room-card:hover { border-color: #5865F2; }
+        .room-card h3 { font-size: 18px; margin-bottom: 6px; color: #f2f3f5; }
+        .room-card p { font-size: 14px; color: #949ba4; margin-bottom: 15px; }
         .room-card button { width: 100%; max-width: none; }
 
         #active-stream-screen { display: none; }
         .stream-layout { display: grid; grid-template-columns: 3fr 1fr; gap: 15px; }
-        .video-wrapper { position: relative; background: #000; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .video-wrapper { position: relative; background: #000; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px solid #3f4147; }
         
-        /* Görüntünün sıkıştırılıp bulanıklaşmasını önleyen netleştirme filtresi */
         video { width: 100%; max-height: 70vh; display: block; pointer-events: none; object-fit: contain; image-rendering: high-quality; }
         
         .stream-controls { margin-top: 15px; display: flex; gap: 10px; justify-content: space-between; align-items: center; }
-        .stream-controls button { width: auto; }
+        .stream-controls button { width: auto; background: #4e5058; }
+        .stream-controls button:hover { background: #6d6f78; }
 
-        .viewers-panel { background: #0f172a; border-radius: 8px; padding: 15px; border: 1px solid #334155; height: 100%; max-height: 70vh; overflow-y: auto; }
-        .viewers-panel h4 { border-bottom: 1px solid #334155; padding-bottom: 8px; margin-bottom: 10px; color: #38bdf8; }
+        .viewers-panel { background: #1e1f22; border-radius: 8px; padding: 15px; border: 1px solid #3f4147; height: 100%; max-height: 70vh; overflow-y: auto; }
+        .viewers-panel h4 { border-bottom: 1px solid #3f4147; padding-bottom: 8px; margin-bottom: 10px; color: #f2f3f5; }
         .viewer-list { list-style: none; }
-        .viewer-item { padding: 6px 10px; background: #1e293b; margin-bottom: 5px; border-radius: 4px; font-size: 14px; display: flex; align-items: center; gap: 8px; }
-        .status-dot { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; }
+        .viewer-item { padding: 8px 10px; background: #2b2d31; margin-bottom: 6px; border-radius: 6px; font-size: 14px; display: flex; align-items: center; gap: 10px; color: #f2f3f5; }
+        .status-dot { width: 8px; height: 8px; background: #23a55a; border-radius: 50%; }
+
+        label { font-size: 13px; font-weight: 600; color: #b5bac1; align-self: flex-start; max-width: 400px; width: 100%; margin-bottom: -6px; }
     </style>
 </head>
 <body>
@@ -57,10 +65,10 @@
     <div class="container">
         <!-- 1. GİRİŞ EKRANI -->
         <div id="login-screen">
-            <h1>StreamHub Giriş</h1>
-            <p style="color: #94a3b8; margin-top: 8px;">Devam etmek için bir kullanıcı adı girin</p>
+            <h1>StreamHub'a Hoş Geldin</h1>
+            <p style="color: #949ba4; margin-top: 4px; margin-bottom: 24px;">Devam etmek için bir kullanıcı adı gir</p>
             <div class="input-group">
-                <input type="text" id="usernameInput" placeholder="Kullanıcı Adınız...">
+                <input type="text" id="usernameInput" placeholder="Kullanıcı Adın...">
                 <button id="loginBtn">Giriş Yap</button>
             </div>
         </div>
@@ -68,8 +76,8 @@
         <!-- 2. LOBİ PANELİ -->
         <div id="lobby-panel">
             <div class="header">
-                <h2>StreamHub - Lobi</h2>
-                <span id="userBadge" style="background: #334155; padding: 6px 12px; border-radius: 20px; font-size: 14px;"></span>
+                <h2>Sunucu Odaları</h2>
+                <span id="userBadge" style="background: #1e1f22; color: #23a55a; padding: 6px 14px; border-radius: 20px; font-size: 14px; font-weight: 600; border: 1px solid #3f4147;"></span>
             </div>
 
             <div class="tabs">
@@ -83,16 +91,28 @@
 
             <div id="host-tab" class="tab-content">
                 <div class="input-group">
-                    <input type="text" id="roomNameInput" placeholder="Oda Adı Belirleyin...">
+                    <label>Yayın / Oda Adı</label>
+                    <input type="text" id="roomNameInput" placeholder="Örn: Oyun Gecesi">
                     
-                    <select id="qualitySelect">
-                        <option value="720">720p HD (60 FPS)</option>
-                        <option value="1080">1080p FHD (60 FPS - Önerilen)</option>
-                        <option value="4k">4K Ultra HD (3840x2160 - 60 FPS)</option>
-                        <option value="max" selected>Maksimum / Orijinal Ekran Çözünürlüğü</option>
+                    <label>Video Çözünürlüğü (Kalite)</label>
+                    <select id="resolutionSelect">
+                        <option value="720">720p HD</option>
+                        <option value="1080">1080p FHD (Önerilen)</option>
+                        <option value="1440">1440p 2K QHD</option>
+                        <option value="4k">4K Ultra HD</option>
+                        <option value="max" selected>Maksimum / Orijinal</option>
                     </select>
 
-                    <button id="startHostBtn">Yayını Başlat</button>
+                    <label>Yenileme Hızı (FPS)</label>
+                    <select id="fpsSelect">
+                        <option value="30">30 FPS (Standart)</option>
+                        <option value="60" selected>60 FPS (Akıcı)</option>
+                        <option value="90">90 FPS (Yüksek)</option>
+                        <option value="120">120 FPS (Çok Akıcı)</option>
+                        <option value="144">144 FPS (Esports)</option>
+                    </select>
+
+                    <button id="startHostBtn" style="margin-top: 10px;">Yayını Başlat</button>
                 </div>
             </div>
         </div>
@@ -100,8 +120,8 @@
         <!-- 3. AKTİF YAYIN EKRANI -->
         <div id="active-stream-screen">
             <div class="header">
-                <h3 id="activeRoomTitle" style="color: #38bdf8;">Oda: -</h3>
-                <button class="btn-danger" id="leaveStreamBtn">Yayından Ayrıl / Kapat</button>
+                <h3 id="activeRoomTitle" style="color: #f2f3f5;">Oda: -</h3>
+                <button class="btn-danger" id="leaveStreamBtn">Yayından Ayrıl</button>
             </div>
 
             <div class="stream-layout">
@@ -110,13 +130,13 @@
                         <video id="remoteVideo" autoplay playsinline></video>
                     </div>
                     <div class="stream-controls">
-                        <button id="fullscreenBtn">Tam Ekran Yap ⛶</button>
-                        <span id="roleIndicator" style="color: #94a3b8; font-size: 14px;"></span>
+                        <button id="fullscreenBtn">Tam Ekran ⛶</button>
+                        <span id="roleIndicator" style="color: #949ba4; font-size: 14px; font-weight: 500;"></span>
                     </div>
                 </div>
 
                 <div class="viewers-panel">
-                    <h4>Odadakiler (<span id="viewerCount">0</span>)</h4>
+                    <h4>İzleyiciler (<span id="viewerCount">0</span>)</h4>
                     <ul class="viewer-list" id="viewerList"></ul>
                 </div>
             </div>
@@ -142,10 +162,10 @@
 
         document.getElementById('loginBtn').addEventListener('click', () => {
             const username = document.getElementById('usernameInput').value.trim();
-            if (!username) return alert("Lütfen kullanıcı adı girin!");
+            if (!username) return alert("Lütfen kullanıcı adı gir!");
             
             currentUser = username;
-            document.getElementById('userBadge').innerText = `👤 ${currentUser}`;
+            document.getElementById('userBadge').innerText = `● ${currentUser}`;
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('lobby-panel').style.display = 'block';
         });
@@ -163,7 +183,7 @@
             grid.innerHTML = "";
 
             if (rooms.length === 0) {
-                grid.innerHTML = `<p style="color:#94a3b8;">Aktif yayın bulunmuyor.</p>`;
+                grid.innerHTML = `<p style="color:#949ba4;">Şu anda aktif bir yayın bulunmuyor.</p>`;
                 return;
             }
 
@@ -186,27 +206,32 @@
             alert(msg);
         });
 
-        // Maksimum Kalite ve Bitrate Ayarları ile Yayın Başlatma
+        // Ayrı Kalite ve FPS Ayarları ile Yayın Başlatma
         document.getElementById('startHostBtn').addEventListener('click', async () => {
             const roomName = document.getElementById('roomNameInput').value.trim();
-            const quality = document.getElementById('qualitySelect').value;
-            if (!roomName) return alert("Lütfen oda adı girin!");
+            const resolution = document.getElementById('resolutionSelect').value;
+            const fps = parseInt(document.getElementById('fpsSelect').value);
+            
+            if (!roomName) return alert("Lütfen oda adı gir!");
 
             let videoConstraints = { 
                 cursor: "always",
-                frameRate: { ideal: 60, max: 60 } // Akıcılık için 60 FPS
+                frameRate: { ideal: fps, max: fps } 
             };
 
-            if (quality === '720') {
+            if (resolution === '720') {
                 videoConstraints.width = { ideal: 1280 };
                 videoConstraints.height = { ideal: 720 };
-            } else if (quality === '1080') {
+            } else if (resolution === '1080') {
                 videoConstraints.width = { ideal: 1920 };
                 videoConstraints.height = { ideal: 1080 };
-            } else if (quality === '4k') {
-                videoConstraints.width = { ideal: 3840, max: 3840 };
-                videoConstraints.height = { ideal: 2160, max: 2160 };
-            } else if (quality === 'max') {
+            } else if (resolution === '1440') {
+                videoConstraints.width = { ideal: 2560 };
+                videoConstraints.height = { ideal: 1440 };
+            } else if (resolution === '4k') {
+                videoConstraints.width = { ideal: 3840 };
+                videoConstraints.height = { ideal: 2160 };
+            } else if (resolution === 'max') {
                 videoConstraints.width = { max: 4096 };
                 videoConstraints.height = { max: 2160 };
             }
@@ -219,8 +244,8 @@
 
                 document.getElementById('lobby-panel').style.display = 'none';
                 document.getElementById('active-stream-screen').style.display = 'block';
-                document.getElementById('activeRoomTitle').innerText = `Oda: ${roomName} (Yayıncı)`;
-                document.getElementById('roleIndicator').innerText = "Yayın Yapılıyor (Yüksek Kalite)";
+                document.getElementById('activeRoomTitle').innerText = `Oda: ${roomName} (Yayıncısın)`;
+                document.getElementById('roleIndicator').innerText = `Canlı Yayın (${resolution === 'max' ? 'Orijinal' : resolution + 'p'} - ${fps} FPS)`;
                 
                 document.getElementById('fullscreenBtn').style.display = 'none';
                 document.getElementById('remoteVideo').srcObject = localStream;
@@ -233,7 +258,7 @@
 
             } catch (err) {
                 console.error(err);
-                alert("Ekran paylaşımı izni verilmedi veya desteklenmiyor.");
+                alert("Ekran paylaşımı izni verilmedi.");
             }
         });
 
@@ -243,7 +268,7 @@
 
             document.getElementById('lobby-panel').style.display = 'none';
             document.getElementById('active-stream-screen').style.display = 'block';
-            document.getElementById('activeRoomTitle').innerText = `Oda: ${roomId} (İzleyici)`;
+            document.getElementById('activeRoomTitle').innerText = `Oda: ${roomId}`;
             document.getElementById('roleIndicator').innerText = "Canlı İzleniyor";
 
             document.getElementById('fullscreenBtn').style.display = 'inline-block';
@@ -264,7 +289,6 @@
             });
         });
 
-        // --- KRİTİK: WEB-RTC BİTRATE VE KALİTE ZORLAMA (MAX BANDWIDTH) ---
         socket.on('user-connected', async (viewerId) => {
             if (!isHost) return;
 
@@ -273,19 +297,18 @@
             localStream.getTracks().forEach(track => {
                 const sender = peerConnection.addTrack(track, localStream);
                 
-                // Video kalitesini ve veri akışını (bitrate) en yüksek seviyeye zorla
                 if (track.kind === 'video') {
                     try {
                         const parameters = sender.getParameters();
                         if (!parameters.encodings) {
                             parameters.encodings = [{}];
                         }
-                        // 15 Mbps (15,000,000 bps) bant genişliği vererek görüntü netliğini maksimuma çıkarıyoruz
-                        parameters.encodings[0].maxBitrate = 15000000; 
-                        parameters.encodings[0].maxFramerate = 60;
+                        // Yüksek bitrate ve FPS optimizasyonu
+                        parameters.encodings[0].maxBitrate = 25000000; // 25 Mbps
+                        parameters.encodings[0].maxFramerate = parseInt(document.getElementById('fpsSelect').value);
                         sender.setParameters(parameters);
                     } catch (e) {
-                        console.error("Bitrate artırılamadı:", e);
+                        console.error("Bitrate ayarlanamadı:", e);
                     }
                 }
             });
