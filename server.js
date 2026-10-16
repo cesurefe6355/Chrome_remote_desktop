@@ -85,23 +85,36 @@ app.post('/api/login', async (req, res) => {
 // ---------- WebRTC ICE (STUN/TURN) ----------
 // Farklı ağlardaki kullanıcıların yayını izleyebilmesi için TURN şart. Render ortam değişkenleri:
 //   METERED_DOMAIN + METERED_API_KEY  (metered.ca hesabı)  veya  TURN_URL + TURN_USER + TURN_PASS
+// Öncelik: 1) METERED_DOMAIN + METERED_API_KEY (REST)  2) TURN_URL/TURN_USER/TURN_PASS  3) aşağıdaki Metered bilgileri
+const METERED_STATIC = {
+    username: process.env.TURN_USER || '5cbcf67c633ed0ffaf5f19c6',
+    credential: process.env.TURN_PASS || 'yDaqLITZGsxTT2x3'
+};
 let iceCache = { t: 0, v: null };
 app.get('/api/ice', async (req, res) => {
     if (!verifyToken((req.headers.authorization || '').replace('Bearer ', ''))) return res.status(401).json({ error: 'unauthorized' });
     if (iceCache.v && Date.now() - iceCache.t < 10 * 60000) return res.json(iceCache.v);
     const servers = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
+    const { METERED_DOMAIN, METERED_API_KEY, TURN_URL } = process.env;
     try {
-        const { METERED_DOMAIN, METERED_API_KEY, TURN_URL, TURN_USER, TURN_PASS } = process.env;
         if (METERED_DOMAIN && METERED_API_KEY) {
             const j = await (await fetch(`https://${METERED_DOMAIN}/api/v1/turn/credentials?apiKey=${METERED_API_KEY}`)).json();
             if (Array.isArray(j)) servers.push(...j);
-        } else if (TURN_URL) {
-            servers.push({ urls: TURN_URL.split(',').map(x => x.trim()), username: TURN_USER, credential: TURN_PASS });
-        } else { // Yalnızca test için herkese açık, güvenilmez yedek TURN
-            servers.push({ urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turns:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' });
         }
-    } catch (e) { console.warn('ICE alınamadı', e.message); }
-    if (servers.length > 1) iceCache = { t: Date.now(), v: servers };
+    } catch (e) { console.warn('Metered REST alınamadı:', e.message); }
+    if (servers.length === 1 && TURN_URL) {
+        servers.push({ urls: TURN_URL.split(',').map(x => x.trim()), username: process.env.TURN_USER, credential: process.env.TURN_PASS });
+    }
+    if (servers.length === 1) { // Varsayılan: Metered TURN (80/443, UDP + TCP + TLS)
+        servers.push(
+            { urls: 'stun:stun.relay.metered.ca:80' },
+            { urls: 'turn:global.relay.metered.ca:80', ...METERED_STATIC },
+            { urls: 'turn:global.relay.metered.ca:80?transport=tcp', ...METERED_STATIC },
+            { urls: 'turn:global.relay.metered.ca:443', ...METERED_STATIC },
+            { urls: 'turns:global.relay.metered.ca:443?transport=tcp', ...METERED_STATIC }
+        );
+    }
+    iceCache = { t: Date.now(), v: servers };
     res.json(servers);
 });
 
