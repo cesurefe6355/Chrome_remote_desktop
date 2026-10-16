@@ -1,17 +1,16 @@
 {
-  "name": "streamhub-desktop",
+  "name": "lumolive",
   "version": "1.0.0",
-  "description": "Discord tarzı uzaktan masaüstü ve yayın uygulaması",
-  "main": "main.js",
+  "description": "Discord tarzı canlı yayın ve ekran paylaşım platformu",
+  "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "desktop": "electron ."
+    "start": "node server.js"
   },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "express": "^4.19.2",
-    "socket.io": "^4.7.5"
-  },
-  "devDependencies": {
-    "electron": "^30.0.0"
+    "jsonwebtoken": "^9.0.2",
+    "socket.io": "^4.7.5",
+    "sqlite3": "^5.1.7"
   }
 }
