@@ -48,10 +48,10 @@
         <div id="login-form" class="form-section active">
             <div class="form-group">
                 <label>Kullanıcı Adı</label>
-                <input type="text" id="loginUsername" placeholder="Kullanıcı adını gir...">
+                <input type="text" id="loginUsername" autocomplete="username" maxlength="20" placeholder="Kullanıcı adını gir...">
                 
                 <label>Şifre</label>
-                <input type="password" id="loginPassword" placeholder="Şifreni gir...">
+                <input type="password" id="loginPassword" autocomplete="current-password" placeholder="Şifreni gir...">
 
                 <button class="auth-btn" onclick="handleLogin()">Giriş Yap</button>
             </div>
@@ -61,10 +61,10 @@
         <div id="register-form" class="form-section">
             <div class="form-group">
                 <label>Kullanıcı Adı Seç</label>
-                <input type="text" id="regUsername" placeholder="Bir kullanıcı adı belirle...">
+                <input type="text" id="regUsername" autocomplete="username" maxlength="20" placeholder="Bir kullanıcı adı belirle...">
                 
                 <label>Şifre Belirle</label>
-                <input type="password" id="regPassword" placeholder="Güçlü bir şifre gir...">
+                <input type="password" id="regPassword" autocomplete="new-password" maxlength="72" placeholder="Güçlü bir şifre gir...">
 
                 <button class="auth-btn" onclick="handleRegister()">Hesap Oluştur</button>
             </div>
@@ -75,6 +75,11 @@
     </div>
 
     <script>
+        if (localStorage.getItem('lumolive_token')) window.location.replace('/index.html');
+        document.addEventListener('keydown', e => {
+            if (e.key !== 'Enter') return;
+            document.getElementById('login-form').classList.contains('active') ? handleLogin() : handleRegister();
+        });
         function switchForm(type, event) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.form-section').forEach(sec => sec.classList.remove('active'));
@@ -110,7 +115,9 @@
         // Kayıt Ol İsteği
         async function handleRegister() {
             const username = document.getElementById('regUsername').value.trim();
-            const password = document.getElementById('regPassword').value.trim();
+            const password = document.getElementById('regPassword').value;
+            if (!/^[\p{L}\p{N}_.-]{3,20}$/u.test(username)) return showError('Kullanıcı adı 3-20 karakter olmalı (harf, rakam, _ . -).');
+            if (password.length < 6) return showError('Şifre en az 6 karakter olmalı.');
 
             if (!username || !password) return showError("Lütfen tüm alanları doldurun!");
 
@@ -124,6 +131,8 @@
 
                 if (res.ok) {
                     showSuccess("Kayıt başarılı! Şimdi giriş yapabilirsin.");
+                    switchForm('login', { target: document.querySelector('.tab-btn') });
+                    document.getElementById('successMsg').style.display = 'block';
                     document.getElementById('regUsername').value = '';
                     document.getElementById('regPassword').value = '';
                 } else {
@@ -137,7 +146,7 @@
         // Giriş Yap İsteği
         async function handleLogin() {
             const username = document.getElementById('loginUsername').value.trim();
-            const password = document.getElementById('loginPassword').value.trim();
+            const password = document.getElementById('loginPassword').value;
 
             if (!username || !password) return showError("Lütfen kullanıcı adı ve şifreni gir!");
 
@@ -152,6 +161,7 @@
                 if (res.ok) {
                     // Kullanıcı adını localStorage'da saklayıp ana lobi sayfasına yönlendiriyoruz
                     localStorage.setItem('lumolive_user', data.username);
+                    localStorage.setItem('lumolive_token', data.token);
                     window.location.href = '/index.html';
                 } else {
                     showError(data.error || "Giriş bilgileri hatalı.");
