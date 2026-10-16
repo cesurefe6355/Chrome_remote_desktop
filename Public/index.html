@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StreamHub - Discord Tarzı Yayın</title>
+    <title>StreamHub - Discord Tarzı Yayın & Kontrol</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif; }
         body { background-color: #313338; color: #dbdee1; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
@@ -14,11 +14,14 @@
         input[type="text"], select { padding: 12px 16px; border-radius: 8px; border: 1px solid transparent; background: #1e1f22; color: #dbdee1; font-size: 15px; outline: none; width: 100%; max-width: 400px; transition: 0.2s; }
         input[type="text"]:focus, select:focus { border-color: #5865F2; }
         
-        button { padding: 12px 20px; border-radius: 8px; border: none; background: #5865F2; color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s; width: 100%; max-width: 400px; }
+        button { padding: 10px 16px; border-radius: 8px; border: none; background: #5865F2; color: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; }
         button:hover { background: #4752c4; }
         
         .btn-danger { background: #ed4245 !important; width: auto !important; }
         .btn-danger:hover { background: #c03537 !important; }
+
+        .btn-control { background: #23a55a; font-size: 12px; padding: 6px 10px; }
+        .btn-control.active { background: #f0b232; color: #000; }
 
         #login-screen { text-align: center; padding: 40px 20px; }
         #login-screen h1 { color: #f2f3f5; margin-bottom: 8px; }
@@ -45,7 +48,8 @@
         .stream-layout { display: grid; grid-template-columns: 3fr 1fr; gap: 15px; }
         .video-wrapper { position: relative; background: #000; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px solid #3f4147; }
         
-        video { width: 100%; max-height: 70vh; display: block; pointer-events: none; object-fit: contain; image-rendering: high-quality; }
+        /* İzleyici kontrol yetkisi aldığında video tıklanabilir hale gelir */
+        video { width: 100%; max-height: 70vh; display: block; object-fit: contain; image-rendering: high-quality; }
         
         .stream-controls { margin-top: 15px; display: flex; gap: 10px; justify-content: space-between; align-items: center; }
         .stream-controls button { width: auto; background: #4e5058; }
@@ -54,7 +58,8 @@
         .viewers-panel { background: #1e1f22; border-radius: 8px; padding: 15px; border: 1px solid #3f4147; height: 100%; max-height: 70vh; overflow-y: auto; }
         .viewers-panel h4 { border-bottom: 1px solid #3f4147; padding-bottom: 8px; margin-bottom: 10px; color: #f2f3f5; }
         .viewer-list { list-style: none; }
-        .viewer-item { padding: 8px 10px; background: #2b2d31; margin-bottom: 6px; border-radius: 6px; font-size: 14px; display: flex; align-items: center; gap: 10px; color: #f2f3f5; }
+        .viewer-item { padding: 8px 10px; background: #2b2d31; margin-bottom: 6px; border-radius: 6px; font-size: 13px; display: flex; align-items: center; justify-content: space-between; color: #f2f3f5; }
+        .viewer-info { display: flex; align-items: center; gap: 8px; }
         .status-dot { width: 8px; height: 8px; background: #23a55a; border-radius: 50%; }
 
         label { font-size: 13px; font-weight: 600; color: #b5bac1; align-self: flex-start; max-width: 400px; width: 100%; margin-bottom: -6px; }
@@ -69,7 +74,7 @@
             <p style="color: #949ba4; margin-top: 4px; margin-bottom: 24px;">Devam etmek için bir kullanıcı adı gir</p>
             <div class="input-group">
                 <input type="text" id="usernameInput" placeholder="Kullanıcı Adın...">
-                <button id="loginBtn">Giriş Yap</button>
+                <button id="loginBtn" style="max-width: 400px; width: 100%;">Giriş Yap</button>
             </div>
         </div>
 
@@ -112,7 +117,7 @@
                         <option value="144">144 FPS (Esports)</option>
                     </select>
 
-                    <button id="startHostBtn" style="margin-top: 10px;">Yayını Başlat</button>
+                    <button id="startHostBtn" style="margin-top: 10px; max-width: 400px; width: 100%;">Yayını Başlat</button>
                 </div>
             </div>
         </div>
@@ -152,6 +157,7 @@
         let localStream = null;
         let peerConnection = null;
         let isHost = false;
+        let hasControlPermission = false;
 
         const rtcConfig = {
             iceServers: [
@@ -202,11 +208,8 @@
             });
         });
 
-        socket.on('error-msg', (msg) => {
-            alert(msg);
-        });
+        socket.on('error-msg', (msg) => alert(msg));
 
-        // Ayrı Kalite ve FPS Ayarları ile Yayın Başlatma
         document.getElementById('startHostBtn').addEventListener('click', async () => {
             const roomName = document.getElementById('roomNameInput').value.trim();
             const resolution = document.getElementById('resolutionSelect').value;
@@ -214,26 +217,18 @@
             
             if (!roomName) return alert("Lütfen oda adı gir!");
 
-            let videoConstraints = { 
-                cursor: "always",
-                frameRate: { ideal: fps, max: fps } 
-            };
+            let videoConstraints = { cursor: "always", frameRate: { ideal: fps, max: fps } };
 
             if (resolution === '720') {
-                videoConstraints.width = { ideal: 1280 };
-                videoConstraints.height = { ideal: 720 };
+                videoConstraints.width = { ideal: 1280 }; videoConstraints.height = { ideal: 720 };
             } else if (resolution === '1080') {
-                videoConstraints.width = { ideal: 1920 };
-                videoConstraints.height = { ideal: 1080 };
+                videoConstraints.width = { ideal: 1920 }; videoConstraints.height = { ideal: 1080 };
             } else if (resolution === '1440') {
-                videoConstraints.width = { ideal: 2560 };
-                videoConstraints.height = { ideal: 1440 };
+                videoConstraints.width = { ideal: 2560 }; videoConstraints.height = { ideal: 1440 };
             } else if (resolution === '4k') {
-                videoConstraints.width = { ideal: 3840 };
-                videoConstraints.height = { ideal: 2160 };
+                videoConstraints.width = { ideal: 3840 }; videoConstraints.height = { ideal: 2160 };
             } else if (resolution === 'max') {
-                videoConstraints.width = { max: 4096 };
-                videoConstraints.height = { max: 2160 };
+                videoConstraints.width = { max: 4096 }; videoConstraints.height = { max: 2160 };
             }
 
             try {
@@ -250,10 +245,7 @@
                 document.getElementById('fullscreenBtn').style.display = 'none';
                 document.getElementById('remoteVideo').srcObject = localStream;
 
-                localStream.getVideoTracks()[0].onended = () => {
-                    leaveStream();
-                };
-
+                localStream.getVideoTracks()[0].onended = () => leaveStream();
                 socket.emit('create-room', { roomId: roomName, username: currentUser });
 
             } catch (err) {
@@ -269,13 +261,13 @@
             document.getElementById('lobby-panel').style.display = 'none';
             document.getElementById('active-stream-screen').style.display = 'block';
             document.getElementById('activeRoomTitle').innerText = `Oda: ${roomId}`;
-            document.getElementById('roleIndicator').innerText = "Canlı İzleniyor";
+            document.getElementById('roleIndicator').innerText = "Canlı İzleniyor (Kontrol Yok)";
 
             document.getElementById('fullscreenBtn').style.display = 'inline-block';
-
             socket.emit('join-room', { roomId, username: currentUser });
         }
 
+        // İzleyici listesi ve Host için "Kontrol Ver" butonları
         socket.on('update-viewers', (viewers) => {
             const list = document.getElementById('viewerList');
             document.getElementById('viewerCount').innerText = viewers.length;
@@ -284,39 +276,92 @@
             viewers.forEach(v => {
                 const li = document.createElement('li');
                 li.className = 'viewer-item';
-                li.innerHTML = `<span class="status-dot"></span> ${v.username}`;
+                
+                let controlBtnHtml = '';
+                // Sadece yayıncı (host) iseniz yanlarında kontrol verme butonu görünür
+                if (isHost) {
+                    const btnText = v.hasControl ? 'Kontrolü Al' : 'Kontrol Ver';
+                    const btnClass = v.hasControl ? 'btn-control active' : 'btn-control';
+                    controlBtnHtml = `<button class="${btnClass}" onclick="toggleControl('${v.id}')">${btnText}</button>`;
+                } else {
+                    if (v.username === currentUser && v.hasControl) {
+                        controlBtnHtml = `<span style="color:#f0b232; font-size:11px;">(Kontrol Sende)</span>`;
+                    }
+                }
+
+                li.innerHTML = `
+                    <div class="viewer-info">
+                        <span class="status-dot" style="background: ${v.hasControl ? '#f0b232' : '#23a55a'}"></span> 
+                        <span>${v.username}</span>
+                    </div>
+                    ${controlBtnHtml}
+                `;
                 list.appendChild(li);
             });
+        });
+
+        function toggleControl(viewerId) {
+            socket.emit('toggle-control', { roomId: currentRoomId, viewerId });
+        }
+
+        // İzleyicinin kontrol yetkisi durumu değiştiğinde
+        socket.on('control-status', ({ hasControl }) => {
+            hasControlPermission = hasControl;
+            const indicator = document.getElementById('roleIndicator');
+            if (hasControl) {
+                indicator.innerText = "⚡ Fare/Klavye Kontrol Yetkisi Verildi!";
+                indicator.style.color = "#f0b232";
+            } else {
+                indicator.innerText = "Canlı İzleniyor (Kontrol Alındı)";
+                indicator.style.color = "#949ba4";
+            }
+        });
+
+        // İzleyici video üzerine tıkladığında koordinatları gönder
+        const videoElement = document.getElementById('remoteVideo');
+        videoElement.addEventListener('click', (e) => {
+            if (isHost || !hasControlPermission) return; // Yayıncıysa veya yetkisi yoksa yoksay
+
+            const rect = videoElement.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / videoElement.clientWidth;
+            const y = (e.clientY - rect.top) / videoElement.clientHeight;
+
+            socket.emit('remote-action', {
+                roomId: currentRoomId,
+                type: 'click',
+                x: x,
+                y: y
+            });
+        });
+
+        // Yayıncı tarafında izleyiciden gelen tıklama sinyalini yakalama
+        socket.on('remote-action', (data) => {
+            if (isHost) {
+                console.log(`İzleyiciden tıklama komutu geldi -> X: ${(data.x * 100).toFixed(1)}%, Y: ${(data.y * 100).toFixed(1)}%`);
+                // Web tabanlı ortamda bu koordinatları ekranda bir imleç göstererek veya 
+                // paylaşılan sayfa içinde simüle ederek kullanabilirsiniz.
+            }
         });
 
         socket.on('user-connected', async (viewerId) => {
             if (!isHost) return;
 
             peerConnection = new RTCPeerConnection(rtcConfig);
-            
             localStream.getTracks().forEach(track => {
                 const sender = peerConnection.addTrack(track, localStream);
-                
                 if (track.kind === 'video') {
                     try {
                         const parameters = sender.getParameters();
-                        if (!parameters.encodings) {
-                            parameters.encodings = [{}];
-                        }
-                        // Yüksek bitrate ve FPS optimizasyonu
-                        parameters.encodings[0].maxBitrate = 25000000; // 25 Mbps
+                        if (!parameters.encodings) parameters.encodings = [{}];
+                        parameters.encodings[0].maxBitrate = 25000000;
                         parameters.encodings[0].maxFramerate = parseInt(document.getElementById('fpsSelect').value);
                         sender.setParameters(parameters);
-                    } catch (e) {
-                        console.error("Bitrate ayarlanamadı:", e);
-                    }
+                    } catch (e) {}
                 }
             });
 
             peerConnection.onicecandidate = (event) => {
-                if (event.candidate) {
-                    socket.emit('signal', { target: viewerId, signal: { candidate: event.candidate } });
-                }
+                if (event.candidate) socket.emit('signal', { target: viewerId, signal: { candidate: event.candidate } });
             };
 
             const offer = await peerConnection.createOffer();
@@ -327,13 +372,9 @@
         socket.on('signal', async (data) => {
             if (!peerConnection) {
                 peerConnection = new RTCPeerConnection(rtcConfig);
-                
                 peerConnection.onicecandidate = (event) => {
-                    if (event.candidate) {
-                        socket.emit('signal', { target: data.sender, signal: { candidate: event.candidate } });
-                    }
+                    if (event.candidate) socket.emit('signal', { target: data.sender, signal: { candidate: event.candidate } });
                 };
-
                 peerConnection.ontrack = (event) => {
                     document.getElementById('remoteVideo').srcObject = event.streams[0];
                 };
@@ -351,28 +392,17 @@
             }
         });
 
-        document.getElementById('leaveStreamBtn').addEventListener('click', () => {
-            leaveStream();
-        });
+        document.getElementById('leaveStreamBtn').addEventListener('click', () => leaveStream());
 
         function leaveStream() {
-            if (currentRoomId) {
-                socket.emit('leave-room', { roomId: currentRoomId });
-            }
-
-            if (localStream) {
-                localStream.getTracks().forEach(track => track.stop());
-                localStream = null;
-            }
-
-            if (peerConnection) {
-                peerConnection.close();
-                peerConnection = null;
-            }
+            if (currentRoomId) socket.emit('leave-room', { roomId: currentRoomId });
+            if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+            if (peerConnection) { peerConnection.close(); peerConnection = null; }
 
             document.getElementById('remoteVideo').srcObject = null;
             currentRoomId = "";
             isHost = false;
+            hasControlPermission = false;
 
             document.getElementById('active-stream-screen').style.display = 'none';
             document.getElementById('lobby-panel').style.display = 'block';
@@ -385,13 +415,8 @@
 
         document.getElementById('fullscreenBtn').addEventListener('click', () => {
             const videoElem = document.getElementById('remoteVideo');
-            if (videoElem.requestFullscreen) {
-                videoElem.requestFullscreen();
-            } else if (videoElem.webkitRequestFullscreen) {
-                videoElem.webkitRequestFullscreen();
-            } else if (videoElem.msRequestFullscreen) {
-                videoElem.msRequestFullscreen();
-            }
+            if (videoElem.requestFullscreen) videoElem.requestFullscreen();
+            else if (videoElem.webkitRequestFullscreen) videoElem.webkitRequestFullscreen();
         });
     </script>
 </body>
