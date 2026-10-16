@@ -82,6 +82,29 @@ app.post('/api/login', async (req, res) => {
     res.json({ success: true, username: user.username, token: makeToken(user.username) });
 });
 
+// ---------- WebRTC ICE (STUN/TURN) ----------
+// Farklı ağlardaki kullanıcıların yayını izleyebilmesi için TURN şart. Render ortam değişkenleri:
+//   METERED_DOMAIN + METERED_API_KEY  (metered.ca hesabı)  veya  TURN_URL + TURN_USER + TURN_PASS
+let iceCache = { t: 0, v: null };
+app.get('/api/ice', async (req, res) => {
+    if (!verifyToken((req.headers.authorization || '').replace('Bearer ', ''))) return res.status(401).json({ error: 'unauthorized' });
+    if (iceCache.v && Date.now() - iceCache.t < 10 * 60000) return res.json(iceCache.v);
+    const servers = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
+    try {
+        const { METERED_DOMAIN, METERED_API_KEY, TURN_URL, TURN_USER, TURN_PASS } = process.env;
+        if (METERED_DOMAIN && METERED_API_KEY) {
+            const j = await (await fetch(`https://${METERED_DOMAIN}/api/v1/turn/credentials?apiKey=${METERED_API_KEY}`)).json();
+            if (Array.isArray(j)) servers.push(...j);
+        } else if (TURN_URL) {
+            servers.push({ urls: TURN_URL.split(',').map(x => x.trim()), username: TURN_USER, credential: TURN_PASS });
+        } else { // Yalnızca test için herkese açık, güvenilmez yedek TURN
+            servers.push({ urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turns:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' });
+        }
+    } catch (e) { console.warn('ICE alınamadı', e.message); }
+    if (servers.length > 1) iceCache = { t: Date.now(), v: servers };
+    res.json(servers);
+});
+
 // ---------- Odalar ----------
 const mkRoom = (createdBy, system = false) => ({ createdBy, system, isLive: false, hostSocketId: null, hostName: null, members: [], messages: [] });
 const rooms = { 'lobi': mkRoom('Sistem', true), 'oyun-gecesi': mkRoom('Sistem', true) };
@@ -210,6 +233,13 @@ io.on('connection', (socket) => {
         broadcastRooms();
         io.to(roomId).emit('stream-started', { roomId, hostName: username, hostSocketId: socket.id });
         room.members.forEach(m => m.id !== socket.id && socket.emit('viewer-wants-stream', { viewerId: m.id }));
+    });
+
+    // İzleyici bağlantı kuramazsa yayıncıdan yeniden teklif ister
+    socket.on('want-stream', () => {
+        const room = rooms[socket.data.roomId];
+        if (!room || !room.isLive || room.hostSocketId === socket.id || limited('ws:' + socket.id, 6, 60000)) return;
+        io.to(room.hostSocketId).emit('viewer-wants-stream', { viewerId: socket.id });
     });
 
     socket.on('stop-stream', () => {
