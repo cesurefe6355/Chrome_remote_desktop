@@ -15,20 +15,17 @@ app.use(express.json({ limit: '10kb' }));
 app.use(express.static(path.join(__dirname, 'Public')));
 app.get('/', (req, res) => res.redirect('/index.html'));
 
-// ---------- Kullanıcı veritabanı (JSON) ----------
-// NOT: Render ücretsiz planda disk silinir. Kalıcı olması için Render Disk veya gerçek DB kullan.
 const DATA_DIR = process.env.DATA_DIR || __dirname;
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, '[]');
 
 const getUsers = () => { try { return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8')); } catch { return []; } };
-const saveUsers = (u) => { // atomik yazım: dosya yarım kalıp bozulmasın
+const saveUsers = (u) => {
     const tmp = USERS_FILE + '.tmp';
     fs.writeFileSync(tmp, JSON.stringify(u, null, 2));
     fs.renameSync(tmp, USERS_FILE);
 };
 
-// ---------- Oturum token'ı (sunucu yeniden başlasa da geçerli kalması için SECRET env ayarla) ----------
 const SECRET = process.env.SECRET || crypto.randomBytes(32).toString('hex');
 const sign = (p) => crypto.createHmac('sha256', SECRET).update(p).digest('base64url');
 function makeToken(username) {
@@ -44,7 +41,6 @@ function verifyToken(t) {
     try { const d = JSON.parse(Buffer.from(p, 'base64url').toString()); return d.e > Date.now() ? d.u : null; } catch { return null; }
 }
 
-// ---------- Basit hız sınırı ----------
 const hits = new Map();
 function limited(key, max, ms) {
     const now = Date.now();
@@ -82,7 +78,6 @@ app.post('/api/login', async (req, res) => {
     res.json({ success: true, username: user.username, token: makeToken(user.username) });
 });
 
-// ---------- Odalar ----------
 const mkRoom = (createdBy, system = false) => ({ createdBy, system, isLive: false, hostSocketId: null, hostName: null, members: [], messages: [] });
 const rooms = { 'lobi': mkRoom('Sistem', true), 'oyun-gecesi': mkRoom('Sistem', true) };
 
@@ -109,7 +104,7 @@ function leaveRoom(socket) {
 
     if (room.hostSocketId === socket.id) endStream(roomId);
     io.to(roomId).emit('update-room-members', room.members);
-    if (!room.system && room.members.length === 0) delete rooms[roomId]; // boş kullanıcı odalarını temizle
+    if (!room.system && room.members.length === 0) delete rooms[roomId];
     broadcastRooms();
 }
 function endStream(roomId) {
@@ -137,7 +132,7 @@ io.on('connection', (socket) => {
     socket.on('join-room', ({ roomId } = {}) => {
         const room = rooms[roomId];
         if (!room) return socket.emit('error-msg', 'Oda bulunamadı.');
-        if (socket.data.roomId) leaveRoom(socket); // aynı anda tek odada ol
+        if (socket.data.roomId) leaveRoom(socket);
 
         socket.join(roomId);
         socket.data.roomId = roomId;
@@ -196,7 +191,6 @@ io.on('connection', (socket) => {
 
     socket.on('signal', (data = {}) => {
         const target = io.sockets.sockets.get(data.target);
-        // sadece aynı odadaki kişilere sinyal gönderilebilir
         if (!target || !socket.data.roomId || target.data.roomId !== socket.data.roomId) return;
         target.emit('signal', { sender: socket.id, signal: data.signal, type: data.type });
     });
