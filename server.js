@@ -48,7 +48,6 @@ function limited(key, max, ms) {
     h.push(now); hits.set(key, h);
     return h.length > max;
 }
-setInterval(() => { const n = Date.now(); for (const [k, v] of hits) if (!v.some(t => n - t < 60000)) hits.delete(k); }, 60000);
 
 const USER_RE = /^[\p{L}\p{N}_.-]{3,20}$/u;
 
@@ -56,7 +55,7 @@ app.post('/api/register', async (req, res) => {
     if (limited('reg:' + req.ip, 5, 60000)) return res.status(429).json({ error: 'Çok fazla deneme. Biraz bekleyin.' });
     const username = String(req.body.username || '').trim();
     const password = String(req.body.password || '');
-    if (!USER_RE.test(username)) return res.status(400).json({ error: 'Kullanıcı adı 3-20 karakter olmalı (harf, rakam, _ . -).' });
+    if (!USER_RE.test(username)) return res.status(400).json({ error: 'Kullanıcı adı 3-20 karakter olmalı.' });
     if (password.length < 6 || password.length > 72) return res.status(400).json({ error: 'Şifre 6-72 karakter olmalı.' });
 
     const users = getUsers();
@@ -78,11 +77,15 @@ app.post('/api/login', async (req, res) => {
     res.json({ success: true, username: user.username, token: makeToken(user.username) });
 });
 
-const mkRoom = (createdBy, system = false) => ({ createdBy, system, isLive: false, hostSocketId: null, hostName: null, members: [], messages: [] });
-const rooms = { 'lobi': mkRoom('Sistem', true), 'oyun-gecesi': mkRoom('Sistem', true) };
+// Oda tipleri eklendi: lobi (voice), oyun-gecesi (text)
+const mkRoom = (createdBy, system = false, type = 'voice') => ({ createdBy, system, type, isLive: false, hostSocketId: null, hostName: null, members: [], messages: [] });
+const rooms = { 
+    'lobi': mkRoom('Sistem', true, 'voice'), 
+    'oyun-gecesi': mkRoom('Sistem', true, 'text') 
+};
 
 const roomsList = () => Object.entries(rooms).map(([id, r]) => ({
-    id, isLive: r.isLive, hostName: r.hostName, members: r.members.map(m => ({ id: m.id, username: m.username }))
+    id, type: r.type, isLive: r.isLive, hostName: r.hostName, members: r.members.map(m => ({ id: m.id, username: m.username }))
 }));
 const broadcastRooms = () => io.emit('room-list-update', roomsList());
 
@@ -99,7 +102,9 @@ function leaveRoom(socket) {
     if (!room) return;
     socket.leave(roomId);
     socket.data.roomId = null;
-    socket.to(roomId).emit('user-left-voice', socket.id);
+    if (room.type === 'voice') {
+        socket.to(roomId).emit('user-left-voice', socket.id);
+    }
     room.members = room.members.filter(m => m.id !== socket.id);
 
     if (room.hostSocketId === socket.id) endStream(roomId);
@@ -118,13 +123,12 @@ io.on('connection', (socket) => {
     const username = socket.data.username;
     socket.emit('room-list-update', roomsList());
 
-    socket.on('create-channel', ({ roomName } = {}) => {
+    socket.on('create-channel', ({ roomName, type } = {}) => {
         if (limited('room:' + socket.id, 5, 60000)) return socket.emit('error-msg', 'Çok hızlı oda oluşturuyorsun.');
         const id = String(roomName || '').trim().replace(/\s+/g, '-').toLowerCase().replace(/[^\p{L}\p{N}-]/gu, '').slice(0, 24);
         if (!id) return socket.emit('error-msg', 'Geçersiz oda adı!');
         if (rooms[id]) return socket.emit('error-msg', 'Bu oda zaten var!');
-        if (Object.keys(rooms).length >= 50) return socket.emit('error-msg', 'Oda limiti doldu.');
-        rooms[id] = mkRoom(username);
+        rooms[id] = mkRoom(username, false, type === 'text' ? 'text' : 'voice');
         broadcastRooms();
         socket.emit('channel-created', { roomId: id });
     });
@@ -136,14 +140,16 @@ io.on('connection', (socket) => {
 
         socket.join(roomId);
         socket.data.roomId = roomId;
-        socket.to(roomId).emit('user-joined-voice', { socketId: socket.id, username });
+        if (room.type === 'voice') {
+            socket.to(roomId).emit('user-joined-voice', { socketId: socket.id, username });
+        }
         room.members.push({ id: socket.id, username });
 
         socket.emit('room-joined', {
-            roomId, isLive: room.isLive, hostName: room.hostName,
+            roomId, type: room.type, isLive: room.isLive, hostName: room.hostName,
             hostSocketId: room.hostSocketId, members: room.members, messages: room.messages
         });
-        if (room.isLive) io.to(room.hostSocketId).emit('viewer-wants-stream', { viewerId: socket.id });
+        if (room.isLive && room.type === 'voice') io.to(room.hostSocketId).emit('viewer-wants-stream', { viewerId: socket.id });
         io.to(roomId).emit('update-room-members', room.members);
         broadcastRooms();
     });
@@ -174,7 +180,7 @@ io.on('connection', (socket) => {
 
     socket.on('start-stream-in-room', () => {
         const roomId = socket.data.roomId, room = rooms[roomId];
-        if (!room) return socket.emit('error-msg', 'Önce bir odaya katıl.');
+        if (!room || room.type !== 'voice') return socket.emit('error-msg', 'Bu kanalda yayın yapılamaz.');
         if (room.isLive) return socket.emit('error-msg', 'Bu odada zaten aktif bir yayın var!');
         room.isLive = true; room.hostSocketId = socket.id; room.hostName = username;
         broadcastRooms();
