@@ -1,0 +1,17 @@
+{
+  "name": "streamhub-desktop",
+  "version": "1.0.0",
+  "description": "Discord tarzı uzaktan masaüstü ve yayın uygulaması",
+  "main": "main.js",
+  "scripts": {
+    "start": "node server.js",
+    "desktop": "electron ."
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0"
+  }
+}
