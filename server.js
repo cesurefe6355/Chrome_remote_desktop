@@ -12,10 +12,8 @@ app.use(express.static(path.join(__dirname, 'Public')));
 const rooms = {}; // { roomId: { hostName, hostSocketId, viewers: [] } }
 
 io.on('connection', (socket) => {
-    // Yeni bağlanan kullanıcıya oda listesini gönder
     socket.emit('room-list', getPublicRooms());
 
-    // Oda Oluşturma (Host)
     socket.on('create-room', ({ roomId, username }) => {
         if (rooms[roomId]) {
             socket.emit('error-msg', 'Bu oda adı zaten kullanımda!');
@@ -33,7 +31,6 @@ io.on('connection', (socket) => {
         io.emit('room-list', getPublicRooms());
     });
 
-    // Yayına Katılma (Viewer)
     socket.on('join-room', ({ roomId, username }) => {
         const room = rooms[roomId];
         if (room) {
@@ -41,7 +38,6 @@ io.on('connection', (socket) => {
             room.viewers.push({ id: socket.id, username });
 
             io.to(roomId).emit('update-viewers', room.viewers);
-            // Host'a yeni izleyicinin bağlandığını bildir
             socket.to(room.hostSocketId).emit('user-connected', socket.id);
             socket.emit('join-success', { roomId });
         } else {
@@ -49,12 +45,10 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Odadan Ayrılma (Manuel)
     socket.on('leave-room', ({ roomId }) => {
         handleUserLeave(socket, roomId);
     });
 
-    // WebRTC Sinyalleşmesi
     socket.on('signal', (data) => {
         io.to(data.target).emit('signal', {
             sender: socket.id,
@@ -62,7 +56,6 @@ io.on('connection', (socket) => {
         });
     });
 
-    // Bağlantı Koptuğunda
     socket.on('disconnect', () => {
         for (const roomId in rooms) {
             handleUserLeave(socket, roomId);
@@ -75,17 +68,14 @@ function handleUserLeave(socket, roomId) {
     if (!room) return;
 
     if (room.hostSocketId === socket.id) {
-        // Host ayrıldıysa odayı tamamen kapat
         delete rooms[roomId];
         io.to(roomId).emit('room-closed');
         io.emit('room-list', getPublicRooms());
     } else {
-        // İzleyici ayrıldıysa listeden çıkar
         const index = room.viewers.findIndex(v => v.id === socket.id);
         if (index !== -1) {
             room.viewers.splice(index, 1);
             io.to(roomId).emit('update-viewers', room.viewers);
-            // Host'a izleyicinin çıktığını bildir (isteğe bağlı peer temizliği için)
             io.to(room.hostSocketId).emit('viewer-disconnected', socket.id);
         }
     }
