@@ -2,171 +2,193 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-const sqlite3 = require('sqlite3').verbose();
+const fs = require('fs');
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, { maxHttpBufferSize: 1e6 });
 
-app.use(express.json());
+app.disable('x-powered-by');
+app.use(express.json({ limit: '10kb' }));
 app.use(express.static(path.join(__dirname, 'Public')));
+app.get('/', (req, res) => res.redirect('/index.html'));
 
-const db = new sqlite3.Database('./lumolive.db', (err) => {
-    if (err) console.error('Veritabanı hatası:', err.message);
-    else console.log('SQLite veritabanına bağlanıldı.');
-});
+// ---------- Kullanıcı veritabanı (JSON) ----------
+// NOT: Render ücretsiz planda disk silinir. Kalıcı olması için Render Disk veya gerçek DB kullan.
+const DATA_DIR = process.env.DATA_DIR || __dirname;
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
+if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, '[]');
 
-db.run(`CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE,
-    password TEXT
-)`);
-
-app.post('/api/register', (req, res) => {
-    const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ error: 'Kullanıcı adı ve şifre zorunludur.' });
-    const hashedPassword = bcrypt.hashSync(password, 8);
-    db.run(`INSERT INTO users (username, password) VALUES (?, ?)`, [username, hashedPassword], function(err) {
-        if (err) return res.status(400).json({ error: 'Bu kullanıcı adı zaten kullanımda.' });
-        res.json({ success: true, message: 'Kayıt başarılı!' });
-    });
-});
-
-app.post('/api/login', (req, res) => {
-    const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ error: 'Tüm alanları doldurun.' });
-    db.get(`SELECT * FROM users WHERE username = ?`, [username], (err, user) => {
-        if (err || !user || !bcrypt.compareSync(password, user.password)) {
-            return res.status(400).json({ error: 'Kullanıcı bulunamadı veya şifre hatalı.' });
-        }
-        res.json({ success: true, username: user.username });
-    });
-});
-
-const rooms = {
-    "Lobi": { createdBy: "Sistem", isLive: false, hostSocketId: null, hostName: null, members: [] },
-    "Oyun-Gecesi": { createdBy: "Sistem", isLive: false, hostSocketId: null, hostName: null, members: [] }
+const getUsers = () => { try { return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8')); } catch { return []; } };
+const saveUsers = (u) => { // atomik yazım: dosya yarım kalıp bozulmasın
+    const tmp = USERS_FILE + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(u, null, 2));
+    fs.renameSync(tmp, USERS_FILE);
 };
 
-io.on('connection', (socket) => {
-    socket.emit('room-list-update', getRoomsList());
+// ---------- Oturum token'ı (sunucu yeniden başlasa da geçerli kalması için SECRET env ayarla) ----------
+const SECRET = process.env.SECRET || crypto.randomBytes(32).toString('hex');
+const sign = (p) => crypto.createHmac('sha256', SECRET).update(p).digest('base64url');
+function makeToken(username) {
+    const p = Buffer.from(JSON.stringify({ u: username, e: Date.now() + 30 * 864e5 })).toString('base64url');
+    return p + '.' + sign(p);
+}
+function verifyToken(t) {
+    if (typeof t !== 'string') return null;
+    const [p, s] = t.split('.');
+    if (!p || !s) return null;
+    const good = sign(p);
+    if (s.length !== good.length || !crypto.timingSafeEqual(Buffer.from(s), Buffer.from(good))) return null;
+    try { const d = JSON.parse(Buffer.from(p, 'base64url').toString()); return d.e > Date.now() ? d.u : null; } catch { return null; }
+}
 
-    socket.on('create-channel', ({ roomName, username }) => {
-        const formattedRoom = roomName.trim().replace(/\s+/g, '-').toLowerCase();
-        if (!formattedRoom || rooms[formattedRoom]) {
-            return socket.emit('error-msg', 'Geçersiz veya mevcut oda adı!');
-        }
+// ---------- Basit hız sınırı ----------
+const hits = new Map();
+function limited(key, max, ms) {
+    const now = Date.now();
+    const h = (hits.get(key) || []).filter(t => now - t < ms);
+    h.push(now); hits.set(key, h);
+    return h.length > max;
+}
+setInterval(() => { const n = Date.now(); for (const [k, v] of hits) if (!v.some(t => n - t < 60000)) hits.delete(k); }, 60000);
 
-        rooms[formattedRoom] = {
-            createdBy: username,
-            isLive: false,
-            hostSocketId: null,
-            hostName: null,
-            members: []
-        };
+const USER_RE = /^[\p{L}\p{N}_.-]{3,20}$/u;
 
-        io.emit('room-list-update', getRoomsList());
-        socket.emit('channel-created', { roomId: formattedRoom });
-    });
+app.post('/api/register', async (req, res) => {
+    if (limited('reg:' + req.ip, 5, 60000)) return res.status(429).json({ error: 'Çok fazla deneme. Biraz bekleyin.' });
+    const username = String(req.body.username || '').trim();
+    const password = String(req.body.password || '');
+    if (!USER_RE.test(username)) return res.status(400).json({ error: 'Kullanıcı adı 3-20 karakter olmalı (harf, rakam, _ . -).' });
+    if (password.length < 6 || password.length > 72) return res.status(400).json({ error: 'Şifre 6-72 karakter olmalı.' });
 
-    socket.on('join-room', ({ roomId, username }) => {
-        const room = rooms[roomId];
-        if (!room) return socket.emit('error-msg', 'Oda bulunamadı.');
+    const users = getUsers();
+    if (users.some(u => u.username.toLowerCase() === username.toLowerCase()))
+        return res.status(400).json({ error: 'Bu kullanıcı adı zaten kullanımda.' });
 
-        socket.join(roomId);
-        socket.to(roomId).emit('user-joined-voice', { socketId: socket.id, username });
-
-        if (!room.members.some(m => m.id === socket.id)) {
-            room.members.push({ id: socket.id, username });
-        }
-
-        socket.emit('room-joined', {
-            roomId,
-            isLive: room.isLive,
-            hostName: room.hostName,
-            hostSocketId: room.hostSocketId,
-            members: room.members
-        });
-
-        // Eğer odada aktif yayın varsa, yeni katılan izleyiciye yayıncının ID'sini bildir
-        if (room.isLive && room.hostSocketId !== socket.id) {
-            io.to(room.hostSocketId).emit('viewer-wants-stream', { viewerId: socket.id });
-        }
-
-        io.to(roomId).emit('update-room-members', room.members);
-    });
-
-    socket.on('start-stream-in-room', ({ roomId, username }) => {
-        const room = rooms[roomId];
-        if (!room) return socket.emit('error-msg', 'Oda bulunamadı.');
-        if (room.isLive) return socket.emit('error-msg', 'Bu odada zaten aktif bir yayın var!');
-
-        room.isLive = true;
-        room.hostSocketId = socket.id;
-        room.hostName = username;
-
-        io.emit('room-list-update', getRoomsList());
-        io.to(roomId).emit('stream-started', { roomId, hostName: username, hostSocketId: socket.id });
-
-        // Odadaki mevcut diğer kullanıcılara yayıncıya bağlanmaları gerektiğini söyle
-        room.members.forEach(member => {
-            if (member.id !== socket.id) {
-                io.to(socket.id).emit('viewer-wants-stream', { viewerId: member.id });
-            }
-        });
-    });
-
-    socket.on('leave-room', ({ roomId }) => {
-        handleUserLeave(socket, roomId);
-    });
-
-    // WebRTC Sinyalleşmesi
-    socket.on('signal', (data) => {
-        io.to(data.target).emit('signal', {
-            sender: socket.id,
-            signal: data.signal,
-            type: data.type
-        });
-    });
-
-    socket.on('disconnect', () => {
-        for (const roomId in rooms) {
-            handleUserLeave(socket, roomId);
-        }
-    });
+    users.push({ username, password: await bcrypt.hash(password, 10) });
+    saveUsers(users);
+    res.json({ success: true });
 });
 
-function handleUserLeave(socket, roomId) {
+app.post('/api/login', async (req, res) => {
+    if (limited('login:' + req.ip, 10, 60000)) return res.status(429).json({ error: 'Çok fazla deneme. Biraz bekleyin.' });
+    const username = String(req.body.username || '').trim();
+    const password = String(req.body.password || '');
+    const user = getUsers().find(u => u.username.toLowerCase() === username.toLowerCase());
+    if (!user || !(await bcrypt.compare(password, user.password)))
+        return res.status(400).json({ error: 'Kullanıcı bulunamadı veya şifre hatalı.' });
+    res.json({ success: true, username: user.username, token: makeToken(user.username) });
+});
+
+// ---------- Odalar ----------
+const mkRoom = (createdBy, system = false) => ({ createdBy, system, isLive: false, hostSocketId: null, hostName: null, members: [], messages: [] });
+const rooms = { 'lobi': mkRoom('Sistem', true), 'oyun-gecesi': mkRoom('Sistem', true) };
+
+const roomsList = () => Object.entries(rooms).map(([id, r]) => ({
+    id, isLive: r.isLive, hostName: r.hostName, members: r.members.map(m => ({ id: m.id, username: m.username }))
+}));
+const broadcastRooms = () => io.emit('room-list-update', roomsList());
+
+io.use((socket, next) => {
+    const u = verifyToken(socket.handshake.auth && socket.handshake.auth.token);
+    if (!u) return next(new Error('unauthorized'));
+    socket.data.username = u;
+    next();
+});
+
+function leaveRoom(socket) {
+    const roomId = socket.data.roomId;
     const room = rooms[roomId];
     if (!room) return;
-
+    socket.leave(roomId);
+    socket.data.roomId = null;
     socket.to(roomId).emit('user-left-voice', socket.id);
+    room.members = room.members.filter(m => m.id !== socket.id);
 
-    const index = room.members.findIndex(m => m.id === socket.id);
-    if (index !== -1) room.members.splice(index, 1);
-
-    if (room.hostSocketId === socket.id) {
-        room.isLive = false;
-        room.hostSocketId = null;
-        room.hostName = null;
-        io.to(roomId).emit('room-stream-ended');
-    }
-
+    if (room.hostSocketId === socket.id) endStream(roomId);
     io.to(roomId).emit('update-room-members', room.members);
-    io.emit('room-list-update', getRoomsList());
+    if (!room.system && room.members.length === 0) delete rooms[roomId]; // boş kullanıcı odalarını temizle
+    broadcastRooms();
+}
+function endStream(roomId) {
+    const room = rooms[roomId];
+    if (!room || !room.isLive) return;
+    room.isLive = false; room.hostSocketId = null; room.hostName = null;
+    io.to(roomId).emit('room-stream-ended');
 }
 
-function getRoomsList() {
-    return Object.keys(rooms).map(id => ({
-        id,
-        isLive: rooms[id].isLive,
-        hostName: rooms[id].hostName,
-        memberCount: rooms[id].members.length
-    }));
-}
+io.on('connection', (socket) => {
+    const username = socket.data.username;
+    socket.emit('room-list-update', roomsList());
+
+    socket.on('create-channel', ({ roomName } = {}) => {
+        if (limited('room:' + socket.id, 5, 60000)) return socket.emit('error-msg', 'Çok hızlı oda oluşturuyorsun.');
+        const id = String(roomName || '').trim().replace(/\s+/g, '-').toLowerCase().replace(/[^\p{L}\p{N}-]/gu, '').slice(0, 24);
+        if (!id) return socket.emit('error-msg', 'Geçersiz oda adı!');
+        if (rooms[id]) return socket.emit('error-msg', 'Bu oda zaten var!');
+        if (Object.keys(rooms).length >= 50) return socket.emit('error-msg', 'Oda limiti doldu.');
+        rooms[id] = mkRoom(username);
+        broadcastRooms();
+        socket.emit('channel-created', { roomId: id });
+    });
+
+    socket.on('join-room', ({ roomId } = {}) => {
+        const room = rooms[roomId];
+        if (!room) return socket.emit('error-msg', 'Oda bulunamadı.');
+        if (socket.data.roomId) leaveRoom(socket); // aynı anda tek odada ol
+
+        socket.join(roomId);
+        socket.data.roomId = roomId;
+        socket.to(roomId).emit('user-joined-voice', { socketId: socket.id, username });
+        room.members.push({ id: socket.id, username });
+
+        socket.emit('room-joined', {
+            roomId, isLive: room.isLive, hostName: room.hostName,
+            hostSocketId: room.hostSocketId, members: room.members, messages: room.messages
+        });
+        if (room.isLive) io.to(room.hostSocketId).emit('viewer-wants-stream', { viewerId: socket.id });
+        io.to(roomId).emit('update-room-members', room.members);
+        broadcastRooms();
+    });
+
+    socket.on('chat-message', ({ text } = {}) => {
+        const room = rooms[socket.data.roomId];
+        text = String(text || '').trim().slice(0, 500);
+        if (!room || !text || limited('chat:' + socket.id, 8, 5000)) return;
+        const msg = { username, text, time: Date.now() };
+        room.messages.push(msg);
+        if (room.messages.length > 50) room.messages.shift();
+        io.to(socket.data.roomId).emit('chat-message', msg);
+    });
+
+    socket.on('start-stream-in-room', () => {
+        const roomId = socket.data.roomId, room = rooms[roomId];
+        if (!room) return socket.emit('error-msg', 'Önce bir odaya katıl.');
+        if (room.isLive) return socket.emit('error-msg', 'Bu odada zaten aktif bir yayın var!');
+        room.isLive = true; room.hostSocketId = socket.id; room.hostName = username;
+        broadcastRooms();
+        io.to(roomId).emit('stream-started', { roomId, hostName: username, hostSocketId: socket.id });
+        room.members.forEach(m => m.id !== socket.id && socket.emit('viewer-wants-stream', { viewerId: m.id }));
+    });
+
+    socket.on('stop-stream', () => {
+        const roomId = socket.data.roomId, room = rooms[roomId];
+        if (room && room.hostSocketId === socket.id) { endStream(roomId); broadcastRooms(); }
+    });
+
+    socket.on('leave-room', () => leaveRoom(socket));
+
+    socket.on('signal', (data = {}) => {
+        const target = io.sockets.sockets.get(data.target);
+        // sadece aynı odadaki kişilere sinyal gönderilebilir
+        if (!target || !socket.data.roomId || target.data.roomId !== socket.data.roomId) return;
+        target.emit('signal', { sender: socket.id, signal: data.signal, type: data.type });
+    });
+
+    socket.on('disconnect', () => leaveRoom(socket));
+});
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`LumoLive Sunucusu aktif: Port ${PORT}`);
-});
+server.listen(PORT, () => console.log(`LumoLive Sunucusu aktif: Port ${PORT}`));
