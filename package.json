@@ -4,6 +4,7 @@
   "main": "main.js",
   "scripts": {
     "start": "node server.js",
+    "test:db": "node test-db.js",
     "desktop": "electron .",
     "build": "electron-builder"
   },
