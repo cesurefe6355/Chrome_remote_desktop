@@ -1,10 +1,11 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-const fs = require('fs');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const { pool, initDb } = require('./db');
 
 const app = express();
 const server = http.createServer(app);
@@ -15,18 +16,8 @@ app.use(express.json({ limit: '10kb' }));
 app.use(express.static(path.join(__dirname, 'Public')));
 app.get('/', (req, res) => res.redirect('/index.html'));
 
-// ---------- Kullanıcı veritabanı (JSON) ----------
-// NOT: Render ücretsiz planda disk silinir. Kalıcı olması için Render Disk veya gerçek DB kullan.
-const DATA_DIR = process.env.DATA_DIR || __dirname;
-const USERS_FILE = path.join(DATA_DIR, 'users.json');
-if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, '[]');
-
-const getUsers = () => { try { return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8')); } catch { return []; } };
-const saveUsers = (u) => { // atomik yazım: dosya yarım kalıp bozulmasın
-    const tmp = USERS_FILE + '.tmp';
-    fs.writeFileSync(tmp, JSON.stringify(u, null, 2));
-    fs.renameSync(tmp, USERS_FILE);
-};
+// ---------- Kullanıcı veritabanı: PostgreSQL (Render) ----------
+// Bağlantı ve "users" tablosunun oluşturulması db.js içindedir (initDb).
 
 // ---------- Oturum token'ı (sunucu yeniden başlasa da geçerli kalması için SECRET env ayarla) ----------
 const SECRET = process.env.SECRET || crypto.randomBytes(32).toString('hex');
@@ -63,23 +54,36 @@ app.post('/api/register', async (req, res) => {
     if (!USER_RE.test(username)) return res.status(400).json({ error: 'Kullanıcı adı 3-20 karakter olmalı (harf, rakam, _ . -).' });
     if (password.length < 6 || password.length > 72) return res.status(400).json({ error: 'Şifre 6-72 karakter olmalı.' });
 
-    const users = getUsers();
-    if (users.some(u => u.username.toLowerCase() === username.toLowerCase()))
-        return res.status(400).json({ error: 'Bu kullanıcı adı zaten kullanımda.' });
+    try {
+        const exists = await pool.query('SELECT 1 FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1', [username]);
+        if (exists.rowCount > 0)
+            return res.status(400).json({ error: 'Bu kullanıcı adı zaten kullanımda.' });
 
-    users.push({ username, password: await bcrypt.hash(password, 10) });
-    saveUsers(users);
-    res.json({ success: true });
+        const hash = await bcrypt.hash(password, 10);
+        await pool.query('INSERT INTO users (username, password) VALUES ($1, $2)', [username, hash]);
+        res.json({ success: true });
+    } catch (err) {
+        if (err.code === '23505') // eşzamanlı kayıtta benzersizlik ihlali
+            return res.status(400).json({ error: 'Bu kullanıcı adı zaten kullanımda.' });
+        console.error('Kayıt hatası:', err.message);
+        res.status(500).json({ error: 'Sunucu hatası, lütfen tekrar deneyin.' });
+    }
 });
 
 app.post('/api/login', async (req, res) => {
     if (limited('login:' + req.ip, 10, 60000)) return res.status(429).json({ error: 'Çok fazla deneme. Biraz bekleyin.' });
     const username = String(req.body.username || '').trim();
     const password = String(req.body.password || '');
-    const user = getUsers().find(u => u.username.toLowerCase() === username.toLowerCase());
-    if (!user || !(await bcrypt.compare(password, user.password)))
-        return res.status(400).json({ error: 'Kullanıcı bulunamadı veya şifre hatalı.' });
-    res.json({ success: true, username: user.username, token: makeToken(user.username) });
+    try {
+        const { rows } = await pool.query('SELECT username, password FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1', [username]);
+        const user = rows[0];
+        if (!user || !(await bcrypt.compare(password, user.password)))
+            return res.status(400).json({ error: 'Kullanıcı bulunamadı veya şifre hatalı.' });
+        res.json({ success: true, username: user.username, token: makeToken(user.username) });
+    } catch (err) {
+        console.error('Giriş hatası:', err.message);
+        res.status(500).json({ error: 'Sunucu hatası, lütfen tekrar deneyin.' });
+    }
 });
 
 // ---------- WebRTC ICE (STUN/TURN) ----------
@@ -273,4 +277,11 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`LumoLive Sunucusu aktif: Port ${PORT}`));
+
+// Önce veritabanını hazırla ("users" tablosunu oluştur), sonra sunucuyu dinlemeye başlat
+initDb()
+    .then(() => server.listen(PORT, () => console.log(`LumoLive Sunucusu aktif: Port ${PORT}`)))
+    .catch((err) => {
+        console.error('Veritabanı başlatılamadı, sunucu durduruluyor:', err.message);
+        process.exit(1);
+    });
