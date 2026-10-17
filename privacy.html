@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LumoLive - Gizlilik Sözleşmesi</title>
+    <style>
+        * { box-sizing:border-box; margin:0; padding:0; font-family:'gg sans','Noto Sans','Helvetica Neue',Helvetica,Arial,sans-serif; }
+        body { background:#1e1f22; color:#b5bac1; min-height:100vh; line-height:1.7; padding:0 16px 60px; }
+        .bg { position:fixed; inset:0; z-index:-2; background:linear-gradient(125deg,#1a1b1e,#232428,#1e1f22,#2b2d31); background-size:400% 400%; animation:bgshift 18s ease infinite; }
+        @keyframes bgshift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+        .wrap { max-width:760px; margin:0 auto; }
+        header { padding:28px 0 18px; display:flex; align-items:center; justify-content:space-between; }
+        .logo { font-size:24px; font-weight:800; color:#f2f3f5; }
+        .logo span { background:linear-gradient(90deg,#5865F2,#a259ff); -webkit-background-clip:text; background-clip:text; color:transparent; }
+        a.back { color:#b5bac1; text-decoration:none; background:#2b2d31; padding:8px 14px; border-radius:8px; font-size:14px; font-weight:600; }
+        a.back:hover { background:#35373c; color:#fff; }
+        .card { background:#2b2d31; border:1px solid #232428; border-radius:14px; padding:28px; animation:in .5s both; }
+        @keyframes in { from{opacity:0; transform:translateY(16px)} to{opacity:1; transform:none} }
+        h1 { color:#f2f3f5; font-size:26px; margin-bottom:6px; }
+        .upd { color:#6d7178; font-size:13px; margin-bottom:22px; }
+        h2 { color:#f2f3f5; font-size:17px; margin:22px 0 8px; }
+        p { margin-bottom:8px; }
+        ul { padding-left:22px; margin-bottom:8px; }
+        .hi { color:#a259ff; font-weight:600; }
+    </style>
+</head>
+<body>
+    <div class="bg"></div>
+    <div class="wrap">
+        <header>
+            <div class="logo">Lumo<span>Live</span></div>
+            <a class="back" href="/login.html">← Giriş Ekranı</a>
+        </header>
+        <div class="card">
+            <h1>Gizlilik Sözleşmesi ve Kullanım Koşulları</h1>
+            <div class="upd">Son güncelleme: 2026</div>
+
+            <h2>1. Toplanan Veriler</h2>
+            <p>LumoLive; hizmeti sunabilmek için yalnızca kullanıcı adınızı, şifrenizin <span class="hi">bcrypt</span> ile geri döndürülemez biçimde şifrelenmiş özetini, hesabın oluşturulma tarihini ve sözleşme kabul zamanını saklar. Şifreniz hiçbir zaman düz metin olarak tutulmaz.</p>
+
+            <h2>2. Verilerin Kullanımı</h2>
+            <ul>
+                <li>Hesabınıza giriş yapmanızı sağlamak,</li>
+                <li>Aynı hesabın yalnızca tek cihazdan kullanılmasını sağlamak (güvenlik),</li>
+                <li>Hizmetin güvenliğini ve kararlılığını korumak.</li>
+            </ul>
+
+            <h2>3. Çerezler ve Yerel Depolama</h2>
+            <p>Oturum bilgisi tarayıcınızın yerel depolamasında (localStorage) tutulur. Bu veriler cihazınızda kalır ve üçüncü taraflarla paylaşılmaz.</p>
+
+            <h2>4. Ses ve Görüntü</h2>
+            <p>Sesli sohbet ve ekran paylaşımı verileri tarayıcılar arasında doğrudan (P2P/WebRTC) aktarılır; sunucularımızda saklanmaz.</p>
+
+            <h2>5. Üçüncü Taraf Hizmetler</h2>
+            <p>Bağlantı kurulumu için STUN/TURN altyapısı kullanılabilir. Bu hizmetler yalnızca bağlantıyı kurmak amacıyla teknik veri işler.</p>
+
+            <h2>6. Haklarınız</h2>
+            <p>Hesabınızın ve verilerinizin silinmesini talep etme hakkınız vardır. Verileriniz yalnızca hizmeti sunmak için gerekli olduğu sürece saklanır.</p>
+
+            <h2>7. İletişim</h2>
+            <p>Gizlilikle ilgili taleplerinizi uygulama üzerinden bize iletebilirsiniz.</p>
+        </div>
+    </div>
+</body>
+</html>
