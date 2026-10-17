@@ -6,40 +6,137 @@
     <title>LumoLive - Giriş / Kayıt Ol</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif; }
-        body { background-color: #313338; color: #dbdee1; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        
-        .auth-card { width: 100%; max-width: 440px; background: #2b2d31; border-radius: 12px; padding: 32px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); border: 1px solid #1f2023; text-align: center; }
-        
-        .logo { font-size: 26px; font-weight: 700; color: #f2f3f5; margin-bottom: 6px; }
-        .logo span { color: #5865F2; }
-        .subtitle { color: #949ba4; font-size: 14px; margin-bottom: 24px; }
+        :root { --brand:#5865F2; --brand-2:#7c4dff; --ok:#23a55a; --err:#ed4245; }
 
-        .tabs { display: flex; background: #1e1f22; border-radius: 8px; padding: 4px; margin-bottom: 20px; }
-        .tab-btn { flex: 1; padding: 10px; background: transparent; border: none; color: #949ba4; font-size: 14px; font-weight: 600; cursor: pointer; border-radius: 6px; transition: 0.2s; }
-        .tab-btn.active { background: #35363c; color: #f2f3f5; }
+        body {
+            background:#1e1f22; color:#dbdee1; min-height:100vh;
+            display:flex; justify-content:center; align-items:center; padding:20px;
+            overflow-x:hidden; position:relative;
+        }
 
-        .form-group { display: flex; flex-direction: column; gap: 14px; text-align: left; }
-        label { font-size: 12px; font-weight: 700; color: #b5bac1; text-transform: uppercase; letter-spacing: 0.5px; }
-        input { padding: 12px 16px; border-radius: 8px; border: 1px solid transparent; background: #1e1f22; color: #dbdee1; font-size: 15px; outline: none; width: 100%; transition: 0.2s; }
-        input:focus { border-color: #5865F2; }
+        /* ---------- Animasyonlu arka plan ---------- */
+        .bg { position:fixed; inset:0; z-index:-2; background:linear-gradient(125deg,#1a1b1e,#232428,#1e1f22,#2b2d31); background-size:400% 400%; animation:bgshift 18s ease infinite; }
+        @keyframes bgshift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+        .blob { position:fixed; border-radius:50%; filter:blur(70px); opacity:.45; z-index:-1; pointer-events:none; }
+        .blob.b1 { width:420px; height:420px; background:#5865F2; top:-120px; left:-100px; animation:float1 16s ease-in-out infinite; }
+        .blob.b2 { width:360px; height:360px; background:#7c4dff; bottom:-120px; right:-80px; animation:float2 20s ease-in-out infinite; }
+        .blob.b3 { width:300px; height:300px; background:#23a55a; top:55%; left:60%; animation:float3 24s ease-in-out infinite; opacity:.25; }
+        @keyframes float1 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(60px,40px) scale(1.15)} }
+        @keyframes float2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-50px,-30px) scale(1.1)} }
+        @keyframes float3 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-40px,50px)} }
 
-        .auth-btn { margin-top: 8px; padding: 12px; border-radius: 8px; border: none; background: #5865F2; color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s; width: 100%; }
-        .auth-btn:hover { background: #4752c4; }
+        /* ---------- Kart ---------- */
+        .auth-card {
+            width:100%; max-width:440px; background:rgba(43,45,49,.92); backdrop-filter:blur(14px);
+            border-radius:16px; padding:34px 32px 28px; text-align:center;
+            border:1px solid rgba(255,255,255,.07);
+            box-shadow:0 20px 60px rgba(0,0,0,.6), 0 0 0 1px rgba(88,101,242,.12);
+            animation:cardIn .7s cubic-bezier(.2,.8,.2,1) both; position:relative; overflow:hidden;
+        }
+        .auth-card::before {
+            content:""; position:absolute; top:0; left:-60%; width:60%; height:100%;
+            background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent);
+            transform:skewX(-20deg); animation:sheen 6s ease-in-out infinite;
+        }
+        @keyframes cardIn { from{opacity:0; transform:translateY(26px) scale(.97)} to{opacity:1; transform:none} }
+        @keyframes sheen { 0%,60%{left:-60%} 100%{left:130%} }
 
-        .error-msg { color: #ed4245; font-size: 13px; margin-top: 10px; display: none; }
-        .success-msg { color: #23a55a; font-size: 13px; margin-top: 10px; display: none; }
+        .logo { font-size:28px; font-weight:800; color:#f2f3f5; margin-bottom:4px; position:relative; z-index:1; letter-spacing:.5px; animation:pop2 .8s .1s both; }
+        .logo span { background:linear-gradient(90deg,#5865F2,#a259ff); -webkit-background-clip:text; background-clip:text; color:transparent; }
+        @keyframes pop2 { from{opacity:0; transform:scale(.85)} to{opacity:1; transform:none} }
+        .subtitle { color:#949ba4; font-size:14px; margin-bottom:22px; position:relative; z-index:1; }
 
-        .form-section { display: none; }
-        .form-section.active { display: block; }
+        /* ---------- Sekmeler ---------- */
+        .tabs { position:relative; display:flex; background:#1e1f22; border-radius:10px; padding:4px; margin-bottom:22px; z-index:1; }
+        .tab-ind { position:absolute; top:4px; left:4px; width:calc(50% - 4px); height:calc(100% - 8px); background:linear-gradient(135deg,#5865F2,#7c4dff); border-radius:7px; transition:transform .35s cubic-bezier(.2,.8,.2,1); }
+        .tabs.reg .tab-ind { transform:translateX(100%); }
+        .tab-btn { flex:1; padding:10px; background:transparent; border:none; color:#949ba4; font-size:14px; font-weight:700; cursor:pointer; border-radius:7px; transition:color .25s; position:relative; z-index:1; }
+        .tab-btn.active { color:#fff; }
+
+        .form-section { display:none; position:relative; z-index:1; }
+        .form-section.active { display:block; animation:fadeUp .4s both; }
+        @keyframes fadeUp { from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none} }
+
+        .form-group { display:flex; flex-direction:column; gap:6px; text-align:left; }
+        label { font-size:12px; font-weight:700; color:#b5bac1; text-transform:uppercase; letter-spacing:.5px; margin-top:8px; }
+        .field { position:relative; }
+        input[type=text], input[type=password] {
+            width:100%; padding:12px 44px 12px 16px; border-radius:9px; border:1px solid transparent;
+            background:#1e1f22; color:#dbdee1; font-size:15px; outline:none; transition:.22s;
+        }
+        input:focus { border-color:var(--brand); box-shadow:0 0 0 3px rgba(88,101,242,.22); background:#232428; }
+        .eye { position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:#949ba4; cursor:pointer; font-size:16px; padding:4px; }
+        .eye:hover { color:#f2f3f5; }
+
+        /* Şifre güç çubuğu */
+        .strength { height:5px; border-radius:3px; background:#1e1f22; overflow:hidden; margin-top:2px; }
+        .strength i { display:block; height:100%; width:0; transition:width .3s, background .3s; }
+
+        /* ---------- CAPTCHA / Robot doğrulaması ---------- */
+        .verify { margin-top:14px; background:#1e1f22; border:1px solid #2b2d31; border-radius:10px; padding:12px; }
+        .verify-head { display:flex; align-items:center; gap:10px; }
+        .cbox { width:22px; height:22px; border-radius:6px; border:2px solid #5865F2; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:.2s; }
+        .cbox.on { background:var(--brand); }
+        .cbox.on::after { content:"✓"; color:#fff; font-size:15px; font-weight:800; }
+        .verify-head span { font-size:13px; color:#b5bac1; font-weight:600; }
+        .verify-body { max-height:0; overflow:hidden; transition:max-height .35s ease, margin .35s; }
+        .verify-body.open { max-height:120px; margin-top:12px; }
+        .cap-row { display:flex; align-items:center; gap:8px; }
+        .cap-q { flex:1; background:#2b2d31; border-radius:8px; padding:10px 14px; font-size:16px; font-weight:700; color:#f2f3f5; letter-spacing:1px; text-align:center; user-select:none; }
+        .cap-ref { background:#2b2d31; border:none; color:#b5bac1; border-radius:8px; padding:11px; cursor:pointer; font-size:15px; transition:.2s; }
+        .cap-ref:hover { color:#fff; background:#35373c; transform:rotate(90deg); }
+        .cap-row input { padding:11px 12px !important; text-align:center; font-weight:700; }
+
+        /* ---------- Sözleşme ---------- */
+        .terms { display:flex; gap:10px; align-items:flex-start; margin-top:14px; text-align:left; }
+        .terms label { text-transform:none; font-size:13px; font-weight:500; color:#949ba4; letter-spacing:0; margin:0; cursor:pointer; line-height:1.4; }
+        .terms a { color:var(--brand); text-decoration:none; font-weight:700; }
+        .terms a:hover { text-decoration:underline; }
+
+        /* ---------- Buton ---------- */
+        .auth-btn { margin-top:18px; padding:12px; border-radius:9px; border:none; width:100%; color:#fff; font-size:15px; font-weight:700; cursor:pointer;
+            background:linear-gradient(135deg,#5865F2,#7c4dff); background-size:200% 200%; transition:.25s; position:relative; overflow:hidden; }
+        .auth-btn:hover { background-position:100% 0; transform:translateY(-1px); box-shadow:0 8px 20px rgba(88,101,242,.35); }
+        .auth-btn:active { transform:translateY(0) scale(.99); }
+        .auth-btn[disabled] { opacity:.6; cursor:default; transform:none; box-shadow:none; }
+        .spin { display:inline-block; width:16px; height:16px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; vertical-align:-3px; }
+        @keyframes spin { to{transform:rotate(360deg)} }
+
+        .msg-box { margin-top:14px; font-size:13px; display:none; padding:10px 12px; border-radius:8px; text-align:left; }
+        .msg-box.err { display:block; color:#ffb3b5; background:rgba(237,66,69,.12); border-left:3px solid var(--err); animation:shake .4s; }
+        .msg-box.ok { display:block; color:#a8f0c0; background:rgba(35,165,90,.12); border-left:3px solid var(--ok); }
+        @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-7px)} 40%{transform:translateX(7px)} 60%{transform:translateX(-5px)} 80%{transform:translateX(5px)} }
+
+        .note { margin-top:16px; font-size:12px; color:#6d7178; display:flex; gap:6px; align-items:center; justify-content:center; position:relative; z-index:1; }
+
+        /* ---------- Sözleşme Modalı ---------- */
+        .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:99; justify-content:center; align-items:center; padding:20px; animation:fadeIn .2s; }
+        .modal.on { display:flex; }
+        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+        .modal-box { background:#313338; border:1px solid #232428; border-radius:14px; width:100%; max-width:560px; max-height:80vh; display:flex; flex-direction:column; animation:cardIn .35s both; }
+        .modal-box h3 { color:#f2f3f5; padding:18px 22px; font-size:19px; border-bottom:1px solid #232428; }
+        .modal-body { padding:18px 22px; overflow-y:auto; color:#b5bac1; font-size:14px; line-height:1.6; }
+        .modal-body h4 { color:#f2f3f5; margin:16px 0 6px; font-size:15px; }
+        .modal-body h4:first-child { margin-top:0; }
+        .modal-body ul { padding-left:20px; }
+        .modal-foot { padding:14px 22px; border-top:1px solid #232428; display:flex; justify-content:flex-end; gap:8px; }
+        .btn { padding:9px 18px; border-radius:8px; border:none; background:var(--brand); color:#fff; font-weight:600; cursor:pointer; font-size:14px; }
+        .btn:hover { background:#4752c4; }
+        .btn.ghost { background:transparent; color:#b5bac1; }
+        .btn.ghost:hover { background:#3f4147; }
+        @media (max-width:520px){ .auth-card{padding:26px 20px} }
     </style>
 </head>
 <body>
+    <div class="bg"></div>
+    <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
 
     <div class="auth-card">
         <div class="logo">Lumo<span>Live</span></div>
-        <div class="subtitle">Canlı yayın dünyasına hoş geldin!</div>
+        <div class="subtitle">Canlı yayın dünyasına hoş geldin! ✨</div>
 
-        <div class="tabs">
+        <div class="tabs" id="tabs">
+            <div class="tab-ind"></div>
             <button class="tab-btn active" onclick="switchForm('login', event)">Giriş Yap</button>
             <button class="tab-btn" onclick="switchForm('register', event)">Kayıt Ol</button>
         </div>
@@ -48,128 +145,221 @@
         <div id="login-form" class="form-section active">
             <div class="form-group">
                 <label>Kullanıcı Adı</label>
-                <input type="text" id="loginUsername" autocomplete="username" maxlength="20" placeholder="Kullanıcı adını gir...">
-                
+                <div class="field">
+                    <input type="text" id="loginUsername" autocomplete="username" maxlength="20" placeholder="Kullanıcı adını gir...">
+                </div>
                 <label>Şifre</label>
-                <input type="password" id="loginPassword" autocomplete="current-password" placeholder="Şifreni gir...">
-
-                <button class="auth-btn" onclick="handleLogin()">Giriş Yap</button>
+                <div class="field">
+                    <input type="password" id="loginPassword" autocomplete="current-password" placeholder="Şifreni gir...">
+                    <button class="eye" onclick="togglePass('loginPassword', this)" tabindex="-1">👁</button>
+                </div>
+                <button class="auth-btn" id="loginBtn" onclick="handleLogin()">Giriş Yap</button>
             </div>
+            <div class="note">🔒 Aynı hesaba aynı anda yalnızca tek cihazdan girilebilir.</div>
         </div>
 
         <!-- KAYIT FORMU -->
         <div id="register-form" class="form-section">
             <div class="form-group">
                 <label>Kullanıcı Adı Seç</label>
-                <input type="text" id="regUsername" autocomplete="username" maxlength="20" placeholder="Bir kullanıcı adı belirle...">
-                
+                <div class="field">
+                    <input type="text" id="regUsername" autocomplete="username" maxlength="20" placeholder="Bir kullanıcı adı belirle...">
+                </div>
                 <label>Şifre Belirle</label>
-                <input type="password" id="regPassword" autocomplete="new-password" maxlength="72" placeholder="Güçlü bir şifre gir...">
+                <div class="field">
+                    <input type="password" id="regPassword" autocomplete="new-password" maxlength="72" placeholder="Güçlü bir şifre gir..." oninput="checkStrength()">
+                    <button class="eye" onclick="togglePass('regPassword', this)" tabindex="-1">👁</button>
+                </div>
+                <div class="strength"><i id="strBar"></i></div>
 
-                <button class="auth-btn" onclick="handleRegister()">Hesap Oluştur</button>
+                <!-- Robot doğrulaması -->
+                <div class="verify">
+                    <div class="verify-head">
+                        <div class="cbox" id="humanBox" onclick="toggleHuman()"></div>
+                        <span>Ben robot değilim</span>
+                    </div>
+                    <div class="verify-body" id="verifyBody">
+                        <div class="cap-row">
+                            <div class="cap-q" id="capQ">Yükleniyor...</div>
+                            <button class="cap-ref" onclick="loadCaptcha()" title="Yeni soru">↻</button>
+                        </div>
+                        <label style="margin-top:12px">Cevap</label>
+                        <div class="field"><input type="text" id="capA" inputmode="numeric" placeholder="Sonucu yaz"></div>
+                    </div>
+                </div>
+
+                <!-- Gizlilik sözleşmesi -->
+                <div class="terms">
+                    <div class="cbox" id="termsBox" onclick="toggleTerms()"></div>
+                    <label onclick="toggleTerms()"><a href="/privacy.html" onclick="event.preventDefault();openPrivacy()">Gizlilik Sözleşmesi</a> ve <a href="/privacy.html" onclick="event.preventDefault();openPrivacy()">Kullanım Koşulları</a>'nı okudum, kabul ediyorum.</label>
+                </div>
+
+                <button class="auth-btn" id="regBtn" onclick="handleRegister()">Hesap Oluştur</button>
             </div>
         </div>
 
-        <div id="errorMsg" class="error-msg"></div>
-        <div id="successMsg" class="success-msg"></div>
+        <div id="msg" class="msg-box"></div>
+    </div>
+
+    <!-- Gizlilik Sözleşmesi Modalı -->
+    <div class="modal" id="privacyModal">
+        <div class="modal-box">
+            <h3>Gizlilik Sözleşmesi ve Kullanım Koşulları</h3>
+            <div class="modal-body">
+                <h4>1. Toplanan Veriler</h4>
+                <p>LumoLive; hizmeti sunabilmek için yalnızca kullanıcı adını, şifrenin bcrypt ile geri döndürülemez biçimde şifrelenmiş özetini ve hesabın oluşturulma tarihini saklar. Şifreniz hiçbir zaman düz metin olarak tutulmaz.</p>
+                <h4>2. Verilerin Kullanımı</h4>
+                <ul>
+                    <li>Hesabınıza giriş yapmanızı sağlamak,</li>
+                    <li>Aynı hesabın yalnızca tek cihazdan kullanılmasını sağlamak (güvenlik),</li>
+                    <li>Hizmetin güvenliğini ve kararlılığını korumak.</li>
+                </ul>
+                <h4>3. Çerezler ve Yerel Depolama</h4>
+                <p>Oturum bilgisi tarayıcınızın yerel depolamasında (localStorage) tutulur. Bu veriler cihazınızda kalır ve üçüncü taraflarla paylaşılmaz.</p>
+                <h4>4. Ses ve Görüntü</h4>
+                <p>Sesli sohbet ve ekran paylaşımı verileri tarayıcılar arasında doğrudan (P2P/WebRTC) aktarılır; sunucularımızda saklanmaz.</p>
+                <h4>5. Üçüncü Taraf Hizmetler</h4>
+                <p>Bağlantı kurulumu için STUN/TURN altyapısı kullanılabilir. Bu hizmetler yalnızca bağlantıyı kurmak amacıyla teknik veri işler.</p>
+                <h4>6. Haklarınız</h4>
+                <p>Hesabınızın ve verilerinizin silinmesini talep etme hakkınız vardır. Verileriniz yalnızca hizmeti sunmak için gerekli olduğu sürece saklanır.</p>
+                <h4>7. İletişim</h4>
+                <p>Gizlilikle ilgili taleplerinizi uygulama üzerinden bize iletebilirsiniz.</p>
+            </div>
+            <div class="modal-foot">
+                <button class="btn ghost" onclick="closePrivacy()">Kapat</button>
+                <button class="btn" onclick="acceptFromModal()">Kabul Ediyorum</button>
+            </div>
+        </div>
     </div>
 
     <script>
         if (localStorage.getItem('lumolive_token')) window.location.replace('/index.html');
-        document.addEventListener('keydown', e => {
-            if (e.key !== 'Enter') return;
-            document.getElementById('login-form').classList.contains('active') ? handleLogin() : handleRegister();
-        });
+
+        const $ = id => document.getElementById(id);
+        function showErr(m) { const b = $('msg'); b.className = 'msg-box err'; b.textContent = m; }
+        function showOk(m) { const b = $('msg'); b.className = 'msg-box ok'; b.textContent = m; }
+        function hideMsg() { $('msg').className = 'msg-box'; }
+
         function switchForm(type, event) {
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.form-section').forEach(sec => sec.classList.remove('active'));
-
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
+            $('tabs').classList.toggle('reg', type === 'register');
             event.target.classList.add('active');
-            if (type === 'login') {
-                document.getElementById('login-form').classList.add('active');
-            } else {
-                document.getElementById('register-form').classList.add('active');
-            }
-            hideMessages();
+            $(type === 'login' ? 'login-form' : 'register-form').classList.add('active');
+            hideMsg();
+            if (type === 'register' && !$('capQ').dataset.loaded) loadCaptcha();
         }
 
-        function showError(msg) {
-            const err = document.getElementById('errorMsg');
-            err.innerText = msg;
-            err.style.display = 'block';
-            document.getElementById('successMsg').style.display = 'none';
+        function togglePass(id, btn) {
+            const i = $(id); const show = i.type === 'password';
+            i.type = show ? 'text' : 'password'; btn.textContent = show ? '🙈' : '👁';
         }
 
-        function showSuccess(msg) {
-            const succ = document.getElementById('successMsg');
-            succ.innerText = msg;
-            succ.style.display = 'block';
-            document.getElementById('errorMsg').style.display = 'none';
+        // ---- Şifre gücü ----
+        function checkStrength() {
+            const v = $('regPassword').value;
+            let s = 0;
+            if (v.length >= 6) s++;
+            if (v.length >= 10) s++;
+            if (/[A-Z]/.test(v) && /[a-z]/.test(v)) s++;
+            if (/\d/.test(v)) s++;
+            if (/[^A-Za-z0-9]/.test(v)) s++;
+            const bar = $('strBar');
+            const map = [['0%', '#5865F2'], ['25%', '#ed4245'], ['45%', '#e67e22'], ['65%', '#f1c40f'], ['85%', '#23a55a'], ['100%', '#23a55a']];
+            const [w, c] = map[Math.min(s, 5)];
+            bar.style.width = v ? w : '0'; bar.style.background = c;
         }
 
-        function hideMessages() {
-            document.getElementById('errorMsg').style.display = 'none';
-            document.getElementById('successMsg').style.display = 'none';
+        // ---- Robot doğrulaması ----
+        let captchaId = null, humanChecked = false, termsChecked = false;
+        function toggleHuman() {
+            humanChecked = !humanChecked;
+            $('humanBox').classList.toggle('on', humanChecked);
+            $('verifyBody').classList.toggle('open', humanChecked);
+            if (humanChecked && !$('capQ').dataset.loaded) loadCaptcha();
+            if (humanChecked) setTimeout(() => $('capA').focus(), 350);
+        }
+        async function loadCaptcha() {
+            $('capQ').textContent = 'Yükleniyor...';
+            try {
+                const r = await fetch('/api/captcha'); const d = await r.json();
+                captchaId = d.id; $('capQ').textContent = d.question; $('capQ').dataset.loaded = '1'; $('capA').value = '';
+            } catch { $('capQ').textContent = 'Soru yüklenemedi'; }
+        }
+        function toggleTerms() { termsChecked = !termsChecked; $('termsBox').classList.toggle('on', termsChecked); }
+        function openPrivacy() { $('privacyModal').classList.add('on'); }
+        function closePrivacy() { $('privacyModal').classList.remove('on'); }
+        function acceptFromModal() { termsChecked = true; $('termsBox').classList.add('on'); closePrivacy(); }
+
+        function busy(btn, on) {
+            btn.disabled = on;
+            if (on) { btn.dataset.label = btn.textContent; btn.innerHTML = '<span class="spin"></span> Lütfen bekle...'; }
+            else btn.textContent = btn.dataset.label || btn.textContent;
         }
 
-        // Kayıt Ol İsteği
+        // ---- Kayıt ----
         async function handleRegister() {
-            const username = document.getElementById('regUsername').value.trim();
-            const password = document.getElementById('regPassword').value;
-            if (!/^[\p{L}\p{N}_.-]{3,20}$/u.test(username)) return showError('Kullanıcı adı 3-20 karakter olmalı (harf, rakam, _ . -).');
-            if (password.length < 6) return showError('Şifre en az 6 karakter olmalı.');
+            hideMsg();
+            const username = $('regUsername').value.trim();
+            const password = $('regPassword').value;
+            if (!/^[\p{L}\p{N}_.-]{3,20}$/u.test(username)) return showErr('Kullanıcı adı 3-20 karakter olmalı (harf, rakam, _ . -).');
+            if (password.length < 6 || password.length > 72) return showErr('Şifre 6-72 karakter olmalı.');
+            if (!humanChecked) return showErr('Lütfen robot doğrulamasını tamamla.');
+            if (!termsChecked) return showErr('Gizlilik sözleşmesini kabul etmelisin.');
+            const captchaAnswer = $('capA').value.trim();
+            if (!captchaAnswer) return showErr('Robot doğrulaması cevabını gir.');
 
-            if (!username || !password) return showError("Lütfen tüm alanları doldurun!");
-
+            const btn = $('regBtn'); busy(btn, true);
             try {
                 const res = await fetch('/api/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, captchaId, captchaAnswer, acceptTerms: true })
                 });
                 const data = await res.json();
-
                 if (res.ok) {
-                    showSuccess("Kayıt başarılı! Şimdi giriş yapabilirsin.");
+                    showOk('Kayıt başarılı! Şimdi giriş yapabilirsin. 🎉');
+                    ['regUsername', 'regPassword', 'capA'].forEach(i => $(i).value = '');
+                    humanChecked = false; termsChecked = false;
+                    $('humanBox').classList.remove('on'); $('termsBox').classList.remove('on'); $('verifyBody').classList.remove('open');
+                    $('strBar').style.width = '0';
                     switchForm('login', { target: document.querySelector('.tab-btn') });
-                    document.getElementById('successMsg').style.display = 'block';
-                    document.getElementById('regUsername').value = '';
-                    document.getElementById('regPassword').value = '';
+                    showOk('Kayıt başarılı! Şimdi giriş yapabilirsin. 🎉');
                 } else {
-                    showError(data.error || "Kayıt olma başarısız.");
+                    showErr(data.error || 'Kayıt olma başarısız.');
+                    loadCaptcha();
                 }
-            } catch (err) {
-                showError("Sunucu bağlantı hatası!");
-            }
+            } catch { showErr('Sunucu bağlantı hatası!'); }
+            finally { busy(btn, false); }
         }
 
-        // Giriş Yap İsteği
+        // ---- Giriş ----
         async function handleLogin() {
-            const username = document.getElementById('loginUsername').value.trim();
-            const password = document.getElementById('loginPassword').value;
+            hideMsg();
+            const username = $('loginUsername').value.trim();
+            const password = $('loginPassword').value;
+            if (!username || !password) return showErr('Lütfen kullanıcı adı ve şifreni gir!');
 
-            if (!username || !password) return showError("Lütfen kullanıcı adı ve şifreni gir!");
-
+            const btn = $('loginBtn'); busy(btn, true);
             try {
                 const res = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
                 });
                 const data = await res.json();
-
                 if (res.ok) {
-                    // Kullanıcı adını localStorage'da saklayıp ana lobi sayfasına yönlendiriyoruz
                     localStorage.setItem('lumolive_user', data.username);
                     localStorage.setItem('lumolive_token', data.token);
-                    window.location.href = '/index.html';
-                } else {
-                    showError(data.error || "Giriş bilgileri hatalı.");
-                }
-            } catch (err) {
-                showError("Sunucu bağlantı hatası!");
-            }
+                    showOk('Giriş başarılı! Yönlendiriliyorsun...');
+                    setTimeout(() => window.location.href = '/index.html', 500);
+                } else { showErr(data.error || 'Giriş bilgileri hatalı.'); busy(btn, false); }
+            } catch { showErr('Sunucu bağlantı hatası!'); busy(btn, false); }
         }
+
+        document.addEventListener('keydown', e => {
+            if (e.key !== 'Enter') return;
+            $('login-form').classList.contains('active') ? handleLogin() : handleRegister();
+        });
+        $('privacyModal').addEventListener('click', e => { if (e.target.id === 'privacyModal') closePrivacy(); });
     </script>
 </body>
 </html>
