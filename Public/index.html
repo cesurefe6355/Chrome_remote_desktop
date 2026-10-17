@@ -94,6 +94,58 @@ button:hover{background:#4752c4}button.red{background:#da373c}button.red:hover{b
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(237,66,69,.7)}50%{box-shadow:0 0 0 5px rgba(237,66,69,0)}}
 @keyframes rise{from{transform:translateY(0) scale(.6);opacity:1}to{transform:translateY(-55vh) scale(1.6);opacity:0}}
 @keyframes pop{50%{transform:scale(1.25)}}
+/* ---------- Ana menü iyileştirmeleri ---------- */
+.rail{gap:10px;padding-top:14px}
+.srv{background:linear-gradient(135deg,#5865F2,#7c4dff);box-shadow:0 6px 18px rgba(88,101,242,.4);transition:transform .25s,border-radius .25s;cursor:pointer}
+.srv:hover{transform:scale(1.08) rotate(-3deg);border-radius:14px}
+.sh{background:linear-gradient(90deg,rgba(88,101,242,.14),transparent);gap:8px;font-weight:800;letter-spacing:.3px}
+.sh .lg{background:linear-gradient(90deg,#5865F2,#a259ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.ch{transition:background .15s,transform .15s,color .15s;position:relative}
+.ch:hover{transform:translateX(2px)}
+.ch.on::before{content:"";position:absolute;left:0;top:5px;bottom:5px;width:3px;border-radius:0 3px 3px 0;background:linear-gradient(180deg,#5865F2,#a259ff)}
+.ch.on{background:linear-gradient(90deg,rgba(88,101,242,.28),rgba(88,101,242,.05));color:#fff}
+.hd{background:linear-gradient(90deg,rgba(88,101,242,.09),transparent);border-bottom:1px solid rgba(0,0,0,.35)}
+.hd .t{font-size:16px}
+.tile{transition:transform .15s,box-shadow .15s}
+.tile:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.45)}
+.vctl{background:linear-gradient(0deg,rgba(0,0,0,.35),transparent)}
+.cb{transition:transform .15s,background .15s}
+.cb:hover{transform:translateY(-2px)}
+.me .av{border:2px solid #5865F2}
+.panel{box-shadow:0 -1px 0 rgba(0,0,0,.3)}
+
+/* ---------- Ping / ağ durumu ---------- */
+.netbar{display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:12px;color:#949ba4;background:#232428;border-top:1px solid #1a1b1e;border-bottom:1px solid #1a1b1e}
+.netdot{width:9px;height:9px;border-radius:50%;background:#23a55a;flex-shrink:0;transition:background .3s;box-shadow:0 0 8px currentColor}
+.netbar .lbl{font-weight:600}
+.netbar b{margin-left:auto;color:#f2f3f5;font-size:12px;font-variant-numeric:tabular-nums}
+.netbar .q{color:#80848e}
+
+/* ---------- Ekran yayını ayar penceresi ---------- */
+.box.sbox{max-width:600px;max-height:92vh;overflow-y:auto}
+.sbox h3{display:flex;align-items:center;gap:10px}
+.sbox h3 .badge{font-size:11px;font-weight:700;color:#a259ff;background:rgba(162,89,255,.15);padding:3px 8px;border-radius:20px;margin-left:auto}
+.srcgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.srcopt{background:#1e1f22;border:2px solid transparent;border-radius:10px;padding:12px 6px;text-align:center;cursor:pointer;transition:.2s;color:#b5bac1}
+.srcopt:hover{background:#232428;color:#fff}
+.srcopt.on{border-color:#5865F2;background:rgba(88,101,242,.15);color:#fff}
+.srcopt .ico{font-size:22px;display:block;line-height:1.2}
+.srcopt small{display:block;font-size:11px;margin-top:5px;font-weight:600}
+.optgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+#fpsGrid{grid-template-columns:repeat(5,1fr)}
+.opt{background:#1e1f22;border:2px solid transparent;border-radius:8px;padding:9px 4px;text-align:center;cursor:pointer;font-size:13px;font-weight:700;color:#b5bac1;transition:.18s}
+.opt:hover{background:#232428;color:#fff}
+.opt.on{border-color:#5865F2;background:rgba(88,101,242,.18);color:#fff}
+.opt small{display:block;font-weight:500;font-size:10px;color:#80848e;margin-top:1px}
+.opt.on small{color:#c9d0f5}
+.row2{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;font-size:14px;color:#b5bac1}
+.switch{position:relative;width:44px;height:25px;background:#1e1f22;border-radius:13px;cursor:pointer;transition:.2s;flex-shrink:0}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:19px;height:19px;border-radius:50%;background:#80848e;transition:.2s}
+.switch.on{background:#5865F2}.switch.on::after{transform:translateX(19px);background:#fff}
+input[type=range]{width:100%;accent-color:#5865F2;margin-top:4px}
+.summary{background:#1e1f22;border-radius:10px;padding:12px 14px;font-size:13px;color:#80848e;margin-top:14px;display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between}
+.summary b{color:#f2f3f5;font-weight:700}
+.warn{display:none;color:#f1c40f;font-size:12px;margin-top:10px;background:rgba(241,196,15,.08);border-left:3px solid #f1c40f;padding:8px 10px;border-radius:6px}
 @media(max-width:900px){.members{display:none}.rail{display:none}}
 </style>
 </head>
@@ -106,9 +158,36 @@ button:hover{background:#4752c4}button.red{background:#da373c}button.red:hover{b
 <label>Kanal Adı</label><input id="newName" maxlength="24" placeholder="yeni-kanal">
 <div class="acts"><button class="g" onclick="closeM('mCreate')">İptal</button><button id="btnCreate">Oluştur</button></div></div></div>
 
-<div class="ov" id="mStream"><div class="box"><h3>Ekran Yayını</h3><p>Yayın kalitesini seç. Yüksek ayarlar daha fazla internet ve işlemci kullanır.</p>
-<label>Çözünürlük</label><select id="resSel"><option value="720">720p</option><option value="1080" selected>1080p</option><option value="1440">1440p</option><option value="2160">4K</option></select>
-<label>Kare Hızı</label><select id="fpsSel"><option value="30">30 FPS</option><option value="60" selected>60 FPS</option></select>
+<div class="ov" id="mStream"><div class="box sbox"><h3>🎥 Ekran Yayını <span class="badge" id="qBadge">4K · 144 FPS destekli</span></h3><p>Yayın kalitesini seç. Yüksek ayarlar daha fazla internet ve işlemci kullanır.</p>
+<label>Ne paylaşacaksın?</label>
+<div class="srcgrid" id="srcGrid">
+  <div class="srcopt on" data-src="monitor"><span class="ico">🖥️</span><small>Tüm Ekran</small></div>
+  <div class="srcopt" data-src="window"><span class="ico">🪟</span><small>Pencere</small></div>
+  <div class="srcopt" data-src="browser"><span class="ico">🌐</span><small>Sekme</small></div>
+</div>
+<label>Çözünürlük</label>
+<div class="optgrid" id="resGrid">
+  <div class="opt" data-v="720">720p<small>HD</small></div>
+  <div class="opt on" data-v="1080">1080p<small>Full HD</small></div>
+  <div class="opt" data-v="1440">1440p<small>2K</small></div>
+  <div class="opt" data-v="2160">2160p<small>4K</small></div>
+</div>
+<label>Kare Hızı</label>
+<div class="optgrid" id="fpsGrid">
+  <div class="opt" data-v="30">30<small>FPS</small></div>
+  <div class="opt on" data-v="60">60<small>FPS</small></div>
+  <div class="opt" data-v="90">90<small>FPS</small></div>
+  <div class="opt" data-v="120">120<small>FPS</small></div>
+  <div class="opt" data-v="144">144<small>FPS</small></div>
+</div>
+<label>Kodek</label>
+<select id="codecSel"><option value="auto">Otomatik (önerilen)</option></select>
+<label>Bit Hızı — <span id="brLbl">8</span> Mbps</label>
+<input type="range" id="brRange" min="2" max="60" step="1" value="8">
+<div class="row2"><span>🔊 Sistem sesini paylaş</span><div class="switch on" id="swAudio"></div></div>
+<div class="row2"><span>⚡ Akıcılığı önceliklendir (oyun/video)</span><div class="switch on" id="swMotion"></div></div>
+<div class="summary"><span>Çözünürlük: <b id="sumRes">1920×1080</b></span><span><b id="sumFps">60</b> FPS</span><span><b id="sumBr">8</b> Mbps</span></div>
+<div class="warn" id="warnBox"></div>
 <div class="acts"><button class="g" onclick="closeM('mStream')">İptal</button><button id="btnGo">Yayına Başla</button></div></div></div>
 
 <div class="ov" id="mInfo"><div class="box"><h3 id="infoT"></h3><p id="infoD"></p><div class="acts"><button onclick="closeM('mInfo')">Tamam</button></div></div></div>
@@ -116,13 +195,19 @@ button:hover{background:#4752c4}button.red{background:#da373c}button.red:hover{b
 <div class="app">
 <div class="rail"><div class="srv">LL</div></div>
 <div class="side">
-  <div class="sh">LumoLive</div>
+  <div class="sh"><span class="lg">LumoLive</span></div>
   <div class="chs">
     <div class="cat"><span>Metin Kanalları</span><button onclick="openCreate('text')" title="Metin Kanalı Oluştur">+</button></div><div id="tList"></div>
     <div class="cat"><span>Ses Kanalları</span><button onclick="openCreate('voice')" title="Ses Kanalı Oluştur">+</button></div><div id="vList"></div>
   </div>
   <div class="vstat" id="vstat"><div><b>Ses Bağlandı</b><small id="vstatName"></small></div>
     <button class="ib" onclick="leaveVoice()" title="Bağlantıyı Kes"><i data-ic="hang"></i></button></div>
+  <div class="netbar" id="netbar" title="Sunucu gecikmesi (ping)">
+    <span class="netdot" id="netDot"></span>
+    <span class="lbl">Ping</span>
+    <span class="q" id="netQual"></span>
+    <b id="netMs">-- ms</b>
+  </div>
   <div class="panel">
     <div class="me"><div class="av" id="meAv"></div><div><b id="meName"></b><small id="meSt">Bağlanıyor...</small></div></div>
     <div style="display:flex">
@@ -197,9 +282,36 @@ const iceReady = fetch('/api/ice', { headers: { Authorization: 'Bearer ' + token
 // rtc.iceServers.push({ urls: 'turn:SUNUCU:3478', username: '...', credential: '...' });
 
 const socket = io({ auth: { token } });
-socket.on('connect_error', e => { if (e.message === 'unauthorized') logout(); else $('meSt').textContent = 'Bağlantı yok'; });
+socket.on('connect_error', e => {
+  if (e.message === 'unauthorized') return logout();
+  if (e.message === 'session-replaced') {
+    alert('Hesabına başka bir cihazdan giriş yapıldı. Bu oturum kapatıldı.');
+    return logout();
+  }
+  $('meSt').textContent = 'Bağlantı yok';
+});
+socket.on('session-replaced', m => { alert(m || 'Hesabına başka bir cihazdan giriş yapıldı.'); logout(); });
 socket.on('disconnect', () => { $('meSt').textContent = 'Bağlantı koptu...'; cleanup(); });
 socket.on('connect', () => { $('meSt').textContent = 'Bağlandı'; if (textId) socket.emit('join-text', { channelId: textId }); if (voiceId) joinVoice(voiceId); });
+
+// ----- İnternet ping göstergesi -----
+const pingSamples = [];
+const pingColor = ms => ms < 60 ? '#23a55a' : ms < 130 ? '#f1c40f' : '#ed4245';
+const pingText = ms => ms < 60 ? 'Harika' : ms < 130 ? 'İyi' : ms < 250 ? 'Orta' : 'Yüksek';
+function measurePing() {
+  const dot = $('netDot'), ms = $('netMs'), q = $('netQual');
+  if (!socket.connected) { ms.textContent = '-- ms'; q.textContent = 'bağlantı yok'; dot.style.background = '#ed4245'; return; }
+  const t = Date.now();
+  socket.timeout(4000).emit('latency', t, (err, start) => {
+    if (err) { ms.textContent = '-- ms'; q.textContent = 'zaman aşımı'; dot.style.background = '#ed4245'; return; }
+    const v = Math.max(0, Date.now() - (typeof start === 'number' ? start : t));
+    pingSamples.push(v); if (pingSamples.length > 5) pingSamples.shift();
+    const avg = Math.round(pingSamples.reduce((a, b) => a + b, 0) / pingSamples.length);
+    ms.textContent = avg + ' ms'; q.textContent = pingText(avg); dot.style.background = pingColor(avg);
+    dot.style.color = pingColor(avg);
+  });
+}
+measurePing(); setInterval(measurePing, 4000);
 
 // ----- Sesler -----
 const getAC = () => ac = ac || new (window.AudioContext || window.webkitAudioContext)();
@@ -415,18 +527,92 @@ socket.on('user-left-voice', id => {
 });
 
 // ----- Ekran yayını -----
-$('btnShare').onclick = () => isHost ? info('Yayındasın', 'Zaten ekran paylaşıyorsun.') : voiceId ? openM('mStream') : 0;
-const BITRATE = { 720: 4e6, 1080: 8e6, 1440: 14e6, 2160: 25e6 };
-$('btnGo').onclick = async () => {
-  const h = +$('resSel').value, fps = +$('fpsSel').value;
+const RES = { 720: [1280, 720], 1080: [1920, 1080], 1440: [2560, 1440], 2160: [3840, 2160] };
+const streamCfg = { src: 'monitor', res: 1080, fps: 60, br: 8, audio: true, motion: true, codec: 'auto' };
+function autoBitrate() {
+  const base = { 720: 4, 1080: 8, 1440: 14, 2160: 24 }[streamCfg.res] || 8;
+  return Math.min(60, Math.round(base * Math.max(1, streamCfg.fps / 60)));
+}
+function updateStreamSummary() {
+  const [w, h] = RES[streamCfg.res];
+  $('sumRes').textContent = `${w}×${h}`;
+  $('sumFps').textContent = streamCfg.fps;
+  $('sumBr').textContent = streamCfg.br;
+  $('brLbl').textContent = streamCfg.br;
+  const warn = [];
+  const sh = window.screen.height * (window.devicePixelRatio || 1);
+  if (h > sh) warn.push('Seçilen çözünürlük ekranından yüksek; kaynak yine de ölçeklenerek gönderilir.');
+  if (streamCfg.fps >= 120 && streamCfg.res >= 2160) warn.push('4K + 120-144 FPS çok yüksek bant genişliği ister (güçlü internet ve bilgisayar gerekir).');
+  if (streamCfg.res >= 2160 && streamCfg.br < 15) warn.push('4K için bit hızı düşük; görüntü bulanık görünebilir.');
+  if (streamCfg.res >= 1440 && streamCfg.fps > 60 && streamCfg.br < 14) warn.push('Yüksek FPS için bit hızını artırman önerilir.');
+  $('warnBox').style.display = warn.length ? 'block' : 'none';
+  $('warnBox').textContent = warn.join(' ');
+}
+function pickGrid(id, cb) {
+  $(id).querySelectorAll('.opt').forEach(o => o.onclick = () => {
+    $(id).querySelectorAll('.opt').forEach(x => x.classList.remove('on'));
+    o.classList.add('on'); cb(+o.dataset.v);
+  });
+}
+pickGrid('resGrid', v => { streamCfg.res = v; streamCfg.br = autoBitrate(); $('brRange').value = streamCfg.br; updateStreamSummary(); });
+pickGrid('fpsGrid', v => { streamCfg.fps = v; streamCfg.br = autoBitrate(); $('brRange').value = streamCfg.br; updateStreamSummary(); });
+$('srcGrid').querySelectorAll('.srcopt').forEach(o => o.onclick = () => {
+  $('srcGrid').querySelectorAll('.srcopt').forEach(x => x.classList.remove('on'));
+  o.classList.add('on'); streamCfg.src = o.dataset.src;
+});
+$('brRange').oninput = e => { streamCfg.br = +e.target.value; updateStreamSummary(); };
+$('swAudio').onclick = e => { streamCfg.audio = !streamCfg.audio; e.target.classList.toggle('on', streamCfg.audio); };
+$('swMotion').onclick = e => { streamCfg.motion = !streamCfg.motion; e.target.classList.toggle('on', streamCfg.motion); };
+$('codecSel').onchange = e => streamCfg.codec = e.target.value;
+(function fillCodecs() { // tarayıcının desteklediği kodekleri listeye ekle
   try {
-    screen = await navigator.mediaDevices.getDisplayMedia({ video: { width: { ideal: h * 16 / 9 }, height: { ideal: h }, frameRate: { ideal: fps, max: fps } }, audio: true });
+    const caps = RTCRtpSender.getCapabilities('video'); if (!caps) return;
+    const has = m => caps.codecs.some(x => (x.mimeType || '').toLowerCase().includes(m));
+    const add = (v, label) => { if (has(v)) { const o = document.createElement('option'); o.value = v; o.textContent = label; $('codecSel').appendChild(o); } };
+    add('av01', 'AV1 (en verimli)'); add('vp9', 'VP9'); add('h264', 'H.264 (en uyumlu)');
+  } catch {}
+})();
+$('btnShare').onclick = () => isHost ? info('Yayındasın', 'Zaten ekran paylaşıyorsun.')
+  : voiceId ? (updateStreamSummary(), openM('mStream')) : info('Önce bir ses kanalı', 'Ekran paylaşmak için önce bir ses kanalına katılmalısın.');
+
+function preferCodec(pc, name) {
+  if (!name || name === 'auto') return;
+  try {
+    const caps = RTCRtpSender.getCapabilities('video'); if (!caps) return;
+    const wanted = caps.codecs.filter(c => (c.mimeType || '').toLowerCase().includes(name));
+    if (!wanted.length) return;
+    const rest = caps.codecs.filter(c => !wanted.includes(c));
+    pc.getTransceivers().forEach(t => { try { t.setCodecPreferences([...wanted, ...rest]); } catch {} });
+  } catch {}
+}
+function applyBitrate(pc) {
+  const s = pc.getSenders().find(s => s.track && s.track.kind === 'video'); if (!s) return Promise.resolve();
+  try {
+    const p = s.getParameters();
+    p.encodings = p.encodings && p.encodings.length ? p.encodings : [{}];
+    p.encodings[0].maxBitrate = streamCfg.br * 1e6;
+    p.encodings[0].maxFramerate = streamCfg.fps;
+    p.degradationPreference = streamCfg.motion ? 'maintain-framerate' : 'maintain-resolution';
+    return s.setParameters(p).catch(() => {});
+  } catch { return Promise.resolve(); }
+}
+
+$('btnGo').onclick = async () => {
+  const [w, h] = RES[streamCfg.res], fps = streamCfg.fps;
+  const video = { width: { ideal: w }, height: { ideal: h }, frameRate: { ideal: fps, max: fps }, displaySurface: streamCfg.src };
+  try {
+    screen = await navigator.mediaDevices.getDisplayMedia({ video, audio: streamCfg.audio });
   } catch { return info('İzin Hatası', 'Ekran paylaşımı başlatılamadı veya iptal edildi.'); }
-  closeM('mStream'); isHost = true; screen._bitrate = BITRATE[h];
-  const vt = screen.getVideoTracks()[0]; vt.contentHint = 'motion'; vt.onended = stopStream;
+  closeM('mStream'); isHost = true; screen._bitrate = streamCfg.br * 1e6;
+  const vt = screen.getVideoTracks()[0];
+  try { await vt.applyConstraints({ width: { ideal: w }, height: { ideal: h }, frameRate: { ideal: fps, max: fps } }); } catch {}
+  vt.contentHint = streamCfg.motion ? 'motion' : 'detail';
+  vt.onended = stopStream;
   $('vid').srcObject = screen; $('vid').muted = true; showStage(true);
   $('who').textContent = 'Yayıncı sensin'; $('btnStop').style.display = 'inline-block'; $('btnShare').classList.add('act');
-  play('live'); toast('Yayın başladı', 'live');
+  play('live');
+  const got = vt.getSettings();
+  toast(`Yayın başladı · ${got.width || w}×${got.height || h} · ${got.frameRate ? Math.round(got.frameRate) : fps} FPS · ${streamCfg.br} Mbps`, 'live');
   socket.emit('start-stream-in-room');
 };
 socket.on('viewer-wants-stream', async ({ viewerId }) => {
@@ -435,13 +621,10 @@ socket.on('viewer-wants-stream', async ({ viewerId }) => {
   const pc = hostPCs[viewerId] = new RTCPeerConnection(rtc);
   pc.onicecandidate = e => e.candidate && socket.emit('signal', { target: viewerId, signal: { candidate: e.candidate }, type: 'stream' });
   screen.getTracks().forEach(t => pc.addTrack(t, screen));
+  preferCodec(pc, streamCfg.codec);
   await pc.setLocalDescription(await pc.createOffer());
   socket.emit('signal', { target: viewerId, signal: { sdp: pc.localDescription }, type: 'stream' });
-  try { // bitrate sınırı, müzakereden sonra uygulanmalı
-    const s = pc.getSenders().find(s => s.track && s.track.kind === 'video'), p = s.getParameters();
-    p.encodings = p.encodings && p.encodings.length ? p.encodings : [{}];
-    p.encodings[0].maxBitrate = screen._bitrate; await s.setParameters(p);
-  } catch {}
+  await applyBitrate(pc); // bit hızı sınırı müzakereden sonra uygulanmalı
 });
 function stopStream() {
   if (!isHost) return;
