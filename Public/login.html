@@ -125,6 +125,42 @@
         .btn.ghost { background:transparent; color:#b5bac1; }
         .btn.ghost:hover { background:#3f4147; }
         @media (max-width:520px){ .auth-card{padding:26px 20px} }
+
+/* ===== Yeni tasarım (privacy.html ile uyumlu) ===== */
+:root{--bg:#17181b;--surface:#1e1f23;--surface-2:#26282d;--line:#2f3137;--muted:#80858d;--violet:#a259ff}
+body{background:var(--bg)}
+.bg{animation:none;background:radial-gradient(620px 380px at 12% -4%,rgba(88,101,242,.18),transparent 70%),radial-gradient(520px 340px at 92% 104%,rgba(162,89,255,.12),transparent 70%),var(--bg)}
+.blob{display:none}
+.auth-card{background:var(--surface);backdrop-filter:none;border:1px solid var(--line);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.45);padding:36px 32px 28px}
+.auth-card::before{display:none}
+.logo{font-size:30px;letter-spacing:-.02em;animation:none}
+.subtitle{font-size:14px;color:var(--muted);margin-bottom:26px}
+.tabs{background:var(--bg);border:1px solid var(--line);border-radius:12px}
+.tab-ind{border-radius:9px}
+.tab-btn{border-radius:9px;font-size:14px}
+label{text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;color:#c4c8cf;margin-top:12px}
+input[type=text],input[type=password]{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:13px 44px 13px 16px}
+input::placeholder{color:#5d6168}
+input:focus{background:var(--bg);border-color:var(--brand);box-shadow:0 0 0 3px rgba(88,101,242,.25)}
+:focus-visible{outline:2px solid var(--violet);outline-offset:2px;border-radius:6px}
+input:focus-visible{outline:none}
+.eye{border-radius:6px}
+.strength{height:4px;background:var(--line)}
+.verify{background:var(--bg);border:1px solid var(--line);border-radius:12px}
+.cap-q{background:var(--surface-2)}
+.cap-ref{background:var(--surface-2)}
+.cap-ref:hover{transform:none}
+.cbox{border-color:#4b4f58}
+.cbox:hover{border-color:var(--brand)}
+.cbox.on{border-color:var(--brand)}
+.auth-btn{margin-top:22px;padding:13px;border-radius:10px}
+.auth-btn:hover{transform:none;box-shadow:0 8px 24px rgba(88,101,242,.3)}
+.note{margin-top:18px;color:var(--muted);line-height:1.5}
+.modal-box{background:var(--surface);border:1px solid var(--line)}
+.modal-box h3,.modal-foot{border-color:var(--line)}
+.modal-body{line-height:1.7}
+.btn{border-radius:10px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
     </style>
 </head>
 <body>
@@ -133,7 +169,7 @@
 
     <div class="auth-card">
         <div class="logo">Lumo<span>Live</span></div>
-        <div class="subtitle">Canlı yayın dünyasına hoş geldin! ✨</div>
+        <div class="subtitle">Sesli sohbet et, ekranını paylaş.</div>
 
         <div class="tabs" id="tabs">
             <div class="tab-ind"></div>
@@ -191,7 +227,7 @@
                 <!-- Gizlilik sözleşmesi -->
                 <div class="terms">
                     <div class="cbox" id="termsBox" onclick="toggleTerms()"></div>
-                    <label onclick="toggleTerms()"><a href="/privacy.html" onclick="event.preventDefault();openPrivacy()">Gizlilik Sözleşmesi</a> ve <a href="/privacy.html" onclick="event.preventDefault();openPrivacy()">Kullanım Koşulları</a>'nı okudum, kabul ediyorum.</label>
+                    <label onclick="toggleTerms()"><a href="/privacy.html" onclick="event.preventDefault();event.stopPropagation();openPrivacy()">Gizlilik Sözleşmesi</a> ve <a href="/privacy.html" onclick="event.preventDefault();event.stopPropagation();openPrivacy()">Kullanım Koşulları</a>'nı okudum, kabul ediyorum.</label>
                 </div>
 
                 <button class="auth-btn" id="regBtn" onclick="handleRegister()">Hesap Oluştur</button>
@@ -207,7 +243,7 @@
             <h3>Gizlilik Sözleşmesi ve Kullanım Koşulları</h3>
             <div class="modal-body">
                 <h4>1. Toplanan Veriler</h4>
-                <p>LumoLive; hizmeti sunabilmek için yalnızca kullanıcı adını, şifrenin bcrypt ile geri döndürülemez biçimde şifrelenmiş özetini ve hesabın oluşturulma tarihini saklar. Şifreniz hiçbir zaman düz metin olarak tutulmaz.</p>
+                <p>LumoLive; hizmeti sunabilmek için yalnızca kullanıcı adını, şifrenin bcrypt ile geri döndürülemez biçimde şifrelenmiş özetini ve hesabın oluşturulma tarihini ve sözleşme kabul zamanını saklar. Şifreniz hiçbir zaman düz metin olarak tutulmaz.</p>
                 <h4>2. Verilerin Kullanımı</h4>
                 <ul>
                     <li>Hesabınıza giriş yapmanızı sağlamak,</li>
