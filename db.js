@@ -43,12 +43,17 @@ pool.on('error', (err) => console.error('PostgreSQL havuz hatası:', err.message
 async function initDb() {
     await pool.query(`
         CREATE TABLE IF NOT EXISTS users (
-            id         SERIAL PRIMARY KEY,
-            username   VARCHAR(20)  NOT NULL,
-            password   TEXT         NOT NULL,
-            created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+            id                SERIAL PRIMARY KEY,
+            username          VARCHAR(20)  NOT NULL,
+            password          TEXT         NOT NULL,
+            created_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+            accepted_terms_at TIMESTAMPTZ,
+            active_session    TEXT
         );
     `);
+    // Mevcut tablolara sonradan eklenen kolonlar (geriye dönük uyumluluk)
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS accepted_terms_at TIMESTAMPTZ;`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS active_session TEXT;`);
     // Kullanıcı adı büyük/küçük harf duyarsız benzersiz olsun (eski JSON mantığıyla aynı)
     await pool.query(`
         CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower_idx
