@@ -22,8 +22,8 @@ app.get('/', (req, res) => res.redirect('/index.html'));
 // ---------- Oturum token'ı (sunucu yeniden başlasa da geçerli kalması için SECRET env ayarla) ----------
 const SECRET = process.env.SECRET || crypto.randomBytes(32).toString('hex');
 const sign = (p) => crypto.createHmac('sha256', SECRET).update(p).digest('base64url');
-function makeToken(username) {
-    const p = Buffer.from(JSON.stringify({ u: username, e: Date.now() + 30 * 864e5 })).toString('base64url');
+function makeToken(username, sid) {
+    const p = Buffer.from(JSON.stringify({ u: username, s: sid, e: Date.now() + 30 * 864e5 })).toString('base64url');
     return p + '.' + sign(p);
 }
 function verifyToken(t) {
@@ -32,7 +32,7 @@ function verifyToken(t) {
     if (!p || !s) return null;
     const good = sign(p);
     if (s.length !== good.length || !crypto.timingSafeEqual(Buffer.from(s), Buffer.from(good))) return null;
-    try { const d = JSON.parse(Buffer.from(p, 'base64url').toString()); return d.e > Date.now() ? d.u : null; } catch { return null; }
+    try { const d = JSON.parse(Buffer.from(p, 'base64url').toString()); return d.e > Date.now() ? { u: d.u, sid: d.s } : null; } catch { return null; }
 }
 
 // ---------- Basit hız sınırı ----------
@@ -45,6 +45,31 @@ function limited(key, max, ms) {
 }
 setInterval(() => { const n = Date.now(); for (const [k, v] of hits) if (!v.some(t => n - t < 60000)) hits.delete(k); }, 60000);
 
+// ---------- Robot doğrulaması (basit matematik CAPTCHA) ----------
+// Sunucu tarafında tutulur; cevap istemciye asla gönderilmez.
+const captchas = new Map();
+setInterval(() => { const n = Date.now(); for (const [id, c] of captchas) if (c.exp < n) captchas.delete(id); }, 60000);
+
+function newCaptcha() {
+    const a = 1 + Math.floor(Math.random() * 9);
+    const b = 1 + Math.floor(Math.random() * 9);
+    const ops = [
+        { q: `${a} + ${b}`, n: a + b },
+        { q: `${Math.max(a, b)} − ${Math.min(a, b)}`, n: Math.abs(a - b) },
+        { q: `${a} × ${b}`, n: a * b }
+    ];
+    const op = ops[Math.floor(Math.random() * ops.length)];
+    const id = crypto.randomUUID();
+    captchas.set(id, { answer: String(op.n), exp: Date.now() + 5 * 60000 });
+    return { id, question: `${op.q} = ?` };
+}
+
+app.get('/api/captcha', (req, res) => {
+    if (limited('cap:' + req.ip, 30, 60000)) return res.status(429).json({ error: 'Çok fazla istek.' });
+    res.set('Cache-Control', 'no-store');
+    res.json(newCaptcha());
+});
+
 const USER_RE = /^[\p{L}\p{N}_.-]{3,20}$/u;
 
 app.post('/api/register', async (req, res) => {
@@ -54,13 +79,24 @@ app.post('/api/register', async (req, res) => {
     if (!USER_RE.test(username)) return res.status(400).json({ error: 'Kullanıcı adı 3-20 karakter olmalı (harf, rakam, _ . -).' });
     if (password.length < 6 || password.length > 72) return res.status(400).json({ error: 'Şifre 6-72 karakter olmalı.' });
 
+    if (req.body.acceptTerms !== true)
+        return res.status(400).json({ error: 'Devam etmek için gizlilik sözleşmesini kabul etmelisin.' });
+
+    const capId = String(req.body.captchaId || '');
+    const cap = captchas.get(capId);
+    if (!cap || cap.exp < Date.now() || String(req.body.captchaAnswer || '').trim() !== cap.answer) {
+        captchas.delete(capId);
+        return res.status(400).json({ error: 'Robot doğrulaması başarısız. Lütfen tekrar dene.' });
+    }
+    captchas.delete(capId); // tek kullanımlık
+
     try {
         const exists = await pool.query('SELECT 1 FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1', [username]);
         if (exists.rowCount > 0)
             return res.status(400).json({ error: 'Bu kullanıcı adı zaten kullanımda.' });
 
         const hash = await bcrypt.hash(password, 10);
-        await pool.query('INSERT INTO users (username, password) VALUES ($1, $2)', [username, hash]);
+        await pool.query('INSERT INTO users (username, password, accepted_terms_at) VALUES ($1, $2, NOW())', [username, hash]);
         res.json({ success: true });
     } catch (err) {
         if (err.code === '23505') // eşzamanlı kayıtta benzersizlik ihlali
@@ -75,11 +111,21 @@ app.post('/api/login', async (req, res) => {
     const username = String(req.body.username || '').trim();
     const password = String(req.body.password || '');
     try {
-        const { rows } = await pool.query('SELECT username, password FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1', [username]);
+        const { rows } = await pool.query('SELECT id, username, password FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1', [username]);
         const user = rows[0];
         if (!user || !(await bcrypt.compare(password, user.password)))
             return res.status(400).json({ error: 'Kullanıcı bulunamadı veya şifre hatalı.' });
-        res.json({ success: true, username: user.username, token: makeToken(user.username) });
+
+        // ---- Tek cihaz kuralı: yeni oturum açılınca eski oturum geçersiz olur ----
+        const sid = crypto.randomUUID();
+        await pool.query('UPDATE users SET active_session = $1 WHERE id = $2', [sid, user.id]);
+        for (const s of io.sockets.sockets.values()) {
+            if (s.data.username && s.data.username.toLowerCase() === user.username.toLowerCase() && s.data.sid !== sid) {
+                s.emit('session-replaced', 'Hesabına başka bir cihazdan giriş yapıldı.');
+                s.disconnect(true);
+            }
+        }
+        res.json({ success: true, username: user.username, token: makeToken(user.username, sid) });
     } catch (err) {
         console.error('Giriş hatası:', err.message);
         res.status(500).json({ error: 'Sunucu hatası, lütfen tekrar deneyin.' });
@@ -136,10 +182,19 @@ const snapshot = () => ({ text: Object.keys(texts), voice: roomsList() });
 const broadcastRooms = () => io.emit('room-list-update', snapshot());
 const broadcastOnline = () => io.emit('online-list', [...new Set([...io.sockets.sockets.values()].filter(x => x.connected && x.data.username).map(x => x.data.username))]);
 
-io.use((socket, next) => {
-    const u = verifyToken(socket.handshake.auth && socket.handshake.auth.token);
-    if (!u) return next(new Error('unauthorized'));
-    socket.data.username = u;
+io.use(async (socket, next) => {
+    const auth = verifyToken(socket.handshake.auth && socket.handshake.auth.token);
+    if (!auth) return next(new Error('unauthorized'));
+    try {
+        // Tek cihaz kuralı: token'daki oturum, veritabanındaki güncel oturumla eşleşmeli
+        const { rows } = await pool.query('SELECT active_session FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1', [auth.u]);
+        if (!rows[0] || rows[0].active_session !== auth.sid) return next(new Error('session-replaced'));
+    } catch (err) {
+        console.error('Oturum doğrulama hatası:', err.message);
+        return next(new Error('db-error'));
+    }
+    socket.data.username = auth.u;
+    socket.data.sid = auth.sid;
     next();
 });
 
@@ -168,6 +223,9 @@ io.on('connection', (socket) => {
     const username = socket.data.username;
     socket.emit('room-list-update', snapshot());
     broadcastOnline();
+
+    // Sunucu gecikmesi (ping) ölçümü için basit yankı
+    socket.on('latency', (start, cb) => { if (typeof cb === 'function') cb(start); });
 
     socket.on('create-channel', ({ roomName, type } = {}) => {
         if (limited('room:' + socket.id, 5, 60000)) return socket.emit('error-msg', 'Çok hızlı kanal oluşturuyorsun.');
