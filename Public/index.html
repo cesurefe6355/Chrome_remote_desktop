@@ -195,6 +195,26 @@ button:focus-visible,.ch:focus-visible,input:focus-visible,select:focus-visible{
 ::-webkit-scrollbar-thumb{background:#2f3137}
 @media(max-width:640px){.side{width:200px}.hd{padding:0 12px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ===== Alt kullanıcı paneli ===== */
+.dock{margin:8px;padding:10px;background:#202125;border:1px solid #2a2c31;border-radius:14px;display:flex;flex-direction:column;gap:10px;flex-shrink:0}
+.dtop{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.dock .me{padding:0;gap:10px;flex:1;min-width:0}
+.dock .me .av{width:36px;height:36px;font-size:15px}
+.dock .me .av::after{border-color:#202125}
+.dock .mt{min-width:0}
+.dock .me b{font-size:14px;line-height:1.25}
+.dock .me small{display:block;font-size:12px;line-height:1.3;color:#80858d}
+.dock .netbar{display:grid;grid-template-columns:auto auto;grid-template-areas:"d m" ". q";column-gap:6px;row-gap:0;align-items:center;justify-items:end;padding:6px 10px;background:#17181b;border:1px solid #2a2c31;border-radius:10px;flex-shrink:0}
+.dock .netdot{grid-area:d;width:8px;height:8px}
+.dock .netbar b{grid-area:m;margin:0;font-size:13px;line-height:1.2}
+.dock .netbar .q{grid-area:q;font-size:11px;line-height:1.2;color:#80858d}
+.dock .netbar .lbl{display:none}
+.dbtns{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.dbtns .ib{height:36px;display:flex;align-items:center;justify-content:center;padding:0;background:#17181b;border:1px solid #2a2c31;border-radius:10px}
+.dbtns .ib:hover{background:#2a2c31;color:#fff}
+.dbtns .ib.off{background:rgba(237,66,69,.12);border-color:rgba(237,66,69,.35)}
+.dbtns .ib.off::after{left:12px;right:12px}
 </style>
 </head>
 <body>
@@ -250,15 +270,17 @@ button:focus-visible,.ch:focus-visible,input:focus-visible,select:focus-visible{
   </div>
   <div class="vstat" id="vstat"><div><b>Ses Bağlandı</b><small id="vstatName"></small></div>
     <button class="ib" onclick="leaveVoice()" title="Bağlantıyı Kes"><i data-ic="hang"></i></button></div>
-  <div class="netbar" id="netbar" title="Sunucu gecikmesi (ping)">
-    <span class="netdot" id="netDot"></span>
-    <span class="lbl">Ping</span>
-    <span class="q" id="netQual"></span>
-    <b id="netMs">-- ms</b>
-  </div>
-  <div class="panel">
-    <div class="me"><div class="av" id="meAv"></div><div><b id="meName"></b><small id="meSt">Bağlanıyor...</small></div></div>
-    <div style="display:flex">
+  <div class="dock">
+    <div class="dtop">
+      <div class="me"><div class="av" id="meAv"></div><div class="mt"><b id="meName"></b><small id="meSt">Bağlanıyor...</small></div></div>
+      <div class="netbar" id="netbar" title="Sunucu gecikmesi (ping)">
+        <span class="netdot" id="netDot"></span>
+        <span class="lbl">Ping</span>
+        <b id="netMs">-- ms</b>
+        <span class="q" id="netQual"></span>
+      </div>
+    </div>
+    <div class="dbtns">
       <button class="ib" id="btnMic" title="Mikrofon"><i data-ic="mic"></i></button>
       <button class="ib" id="btnDeaf" title="Sağırlaştır"><i data-ic="head"></i></button>
       <button class="ib" id="btnSnd" title="Bildirim Sesleri"><i data-ic="bell"></i></button>
@@ -344,7 +366,7 @@ socket.on('connect', () => { $('meSt').textContent = 'Bağlandı'; if (textId) s
 
 // ----- İnternet ping göstergesi -----
 const pingSamples = [];
-const pingColor = ms => ms < 60 ? '#23a55a' : ms < 130 ? '#f1c40f' : '#ed4245';
+const pingColor = ms => ms < 130 ? '#23a55a' : ms < 250 ? '#f1c40f' : '#ed4245';
 const pingText = ms => ms < 60 ? 'Harika' : ms < 130 ? 'İyi' : ms < 250 ? 'Orta' : 'Yüksek';
 function measurePing() {
   const dot = $('netDot'), ms = $('netMs'), q = $('netQual');
