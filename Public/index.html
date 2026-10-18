@@ -146,18 +146,61 @@ input[type=range]{width:100%;accent-color:#5865F2;margin-top:4px}
 .summary{background:#1e1f22;border-radius:10px;padding:12px 14px;font-size:13px;color:#80848e;margin-top:14px;display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between}
 .summary b{color:#f2f3f5;font-weight:700}
 .warn{display:none;color:#f1c40f;font-size:12px;margin-top:10px;background:rgba(241,196,15,.08);border-left:3px solid #f1c40f;padding:8px 10px;border-radius:6px}
-.srclist{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;max-height:240px;overflow-y:auto;padding-right:2px}
-.srcitem{background:#1e1f22;border:2px solid transparent;border-radius:9px;padding:6px;cursor:pointer;transition:background .15s,border-color .15s}
-.srcitem:hover{background:#232428}
-.srcitem.on{border-color:#5865F2;background:rgba(88,101,242,.12)}
-.srcitem img{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:5px;display:block;background:#000}
-.srcitem .ph{width:100%;aspect-ratio:16/10;border-radius:5px;background:#000}
-.srcitem span{display:block;font-size:11px;color:#b5bac1;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.miniref{background:#2b2d31;border:0;color:#b5bac1;border-radius:6px;padding:4px 9px;font-size:11px;cursor:pointer;margin-left:8px}
-.miniref:hover{background:#35373c;color:#fff}
 .matchip{display:none;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#a259ff;background:rgba(162,89,255,.14);padding:3px 9px;border-radius:20px;margin-left:8px}
 .stats{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.62);color:#fff;font-size:12px;padding:4px 10px;border-radius:6px;display:none;font-variant-numeric:tabular-nums;z-index:2;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.1)}
 .stats.low{border-color:#ed4245;color:#ffb3b5}
+/* ---------- Özel ekran paylaşım seçici (tamamen bize ait tasarım, Chrome penceresi yok) ---------- */
+.pk{width:min(940px,96vw);max-height:92vh;background:linear-gradient(180deg,#313338,#2b2d31);border:1px solid rgba(255,255,255,.06);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.65);animation:pkIn .28s cubic-bezier(.2,.8,.2,1)}
+@keyframes pkIn{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:none}}
+.pk-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;background:linear-gradient(90deg,rgba(88,101,242,.16),transparent 70%);border-bottom:1px solid rgba(0,0,0,.35)}
+.pk-ttl{display:flex;align-items:center;gap:12px;min-width:0}
+.pk-ico{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;background:linear-gradient(135deg,#5865F2,#a259ff);box-shadow:0 6px 16px rgba(88,101,242,.4);flex-shrink:0}
+.pk-head h3{color:#f2f3f5;font-size:17px}
+.pk-head small{color:#949ba4;font-size:12px}
+.pk-x{background:none;color:#b5bac1;width:34px;height:34px;border-radius:8px;font-size:16px;padding:0;flex-shrink:0}
+.pk-x:hover{background:#3f4147;color:#fff}
+.pk-body{display:flex;min-height:0;flex:1}
+.pk-left{flex:1.3;min-width:0;min-height:0;display:flex;flex-direction:column;padding:14px;border-right:1px solid rgba(0,0,0,.3)}
+#srcListWrap{flex:1;min-height:0;flex-direction:column}
+.pk-right{width:320px;flex-shrink:0;padding:14px;overflow-y:auto;background:rgba(0,0,0,.12)}
+.pk-right::-webkit-scrollbar{width:8px}
+.pk-tabs{display:flex;gap:6px;align-items:center;background:#1e1f22;padding:4px;border-radius:10px;margin-bottom:12px;flex-shrink:0}
+.pk-tab{flex:1;background:none;color:#949ba4;font-weight:700;font-size:13px;padding:8px;border-radius:7px;display:flex;align-items:center;justify-content:center;gap:7px}
+.pk-tab:hover{background:#232428;color:#dbdee1}
+.pk-tab.on{background:linear-gradient(135deg,#5865F2,#7c4dff);color:#fff;box-shadow:0 4px 12px rgba(88,101,242,.35)}
+.pk-tab b{background:rgba(255,255,255,.14);color:inherit;font-size:11px;padding:1px 7px;border-radius:20px}
+.pk-tab.on b{background:rgba(255,255,255,.25)}
+.pk-ref{background:#232428;color:#b5bac1;width:34px;height:34px;padding:0;border-radius:8px;font-size:15px;flex-shrink:0}
+.pk-ref:hover{color:#fff;background:#35373c}
+.pk-scroll{flex:1;overflow-y:auto;min-height:170px;padding-right:2px}
+.pk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;align-content:start}
+.srcitem{position:relative;background:#1e1f22;border:2px solid transparent;border-radius:11px;padding:7px;cursor:pointer;transition:.16s;text-align:left;display:block;width:100%}
+.srcitem:hover{background:#232428;transform:translateY(-2px)}
+.srcitem.on{border-color:#5865F2;background:rgba(88,101,242,.14);box-shadow:0 0 0 3px rgba(88,101,242,.18)}
+.srcitem img{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:6px;display:block;background:#000}
+.srcitem .ph{width:100%;aspect-ratio:16/10;border-radius:6px;background:#000}
+.srcitem .sm{display:flex;align-items:center;gap:6px;margin-top:7px;min-width:0}
+.srcitem .ai{width:15px;height:15px;border-radius:3px;flex-shrink:0}
+.srcitem .sm span{font-size:12px;color:#b5bac1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.srcitem.on .sm span{color:#fff}
+.srcitem .ck{position:absolute;top:11px;right:11px;width:22px;height:22px;border-radius:50%;background:#5865F2;color:#fff;font-size:13px;font-weight:800;display:none;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.5)}
+.srcitem.on .ck{display:flex}
+.pk-loading,.pk-empty{color:#949ba4;font-size:13px;padding:26px 8px;text-align:center;grid-column:1/-1}
+.pk-note{font-size:12px;color:#f1c40f;background:rgba(241,196,15,.08);border-left:3px solid #f1c40f;padding:8px 10px;border-radius:6px;margin-top:10px;line-height:1.5}
+.pk-label{font-size:12px;font-weight:700;color:#b5bac1;text-transform:uppercase;margin-bottom:8px}
+.pk-right label{display:block;font-size:12px;font-weight:700;color:#b5bac1;text-transform:uppercase;letter-spacing:.4px;margin:12px 0 6px}
+.pk-right select{width:100%;padding:9px 10px;border-radius:8px;border:1px solid transparent;background:#1e1f22;color:#dbdee1;font-size:14px;outline:0}
+.pk-right select:focus{border-color:#5865F2;box-shadow:0 0 0 3px rgba(88,101,242,.2)}
+.pk-right .optgrid{margin-bottom:2px}
+.pk-sec{font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#80848e;margin:14px 0 4px}
+.pk-sec:first-child{margin-top:0}
+.pk-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 18px;background:#232428;border-top:1px solid rgba(0,0,0,.35);flex-shrink:0}
+.pk-sum{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:#80848e}
+.pk-sum b{color:#f2f3f5;font-variant-numeric:tabular-nums}
+.pk-btns{display:flex;gap:8px;flex-shrink:0}
+.pk-btns .g{background:none;color:#b5bac1}
+.pk-btns .g:hover{background:#3f4147}
+@media(max-width:760px){.pk-body{flex-direction:column}.pk-right{width:auto;border-top:1px solid rgba(0,0,0,.3)}.pk-left{border-right:0}}
 @media(max-width:900px){.members{display:none}.rail{display:none}}
 </style>
 </head>
@@ -170,48 +213,83 @@ input[type=range]{width:100%;accent-color:#5865F2;margin-top:4px}
 <label>Kanal Adı</label><input id="newName" maxlength="24" placeholder="yeni-kanal">
 <div class="acts"><button class="g" onclick="closeM('mCreate')">İptal</button><button id="btnCreate">Oluştur</button></div></div></div>
 
-<div class="ov" id="mStream"><div class="box sbox"><h3>🎥 Ekran Yayını <span class="badge" id="qBadge">4K · 144 FPS destekli</span></h3><p>Yayın kalitesini seç. Yüksek ayarlar daha fazla internet ve işlemci kullanır.</p>
-<label>Ne paylaşacaksın?</label>
-<div id="srcGridWrap">
-<div class="srcgrid" id="srcGrid">
-  <div class="srcopt on" data-src="monitor"><span class="ico">🖥️</span><small>Tüm Ekran</small></div>
-  <div class="srcopt" data-src="window"><span class="ico">🪟</span><small>Pencere</small></div>
-  <div class="srcopt" data-src="browser"><span class="ico">🌐</span><small>Sekme</small></div>
-</div>
-</div>
-<div id="srcListWrap" style="display:none">
-  <label>Paylaşılacak kaynak <button type="button" class="miniref" onclick="loadSources()">↻ Yenile</button></label>
-  <div class="srclist" id="srcList"></div>
-</div>
-<label>Çözünürlük</label>
-<div class="optgrid" id="resGrid">
-  <div class="opt" data-v="720">720p<small>HD</small></div>
-  <div class="opt on" data-v="1080">1080p<small>Full HD</small></div>
-  <div class="opt" data-v="1440">1440p<small>2K</small></div>
-  <div class="opt" data-v="2160">2160p<small>4K</small></div>
-</div>
-<label>Kare Hızı</label>
-<div class="optgrid" id="fpsGrid">
-  <div class="opt" data-v="30">30<small>FPS</small></div>
-  <div class="opt on" data-v="60">60<small>FPS</small></div>
-  <div class="opt" data-v="90">90<small>FPS</small></div>
-  <div class="opt" data-v="120">120<small>FPS</small></div>
-  <div class="opt" data-v="144">144<small>FPS</small></div>
-</div>
-<label>Kodek</label>
-<select id="codecSel"><option value="auto">Otomatik (önerilen)</option></select>
-<label>Bit Hızı — <span id="brLbl">8</span> Mbps</label>
-<input type="range" id="brRange" min="2" max="60" step="1" value="8">
-<div class="row2"><span>🔊 Sistem sesini paylaş</span><div class="switch on" id="swAudio"></div></div>
-<label>İçerik Türü</label>
-<select id="contentSel">
-  <option value="auto">Otomatik / dengeli (önerilen)</option>
-  <option value="motion">Oyun · video — akıcılık öncelikli</option>
-  <option value="text">Sunum · metin — net yazı öncelikli</option>
-</select>
-<div class="summary"><span>Çözünürlük: <b id="sumRes">1920×1080</b></span><span><b id="sumFps">60</b> FPS</span><span><b id="sumBr">8</b> Mbps</span></div>
-<div class="warn" id="warnBox"></div>
-<div class="acts"><button class="g" onclick="closeM('mStream')">İptal</button><button id="btnGo">Yayına Başla</button></div></div></div>
+<div class="ov" id="mStream"><div class="pk">
+  <div class="pk-head">
+    <div class="pk-ttl">
+      <span class="pk-ico">🖥️</span>
+      <div><h3>Ekranını paylaş</h3><small id="pkSub">Paylaşmak istediğin ekranı ya da pencereyi seç</small></div>
+    </div>
+    <button class="pk-x" type="button" onclick="closeM('mStream')" title="Kapat">✕</button>
+  </div>
+
+  <div class="pk-body">
+    <!-- SOL: kaynak seçimi (tamamen bize ait arayüz) -->
+    <div class="pk-left">
+      <div id="srcListWrap" style="display:none">
+        <div class="pk-tabs" id="srcTabs">
+          <button class="pk-tab on" type="button" data-t="screen">Ekranlar <b id="cntScreen">0</b></button>
+          <button class="pk-tab" type="button" data-t="window">Pencereler <b id="cntWindow">0</b></button>
+          <button class="pk-ref" type="button" onclick="loadSources()" title="Listeyi yenile">↻</button>
+        </div>
+        <div class="pk-scroll"><div class="pk-grid" id="srcList"></div></div>
+      </div>
+      <div id="srcGridWrap" style="display:none">
+        <div class="pk-label">Ne paylaşacaksın?</div>
+        <div class="srcgrid" id="srcGrid">
+          <div class="srcopt on" data-src="monitor"><span class="ico">🖥️</span><small>Tüm Ekran</small></div>
+          <div class="srcopt" data-src="window"><span class="ico">🪟</span><small>Pencere</small></div>
+          <div class="srcopt" data-src="browser"><span class="ico">🌐</span><small>Sekme</small></div>
+        </div>
+        <div class="pk-note">Web tarayıcısında paylaşımı başlattığında Chrome kendi seçim penceresini zorunlu olarak gösterir; bu pencere tarayıcı tarafından kontrol edilir ve değiştirilemez. Tamamen bize ait seçiciyi görmek için uygulamayı masaüstü (LumoLive) sürümünde kullan.</div>
+      </div>
+    </div>
+
+    <!-- SAĞ: yayın ayarları -->
+    <div class="pk-right">
+      <div class="pk-sec">Görüntü Kalitesi</div>
+      <label>Çözünürlük</label>
+      <div class="optgrid" id="resGrid">
+        <div class="opt" data-v="720">720p<small>HD</small></div>
+        <div class="opt on" data-v="1080">1080p<small>Full HD</small></div>
+        <div class="opt" data-v="1440">1440p<small>2K</small></div>
+        <div class="opt" data-v="2160">2160p<small>4K</small></div>
+      </div>
+      <label>Kare Hızı</label>
+      <div class="optgrid" id="fpsGrid">
+        <div class="opt" data-v="30">30<small>FPS</small></div>
+        <div class="opt on" data-v="60">60<small>FPS</small></div>
+        <div class="opt" data-v="90">90<small>FPS</small></div>
+        <div class="opt" data-v="120">120<small>FPS</small></div>
+        <div class="opt" data-v="144">144<small>FPS</small></div>
+      </div>
+      <label>Bit Hızı — <span id="brLbl">8</span> Mbps</label>
+      <input type="range" id="brRange" min="2" max="60" step="1" value="8">
+      <label>Kodek</label>
+      <select id="codecSel"><option value="auto">Otomatik (önerilen)</option></select>
+      <label>İçerik Türü</label>
+      <select id="contentSel">
+        <option value="auto">Otomatik / dengeli (önerilen)</option>
+        <option value="motion">Oyun · video — akıcılık öncelikli</option>
+        <option value="text">Sunum · metin — net yazı öncelikli</option>
+      </select>
+      <div class="pk-sec">Ses</div>
+      <div class="row2"><span>🔊 Sistem sesini paylaş</span><div class="switch on" id="swAudio"></div></div>
+      <div class="warn" id="warnBox"></div>
+    </div>
+  </div>
+
+  <div class="pk-foot">
+    <div class="pk-sum">
+      <span>Çözünürlük: <b id="sumRes">1920×1080</b></span>
+      <span><b id="sumFps">60</b> FPS</span>
+      <span><b id="sumBr">8</b> Mbps</span>
+    </div>
+    <div class="pk-btns">
+      <button class="g" type="button" onclick="closeM('mStream')">İptal</button>
+      <button id="btnGo" type="button">Paylaşmayı Başlat</button>
+    </div>
+  </div>
+</div></div>
 
 <div class="ov" id="mInfo"><div class="box"><h3 id="infoT"></h3><p id="infoD"></p><div class="acts"><button onclick="closeM('mInfo')">Tamam</button></div></div></div>
 
@@ -556,7 +634,7 @@ if (DESKTOP) { const b = $('deskBadge'); if (b) b.style.display = 'inline-flex';
 const RES = { 720: [1280, 720], 1080: [1920, 1080], 1440: [2560, 1440], 2160: [3840, 2160] };
 // br = Mbps. "Az internet + iyi kalite" için ekonomik varsayılanlar.
 const streamCfg = { src: 'monitor', res: 1080, fps: 60, br: 5, audio: true, content: 'auto', codec: 'auto' };
-let selectedSource = null;
+let selectedSource = null, activeTab = 'screen', allSources = [];
 
 function autoBitrate() {
   const base = { 720: 2.5, 1080: 5, 1440: 10, 2160: 18 }[streamCfg.res] || 5;
@@ -605,32 +683,60 @@ $('codecSel').onchange = e => streamCfg.codec = e.target.value;
   } catch {}
 })();
 
-// Masaüstü (Electron) modunda: kendi kaynak listemizi yükle
+// Masaüstü (Electron) modunda: kaynakları tamamen bize ait arayüzle, sekmeli olarak listele
+function cntOf() {
+  $('cntScreen').textContent = allSources.filter(s => s.id.startsWith('screen')).length;
+  $('cntWindow').textContent = allSources.filter(s => !s.id.startsWith('screen')).length;
+}
+function renderSources() {
+  const list = $('srcList'); if (!list) return; list.innerHTML = '';
+  const items = allSources.filter(s => (s.id.startsWith('screen') ? 'screen' : 'window') === activeTab);
+  if (!items.length) { list.innerHTML = `<div class="pk-empty">${activeTab === 'screen' ? 'Ekran bulunamadı.' : 'Pencere bulunamadı.'}</div>`; return; }
+  items.forEach(s => {
+    const d = document.createElement('button'); d.type = 'button';
+    d.className = 'srcitem' + (s.id === selectedSource ? ' on' : '');
+    if (s.thumbnail) { const im = document.createElement('img'); im.src = s.thumbnail; im.draggable = false; d.appendChild(im); }
+    else { const ph = document.createElement('div'); ph.className = 'ph'; d.appendChild(ph); }
+    const meta = document.createElement('div'); meta.className = 'sm';
+    if (s.appIcon) { const ic = document.createElement('img'); ic.className = 'ai'; ic.src = s.appIcon; meta.appendChild(ic); }
+    const nm = document.createElement('span'); nm.textContent = s.name; nm.title = s.name; meta.appendChild(nm);
+    d.appendChild(meta);
+    const ck = document.createElement('span'); ck.className = 'ck'; ck.textContent = '✓'; d.appendChild(ck);
+    d.onclick = () => { selectedSource = s.id; list.querySelectorAll('.srcitem').forEach(x => x.classList.remove('on')); d.classList.add('on'); };
+    list.appendChild(d);
+  });
+}
 async function loadSources() {
   const list = $('srcList');
-  list.innerHTML = '<div style="color:#949ba4;font-size:12px;grid-column:1/-1">Ekranlar ve pencereler taranıyor...</div>';
+  list.innerHTML = '<div class="pk-loading">Ekranlar ve pencereler taranıyor…</div>';
   try {
-    const srcs = await window.lumoDesktop.getSources();
-    if (!srcs.length) { list.innerHTML = '<div style="color:#ed4245;font-size:12px;grid-column:1/-1">Kaynak bulunamadı</div>'; return; }
-    list.innerHTML = '';
-    srcs.forEach((s, i) => {
-      const d = document.createElement('div'); d.className = 'srcitem';
-      if (s.thumbnail) { const im = document.createElement('img'); im.src = s.thumbnail; im.draggable = false; d.appendChild(im); }
-      else d.innerHTML = '<div class="ph"></div>';
-      const nm = document.createElement('span'); nm.textContent = s.name; nm.title = s.name; d.appendChild(nm);
-      d.onclick = () => { list.querySelectorAll('.srcitem').forEach(x => x.classList.remove('on')); d.classList.add('on'); selectedSource = s.id; };
-      list.appendChild(d);
-      if (i === 0) { d.classList.add('on'); selectedSource = s.id; }
-    });
-  } catch (e) { list.innerHTML = '<div style="color:#ed4245;font-size:12px;grid-column:1/-1">Kaynaklar alınamadı</div>'; }
+    allSources = (await window.lumoDesktop.getSources()) || [];
+    cntOf();
+    if (!allSources.length) { list.innerHTML = '<div class="pk-empty">Kaynak bulunamadı.</div>'; return; }
+    if (!selectedSource || !allSources.some(s => s.id === selectedSource)) {
+      const first = allSources.find(s => (s.id.startsWith('screen') ? 'screen' : 'window') === activeTab) || allSources[0];
+      selectedSource = first.id;
+    }
+    renderSources();
+  } catch (e) { list.innerHTML = '<div class="pk-empty">Kaynaklar alınamadı.</div>'; }
 }
+$('srcTabs').querySelectorAll('.pk-tab').forEach(t => t.onclick = () => {
+  activeTab = t.dataset.t;
+  $('srcTabs').querySelectorAll('.pk-tab').forEach(x => x.classList.toggle('on', x === t));
+  renderSources();
+});
 
 $('btnShare').onclick = () => {
   if (isHost) return info('Yayındasın', 'Zaten ekran paylaşıyorsun.');
   if (!voiceId) return info('Önce bir ses kanalı', 'Ekran paylaşmak için önce bir ses kanalına katılmalısın.');
   $('srcGridWrap').style.display = DESKTOP ? 'none' : 'block';
-  $('srcListWrap').style.display = DESKTOP ? 'block' : 'none';
-  if (DESKTOP) { selectedSource = null; loadSources(); }
+  $('srcListWrap').style.display = DESKTOP ? 'flex' : 'none';
+  $('pkSub').textContent = DESKTOP ? 'Paylaşmak istediğin ekranı ya da pencereyi seç' : 'Paylaşmak istediğin türü seç';
+  if (DESKTOP) {
+    selectedSource = null; activeTab = 'screen';
+    $('srcTabs').querySelectorAll('.pk-tab').forEach(x => x.classList.toggle('on', x.dataset.t === 'screen'));
+    loadSources();
+  }
   updateStreamSummary(); openM('mStream');
 };
 

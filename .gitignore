@@ -1,0 +1,20 @@
+# Bağımlılıklar
+node_modules/
+
+# Ortam değişkenleri (şifreler, veritabanı bilgileri)
+.env
+.env.local
+
+# Derleme çıktıları
+dist/
+build/
+
+# Günlükler
+npm-debug.log*
+*.log
+
+# İşletim sistemi / editör
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

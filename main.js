@@ -49,16 +49,17 @@ function createWindow() {
         cb(['media', 'display-capture', 'fullscreen'].includes(permission));
     });
 
-    // Ekran paylaşımı: Chrome'un seçim penceresini tamamen devre dışı bırakır.
-    // Kullanıcı kendi arayüzümüzden seçtiği kaynağı (pendingSourceId) callback ile döndürürüz.
+    // Ekran paylaşımı: Chrome/Chromium'un seçim penceresini tamamen devre dışı bırakır.
+    // Kullanıcı kaynağı kendi arayüzümüzden seçer; burada yalnızca o kaynağı geri döndürürüz.
     session.defaultSession.setDisplayMediaRequestHandler(async (request, callback) => {
+        const wanted = pendingSourceId;
+        pendingSourceId = null;
         try {
+            if (!wanted) { callback({}); return; } // seçim yoksa paylaşım başlamaz (Chrome penceresi açılmaz)
             // Sadece kaynağı bulmak için; önizleme üretmeden hızlıca listele
             const sources = await desktopCapturer.getSources({ types: ['screen', 'window'], thumbnailSize: { width: 1, height: 1 } });
-            let src = sources.find(s => s.id === pendingSourceId);
-            if (!src) src = sources.find(s => s.id.startsWith('screen')) || sources[0];
-            pendingSourceId = null;
-            if (!src) return callback({});
+            const src = sources.find(s => s.id === wanted);
+            if (!src) { callback({}); return; }
             const opts = { video: src };
             if (process.platform === 'win32' && request.audioRequested) opts.audio = 'loopback'; // sistem sesi
             callback(opts);
