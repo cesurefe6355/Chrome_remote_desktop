@@ -1,7 +1,28 @@
-const { app, BrowserWindow, session, desktopCapturer, shell } = require('electron');
+const { app, BrowserWindow, session, desktopCapturer, shell, ipcMain } = require('electron');
+const path = require('path');
 
 const SERVER_URL = process.env.LUMOLIVE_URL || 'https://chrome-remote-desktop-w9hm.onrender.com';
 let win;
+
+// ---------- Özel ekran paylaşımı (tarayıcı seçim penceresi yerine kendi arayüzümüz) ----------
+// Kullanıcının seçtiği kaynak burada tutulur; getDisplayMedia çağrıldığında kullanılır.
+let pendingSourceId = null;
+
+ipcMain.handle('lumo:get-sources', async () => {
+    const sources = await desktopCapturer.getSources({
+        types: ['screen', 'window'],
+        thumbnailSize: { width: 380, height: 238 },
+        fetchWindowIcons: true
+    });
+    return sources.map(s => ({
+        id: s.id,
+        name: s.name,
+        thumbnail: s.thumbnail && !s.thumbnail.isEmpty() ? s.thumbnail.toDataURL() : '',
+        appIcon: s.appIcon && !s.appIcon.isEmpty() ? s.appIcon.toDataURL() : ''
+    }));
+});
+
+ipcMain.handle('lumo:pick-source', async (e, id) => { pendingSourceId = String(id); return true; });
 
 if (!app.requestSingleInstanceLock()) app.quit();
 app.on('second-instance', () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });
@@ -17,18 +38,34 @@ function createWindow() {
     win = new BrowserWindow({
         width: 1280, height: 720, minWidth: 940, minHeight: 560,
         backgroundColor: '#313338', autoHideMenuBar: true,
-        webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true }
+        webPreferences: {
+            nodeIntegration: false, contextIsolation: true, sandbox: true,
+            preload: path.join(__dirname, 'preload.js')
+        }
     });
 
     // Mikrofon ve ekran paylaşımı izinleri (Electron'da bunlar olmadan çalışmaz)
     session.defaultSession.setPermissionRequestHandler((wc, permission, cb) => {
         cb(['media', 'display-capture', 'fullscreen'].includes(permission));
     });
-    // Ekran paylaşımı: Electron'da tarayıcıdaki seçim penceresi yoktur, ana ekranı paylaşır
-    session.defaultSession.setDisplayMediaRequestHandler((req, cb) => {
-        desktopCapturer.getSources({ types: ['screen'] })
-            .then(src => cb({ video: src[0], ...(process.platform === 'win32' ? { audio: 'loopback' } : {}) }))
-            .catch(() => cb({}));
+
+    // Ekran paylaşımı: Chrome'un seçim penceresini tamamen devre dışı bırakır.
+    // Kullanıcı kendi arayüzümüzden seçtiği kaynağı (pendingSourceId) callback ile döndürürüz.
+    session.defaultSession.setDisplayMediaRequestHandler(async (request, callback) => {
+        try {
+            // Sadece kaynağı bulmak için; önizleme üretmeden hızlıca listele
+            const sources = await desktopCapturer.getSources({ types: ['screen', 'window'], thumbnailSize: { width: 1, height: 1 } });
+            let src = sources.find(s => s.id === pendingSourceId);
+            if (!src) src = sources.find(s => s.id.startsWith('screen')) || sources[0];
+            pendingSourceId = null;
+            if (!src) return callback({});
+            const opts = { video: src };
+            if (process.platform === 'win32' && request.audioRequested) opts.audio = 'loopback'; // sistem sesi
+            callback(opts);
+        } catch (e) {
+            console.error('Ekran kaynağı seçilemedi:', e.message);
+            callback({});
+        }
     });
 
     // Sunucu uyanana / internet gelene kadar tekrar dene (Render ücretsiz plan ilk açılışta yavaştır)
