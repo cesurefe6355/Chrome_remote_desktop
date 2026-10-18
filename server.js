@@ -44,8 +44,10 @@ const MAX_STRIKES = 3;                                  // 3. ihlalde hesap banl
 const STRIKE_WINDOW_MS = 24 * 3600e3;                   // 24 saat cezasız geçerse sayaç sıfırlanır
 
 // ---------- Yönetici (admin / "muhtar") oturumu ----------
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'muhtar123';
-if (!process.env.ADMIN_PASSWORD) console.warn('[UYARI] ADMIN_PASSWORD tanımlı değil — varsayılan şifre kullanılıyor. Render > Environment üzerinden güvenli bir şifre ayarlayın.');
+// Baştaki/sondaki boşluk ve satır sonu karakterlerini temizle (env değerlerinde sık görülür).
+const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || '').trim() || 'muhtar123';
+if (!String(process.env.ADMIN_PASSWORD || '').trim()) console.warn('[UYARI] ADMIN_PASSWORD tanımlı değil — varsayılan şifre (muhtar123) kullanılıyor. Render > Environment üzerinden güvenli bir şifre ayarlayın.');
+else console.log('[BİLGİ] Yönetici paneli (/muhtar) aktif. Şifre uzunluğu: ' + ADMIN_PASSWORD.length);
 const ADMIN_SESSION_MS = 12 * 3600e3;                   // 12 saat
 function makeAdminToken() {
     const p = Buffer.from(JSON.stringify({ a: 1, e: Date.now() + ADMIN_SESSION_MS })).toString('base64url');
@@ -74,15 +76,16 @@ function banText(b) {
 function onlineUsernames() {
     return [...new Set([...io.sockets.sockets.values()].filter(s => s.connected && s.data.username).map(s => s.data.username))];
 }
-function kickUser(username, reason) {
+function disconnectUser(username, event, message) {
     const low = String(username).toLowerCase();
     for (const s of io.sockets.sockets.values()) {
         if (s.data.username && s.data.username.toLowerCase() === low) {
-            s.emit('banned', reason);
+            s.emit(event, message);
             setTimeout(() => { try { s.disconnect(true); } catch { /* yoksay */ } }, 400);
         }
     }
 }
+function kickUser(username, reason) { disconnectUser(username, 'banned', reason); }
 // Küfür ihlalinde ceza uygula: 1-2. ihlal uyarı, 3. ihlal kalıcı ban.
 async function applyStrike(socket, result) {
     const username = socket.data.username;
@@ -213,6 +216,25 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
+// ---------- Kullanıcının KENDİ şifresini değiştirmesi ----------
+app.post('/api/account/change-password', async (req, res) => {
+    const auth = verifyToken((req.headers.authorization || '').replace('Bearer ', ''));
+    if (!auth) return res.status(401).json({ error: 'Yetkisiz.' });
+    if (limited('pw:' + req.ip, 6, 60000)) return res.status(429).json({ error: 'Çok fazla deneme. Biraz bekleyin.' });
+    const current = String(req.body.currentPassword || '');
+    const next = String(req.body.newPassword || '');
+    if (next.length < 6 || next.length > 72) return res.status(400).json({ error: 'Yeni şifre 6-72 karakter olmalı.' });
+    try {
+        const { rows } = await pool.query('SELECT id, password, active_session FROM users WHERE LOWER(username)=LOWER($1) LIMIT 1', [auth.u]);
+        const user = rows[0];
+        if (!user || user.active_session !== auth.sid) return res.status(401).json({ error: 'Oturum geçersiz. Lütfen tekrar giriş yap.' });
+        if (!(await bcrypt.compare(current, user.password))) return res.status(400).json({ error: 'Mevcut şifre hatalı.' });
+        const hash = await bcrypt.hash(next, 10);
+        await pool.query('UPDATE users SET password=$1 WHERE id=$2', [hash, user.id]);
+        res.json({ success: true });
+    } catch (e) { console.error('Şifre değiştirme hatası:', e.message); res.status(500).json({ error: 'Sunucu hatası.' }); }
+});
+
 // ============================================================================
 //  YÖNETİCİ PANELİ ("muhtar") — /muhtar adresinden erişilir
 // ============================================================================
@@ -223,7 +245,9 @@ app.get(['/muhtar', '/muhtar/'], (req, res) => res.sendFile(path.join(__dirname,
 
 app.post('/api/admin/login', (req, res) => {
     if (limited('admin:' + req.ip, 8, 60000)) return res.status(429).json({ error: 'Çok fazla deneme. Biraz bekleyin.' });
-    if (String(req.body.password || '') !== ADMIN_PASSWORD) return res.status(401).json({ error: 'Şifre hatalı.' });
+    // Tırnak/boşluk hatalarına karşı toleranslı karşılaştırma
+    const given = String(req.body.password || '').trim().replace(/^["']|["']$/g, '');
+    if (given !== ADMIN_PASSWORD) return res.status(401).json({ error: 'Şifre hatalı.' });
     res.json({ token: makeAdminToken() });
 });
 
@@ -332,6 +356,53 @@ app.post('/api/admin/clear-messages', requireAdmin, (req, res) => {
     t.messages = [];
     gone.forEach(msgId => io.to('t:' + req.body.channelId).emit('message-deleted', { msgId }));
     res.json({ success: true, removed: gone.length });
+});
+
+// Kullanıcının şifresini değiştir (yönetici). Oturum geçersiz kılınır.
+app.post('/api/admin/set-password', requireAdmin, async (req, res) => {
+    const username = String(req.body.username || '').trim();
+    const password = String(req.body.password || '');
+    if (!username) return res.status(400).json({ error: 'Kullanıcı adı gerekli.' });
+    if (password.length < 6 || password.length > 72) return res.status(400).json({ error: 'Şifre 6-72 karakter olmalı.' });
+    try {
+        const hash = await bcrypt.hash(password, 10);
+        const { rowCount } = await pool.query('UPDATE users SET password=$1, active_session=NULL WHERE LOWER(username)=LOWER($2)', [hash, username]);
+        if (!rowCount) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+        disconnectUser(username, 'session-replaced', 'Yönetici şifreni değiştirdi. Lütfen yeni şifrenle tekrar giriş yap.');
+        res.json({ success: true });
+    } catch (e) { console.error('admin/set-password:', e.message); res.status(500).json({ error: 'Sunucu hatası.' }); }
+});
+
+// Kullanıcıyı sil (mesajları ve açtığı kanallar da silinir)
+app.post('/api/admin/delete-user', requireAdmin, async (req, res) => {
+    const username = String(req.body.username || '').trim();
+    if (!username) return res.status(400).json({ error: 'Kullanıcı adı gerekli.' });
+    try {
+        const { rowCount } = await pool.query('DELETE FROM users WHERE LOWER(username)=LOWER($1)', [username]);
+        if (!rowCount) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+        const low = username.toLowerCase();
+
+        // Kullanıcının tüm mesajlarını sil
+        for (const [id, t] of Object.entries(texts)) {
+            const gone = t.messages.filter(m => (m.username || '').toLowerCase() === low).map(m => m.id);
+            if (!gone.length) continue;
+            t.messages = t.messages.filter(m => (m.username || '').toLowerCase() !== low);
+            gone.forEach(msgId => io.to('t:' + id).emit('message-deleted', { msgId }));
+        }
+        // Kullanıcının açtığı kanalları kaldır
+        let removedChannels = 0;
+        for (const [id, t] of Object.entries(texts)) {
+            if (!t.system && t.owner && t.owner.toLowerCase() === low) { delete texts[id]; removedChannels++; }
+        }
+        for (const [id, r] of Object.entries(rooms)) {
+            if (!r.system && r.owner && r.owner.toLowerCase() === low) { delete rooms[id]; removedChannels++; }
+        }
+        if (removedChannels) broadcastRooms();
+
+        disconnectUser(username, 'account-deleted', 'Hesabın yönetici tarafından silindi.');
+        console.log(`[SİL] ${username} kalıcı olarak silindi (${removedChannels} kanal kaldırıldı).`);
+        res.json({ success: true });
+    } catch (e) { console.error('admin/delete-user:', e.message); res.status(500).json({ error: 'Sunucu hatası.' }); }
 });
 
 // ---------- WebRTC ICE (STUN/TURN) ----------

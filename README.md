@@ -37,7 +37,16 @@ Panelden yapılabilenler:
 - **Ban kaldırma** ve **uyarı sayacını sıfırlama**.
 - **Mesajları görme** (kanal kanal) ve **tek tek mesaj silme**, **kanalı tamamen temizleme**,
   **bir kullanıcının tüm mesajlarını silme**.
-- Canlı istatistikler: kullanıcı, çevrimiçi, uyarı, ban ve mesaj sayıları (5 saniyede bir güncellenir).
+- **Şifre değiştirme:** bir kullanıcının şifresini panelden sıfırlayabilirsin; kullanıcı anında atılır ve
+  yeni şifreyle giriş yapması gerekir.
+- **Kullanıcı silme:** hesabı kalıcı olarak siler; mesajları ve açtığı kanallar da kaldırılır.
+  Kazara silmeyi önlemek için kullanıcı adını yazarak onaylatır.
+- **Oto yenilenme:** panel kendini varsayılan olarak 5 saniyede bir yeniler; üstteki menüden
+  `3 sn / 5 sn / 10 sn / 30 sn / Kapalı` seçilebilir (tercih tarayıcıda saklanır).
+- Canlı istatistikler: kullanıcı, çevrimiçi, uyarı, ban ve mesaj sayıları.
+
+> Kullanıcılar ayrıca uygulama içinde **Ayarlar (⚙)** düğmesinden kendi şifresini değiştirebilir
+> (mevcut şifresini girerek).
 
 ---
 

@@ -312,6 +312,13 @@ input[type=range]{width:100%;accent-color:#5865F2;margin-top:4px}
 <textarea id="codeText" spellcheck="false" placeholder="Kodu buraya yapıştır..."></textarea>
 <div class="acts"><button class="g" onclick="closeM('mCode')">İptal</button><button id="btnSendCode">Gönder</button></div></div></div>
 
+<div class="ov" id="mPass"><div class="box"><h3>Şifre Değiştir</h3>
+<p>Güvenlik için önce mevcut şifreni gir, sonra yeni şifreni belirle.</p>
+<label>Mevcut Şifre</label><input type="password" id="pwCur" autocomplete="current-password">
+<label>Yeni Şifre</label><input type="password" id="pwNew" autocomplete="new-password">
+<label>Yeni Şifre (tekrar)</label><input type="password" id="pwNew2" autocomplete="new-password">
+<div class="acts"><button class="g" onclick="closeM('mPass')">İptal</button><button id="btnPwSave">Kaydet</button></div></div></div>
+
 <div class="app">
 <div class="rail"><div class="srv">LL</div></div>
 <div class="side">
@@ -334,6 +341,7 @@ input[type=range]{width:100%;accent-color:#5865F2;margin-top:4px}
       <button class="ib" id="btnMic" title="Mikrofon"><i data-ic="mic"></i></button>
       <button class="ib" id="btnDeaf" title="Sağırlaştır"><i data-ic="head"></i></button>
       <button class="ib" id="btnSnd" title="Bildirim Sesleri"><i data-ic="bell"></i></button>
+      <button class="ib" id="btnSet" title="Ayarlar · Şifre Değiştir"><i data-ic="gear"></i></button>
       <button class="ib" onclick="logout()" title="Çıkış Yap"><i data-ic="out"></i></button>
     </div>
   </div>
@@ -383,6 +391,7 @@ const IC = {
   plus: 'M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5z',
   file: 'M6 2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6H6zm7 1.5L18.5 9H13V3.5zM8 13h8v2H8v-2zm0 4h8v2H8v-2z',
   spk: 'M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z',
+  gear: 'M19.14 12.94a7.49 7.49 0 0 0 .06-.94 7.49 7.49 0 0 0-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.58.24-1.12.55-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.62-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.3.6.22l2.39-.96c.5.39 1.04.7 1.62.94l.36 2.54c.04.24.25.42.5.42h3.84c.25 0 .46-.18.5-.42l.36-2.54c.58-.24 1.12-.55 1.62-.94l2.39.96c.22.08.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z',
   hang: 'M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 0 1-.29-.7c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85a.99.99 0 0 1-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z'
 };
 const svg = n => `<svg viewBox="0 0 24 24"><path d="${IC[n]}"/></svg>`;
@@ -419,6 +428,7 @@ socket.on('connect_error', e => {
 });
 socket.on('session-replaced', m => { alert(m || 'Hesabına başka bir cihazdan giriş yapıldı.'); logout(); });
 socket.on('banned', m => { alert(m || 'Hesabın banlandı.'); logout(); });
+socket.on('account-deleted', m => { alert(m || 'Hesabın silindi.'); logout(); });
 socket.on('disconnect', () => { $('meSt').textContent = 'Bağlantı koptu...'; cleanup(); });
 socket.on('connect', () => { $('meSt').textContent = 'Bağlandı'; if (textId) socket.emit('join-text', { channelId: textId }); if (voiceId) joinVoice(voiceId); });
 
@@ -617,6 +627,27 @@ $('btnSendCode').onclick = () => {
   if (!code.trim()) return;
   socket.emit('code-message', { code });
   closeM('mCode');
+};
+
+// ----- Ayarlar: kullanıcının kendi şifresini değiştirmesi -----
+$('btnSet').onclick = () => { ['pwCur', 'pwNew', 'pwNew2'].forEach(i => $(i).value = ''); openM('mPass'); setTimeout(() => $('pwCur').focus(), 50); };
+$('btnPwSave').onclick = async () => {
+  const cur = $('pwCur').value, nw = $('pwNew').value, n2 = $('pwNew2').value;
+  if (!cur) return info('Eksik bilgi', 'Mevcut şifreni girmelisin.');
+  if (nw.length < 6) return info('Zayıf şifre', 'Yeni şifre en az 6 karakter olmalı.');
+  if (nw !== n2) return info('Uyuşmuyor', 'Yeni şifrenin iki girişi birbiriyle aynı değil.');
+  if (nw === cur) return info('Aynı şifre', 'Yeni şifre mevcut şifrenle aynı olamaz.');
+  $('btnPwSave').disabled = true;
+  try {
+    const r = await fetch('/api/account/change-password', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ currentPassword: cur, newPassword: nw })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { $('btnPwSave').disabled = false; return info('Hata', d.error || 'Şifre değiştirilemedi.'); }
+    closeM('mPass'); $('btnPwSave').disabled = false;
+    info('Başarılı ✅', 'Şifren güncellendi.');
+  } catch { $('btnPwSave').disabled = false; info('Hata', 'Sunucuya bağlanılamadı.'); }
 };
 
 // ----- Ses kanalı -----

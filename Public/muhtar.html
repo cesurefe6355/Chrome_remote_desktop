@@ -62,6 +62,8 @@ tr:hover td{background:#2e3035}
 .acts button{padding:6px 10px;font-size:12px}
 .chanbar{display:flex;gap:8px;align-items:center;padding:12px 14px;background:#26282d;flex-wrap:wrap}
 .chanbar select{background:#1e1f22;color:#dbdee1;border:1px solid #3a3c42;border-radius:6px;padding:8px 10px;font-size:13px;outline:0}
+.top select{background:#1e1f22;color:#dbdee1;border:1px solid #3a3c42;border-radius:8px;padding:9px 10px;font-size:13px;outline:0;font-weight:600}
+.top label{display:flex;align-items:center;gap:6px;font-size:11px;color:#949ba4;font-weight:800;letter-spacing:.4px}
 .msglist{max-height:62vh;overflow-y:auto}
 .mrow{display:flex;gap:12px;padding:10px 14px;border-bottom:1px solid #232428;align-items:flex-start}
 .mrow:hover{background:#2e3035}
@@ -104,8 +106,17 @@ tr:hover td{background:#2e3035}
 <div id="panel">
   <div class="top">
     <h1>🛡️ Yönetici Paneli <span class="badge">MUHTAR</span></h1>
-    <div style="display:flex;align-items:center;gap:10px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <span class="meta" id="lastRefresh"></span>
+      <label title="Panelin kendini kaç saniyede bir yenileyeceği">OTO YENİLENME
+        <select id="autoSel">
+          <option value="0">Kapalı</option>
+          <option value="3000">3 sn</option>
+          <option value="5000" selected>5 sn</option>
+          <option value="10000">10 sn</option>
+          <option value="30000">30 sn</option>
+        </select>
+      </label>
       <button class="g" id="btnRefresh">↻ Yenile</button>
       <button class="red" id="btnLogout">Çıkış</button>
     </div>
@@ -167,6 +178,32 @@ tr:hover td{background:#2e3035}
   </div>
 </div></div>
 
+<!-- ============ ŞİFRE DEĞİŞTİRME MODALI ============ -->
+<div class="ov" id="pwModal"><div class="box">
+  <h3>Şifre Değiştir</h3>
+  <div class="hint">Kullanıcı: <b id="pwUser" style="color:#f2f3f5"></b></div>
+  <label>Yeni Şifre</label>
+  <input id="pwNewA" type="password" placeholder="En az 6 karakter" autocomplete="new-password">
+  <label>Yeni Şifre (tekrar)</label>
+  <input id="pwNewB" type="password" placeholder="Tekrar gir" autocomplete="new-password">
+  <div class="rowbtns">
+    <button class="g" onclick="closePw()">İptal</button>
+    <button id="btnPwGo">Kaydet</button>
+  </div>
+</div></div>
+
+<!-- ============ KULLANICIYI SİLME MODALI ============ -->
+<div class="ov" id="delModal"><div class="box">
+  <h3 style="color:#ff8b8d">Kullanıcıyı Sil</h3>
+  <div class="hint"><b id="delUser" style="color:#f2f3f5"></b> kalıcı olarak silinecek. Hesabı, tüm mesajları ve açtığı kanallar kaldırılır. <b style="color:#ff8b8d">Bu işlem geri alınamaz.</b></div>
+  <label>Onaylamak için kullanıcı adını yaz</label>
+  <input id="delConfirm" placeholder="Kullanıcı adı" autocomplete="off">
+  <div class="rowbtns">
+    <button class="g" onclick="closeDel()">İptal</button>
+    <button class="red" id="btnDelGo">Kalıcı Olarak Sil</button>
+  </div>
+</div></div>
+
 <div class="toast" id="toasts"></div>
 
 <script>
@@ -207,10 +244,26 @@ async function doLogin() {
     showPanel();
   } catch { $('loginErr').textContent = 'Sunucuya bağlanılamadı.'; $('loginErr').classList.add('on'); }
 }
-function logout() { token = ''; sessionStorage.removeItem('lumolive_admin_token'); $('panel').style.display = 'none'; $('login').style.display = 'flex'; $('pw').value = ''; }
+function logout() { token = ''; sessionStorage.removeItem('lumolive_admin_token'); if (autoTimer) { clearInterval(autoTimer); autoTimer = null; } $('panel').style.display = 'none'; $('login').style.display = 'flex'; $('pw').value = ''; }
 $('btnLogout').onclick = logout;
 
-function showPanel() { $('login').style.display = 'none'; $('panel').style.display = 'block'; refresh(); setInterval(refresh, 5000); }
+function showPanel() {
+  $('login').style.display = 'none'; $('panel').style.display = 'block';
+  const saved = Number(localStorage.getItem('lumolive_admin_auto'));
+  const ms = [0, 3000, 5000, 10000, 30000].includes(saved) ? saved : 5000;
+  $('autoSel').value = String(ms);
+  setAuto(ms);
+  refresh();
+}
+
+// ---------- Oto yenilenme ----------
+let autoTimer = null;
+function setAuto(ms) {
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+  localStorage.setItem('lumolive_admin_auto', String(ms));
+  if (ms > 0) autoTimer = setInterval(refresh, ms);
+}
+$('autoSel').onchange = e => { setAuto(Number(e.target.value)); toast(Number(e.target.value) ? 'Oto yenilenme: ' + (e.target.value / 1000) + ' sn' : 'Oto yenilenme kapatıldı'); };
 
 // ---------- Sekmeler ----------
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
@@ -261,6 +314,8 @@ function renderUsers() {
     wrap.appendChild(mkBtn('Mesajlarını Sil', 'g', () => {
       if (confirm(`${u.username} kullanıcısının TÜM mesajları silinsin mi?`)) act('delete-user-messages', { username: u.username }, 'Mesajlar silindi');
     }));
+    wrap.appendChild(mkBtn('Şifre Değiştir', 'g', () => openPw(u.username)));
+    wrap.appendChild(mkBtn('Sil', 'red', () => openDel(u.username)));
     acts.appendChild(wrap); tr.appendChild(acts);
     tb.appendChild(tr);
   });
@@ -310,6 +365,32 @@ $('btnBanGo').onclick = async () => {
   const reason = $('banReason').value.trim();
   await act('ban', { username: banTarget, minutes, reason }, 'Ban uygulandı: ' + banTarget);
   closeBan();
+};
+
+// ---------- Şifre değiştirme modalı ----------
+let pwTarget = null;
+function openPw(username) { pwTarget = username; $('pwUser').textContent = username; $('pwNewA').value = ''; $('pwNewB').value = ''; $('pwModal').classList.add('on'); setTimeout(() => $('pwNewA').focus(), 50); }
+function closePw() { $('pwModal').classList.remove('on'); pwTarget = null; }
+$('btnPwGo').onclick = async () => {
+  const a = $('pwNewA').value, b = $('pwNewB').value;
+  if (a.length < 6) return toast('Şifre en az 6 karakter olmalı.', 'err');
+  if (a !== b) return toast('Şifreler birbiriyle aynı değil.', 'err');
+  $('btnPwGo').disabled = true;
+  try { await api('/api/admin/set-password', { username: pwTarget, password: a }); toast('Şifre güncellendi: ' + pwTarget, 'ok'); closePw(); }
+  catch (e) { toast(e.message || 'İşlem başarısız', 'err'); }
+  $('btnPwGo').disabled = false;
+};
+
+// ---------- Kullanıcı silme modalı ----------
+let delTarget = null;
+function openDel(username) { delTarget = username; $('delUser').textContent = username; $('delConfirm').value = ''; $('delModal').classList.add('on'); setTimeout(() => $('delConfirm').focus(), 50); }
+function closeDel() { $('delModal').classList.remove('on'); delTarget = null; }
+$('btnDelGo').onclick = async () => {
+  if ($('delConfirm').value.trim().toLowerCase() !== String(delTarget).toLowerCase()) return toast('Kullanıcı adını doğru yazmadın.', 'err');
+  $('btnDelGo').disabled = true;
+  try { await api('/api/admin/delete-user', { username: delTarget }); toast('Kullanıcı silindi: ' + delTarget, 'ok'); closeDel(); refresh(); }
+  catch (e) { toast(e.message || 'İşlem başarısız', 'err'); }
+  $('btnDelGo').disabled = false;
 };
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
