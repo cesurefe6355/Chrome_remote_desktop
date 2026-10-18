@@ -15,9 +15,29 @@ Sesli sohbet + canlı ekran yayını uygulaması. İki şekilde çalışır:
 - **Şifre:** En az 6 karakter.
 - **Beni hatırla:** İşaretliyse oturum 30 gün açık kalır; işaretli değilse **1 saat sonra otomatik çıkış** yapılır.
 - **Tek cihaz kuralı:** Aynı hesaba yeni giriş yapılınca eski oturum kapanır.
-- **Gelişmiş küfür filtresi:** Sohbet, kullanıcı adı ve kanal adlarında; büyük/küçük harf, `s.i.k` gibi bölme, `*`, tekrar eden harf ve leetspeak (`s1kt1r`) varyasyonlarını yakalar. Sohbette uygunsuz kelimeler `***` ile gizlenir.
+- **Gelişmiş küfür filtresi:** Sohbet, kullanıcı adı ve kanal adlarında çalışır. Büyük/küçük harf, Türkçe karakter (`ş ı ğ ü ö ç`), leetspeak (`s1kt1r`, `$ik`), homoglif harfler (Kiril `а о е`…), ayraçla bölme (`s.i.k`, `a.m.k`), tekrar eden harfler (`siiiktir`) ve görünmez karakterler yakalanır. Sohbette uygunsuz kelimeler `***` ile gizlenir.
+- **Kademeli ceza sistemi (otomatik):** Küfür tespit edildiğinde
+  **1. ve 2. ihlal → uyarı**, **3. ihlal → hesap kalıcı olarak banlanır** ve kullanıcı oturumdan atılır.
+  (24 saat cezasız geçerse uyarı sayacı sıfırlanır.)
 - **Kod paylaşımı:** Sohbetteki **+** butonuna bas → kodu yapıştır → sohbete **`kod-<kullanıcıadı>.txt`** dosyası olarak gönderilir (indirilebilir).
 - **Ekran yayını:** Kanal içinde ekran paylaşımı, kalite seçenekleri (720p→4K, 30→144 FPS, bit hızı, kodek, sistem sesi).
+
+---
+
+## 🛡️ Yönetici Paneli ("muhtar")
+
+Tarayıcıdan `site-adresin/muhtar` yazarak girilir (örn. `https://chrome-remote-desktop-w9hm.onrender.com/muhtar`).
+Şifre `.env` içindeki **`ADMIN_PASSWORD`** değeridir. (Ayarlanmazsa varsayılan `muhtar123` kullanılır —
+**mutlaka değiştir!**)
+
+Panelden yapılabilenler:
+
+- **Kullanıcıları görme:** çevrimiçi/çevrimdışı durumu, küfür uyarı sayısı (`x/3`), ban durumu ve sebebi.
+- **Ban atma:** süreli (1 saat → 30 gün) veya **kalıcı**; sebep yazılabilir. Banlanan kullanıcı anında atılır.
+- **Ban kaldırma** ve **uyarı sayacını sıfırlama**.
+- **Mesajları görme** (kanal kanal) ve **tek tek mesaj silme**, **kanalı tamamen temizleme**,
+  **bir kullanıcının tüm mesajlarını silme**.
+- Canlı istatistikler: kullanıcı, çevrimiçi, uyarı, ban ve mesaj sayıları (5 saniyede bir güncellenir).
 
 ---
 

@@ -6,7 +6,7 @@ const path = require('path');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { pool, initDb } = require('./db');
-const { containsProfanity, censor, isValidName } = require('./filter');
+const { analyze, censor, isValidName } = require('./filter');
 
 const app = express();
 const server = http.createServer(app);
@@ -37,6 +37,78 @@ function verifyToken(t) {
     const good = sign(p);
     if (s.length !== good.length || !crypto.timingSafeEqual(Buffer.from(s), Buffer.from(good))) return null;
     try { const d = JSON.parse(Buffer.from(p, 'base64url').toString()); return d.e > Date.now() ? { u: d.u, sid: d.s } : null; } catch { return null; }
+}
+
+// ---------- Küfür ceza sistemi (uyarı → uyarı → ban) ----------
+const MAX_STRIKES = 3;                                  // 3. ihlalde hesap banlanır
+const STRIKE_WINDOW_MS = 24 * 3600e3;                   // 24 saat cezasız geçerse sayaç sıfırlanır
+
+// ---------- Yönetici (admin / "muhtar") oturumu ----------
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'muhtar123';
+if (!process.env.ADMIN_PASSWORD) console.warn('[UYARI] ADMIN_PASSWORD tanımlı değil — varsayılan şifre kullanılıyor. Render > Environment üzerinden güvenli bir şifre ayarlayın.');
+const ADMIN_SESSION_MS = 12 * 3600e3;                   // 12 saat
+function makeAdminToken() {
+    const p = Buffer.from(JSON.stringify({ a: 1, e: Date.now() + ADMIN_SESSION_MS })).toString('base64url');
+    return p + '.' + sign(p);
+}
+function verifyAdminToken(t) {
+    if (typeof t !== 'string') return false;
+    const [p, s] = t.split('.');
+    if (!p || !s) return false;
+    const good = sign(p);
+    if (s.length !== good.length || !crypto.timingSafeEqual(Buffer.from(s), Buffer.from(good))) return false;
+    try { const d = JSON.parse(Buffer.from(p, 'base64url').toString()); return d.a === 1 && d.e > Date.now(); } catch { return false; }
+}
+
+// ---------- Ban yardımcıları ----------
+function banInfo(row) {
+    if (!row || !row.banned) return null;
+    if (row.ban_until && new Date(row.ban_until).getTime() <= Date.now()) return null; // süresi geçmiş
+    return { until: row.ban_until || null, reason: row.ban_reason || 'Kural ihlali', permanent: !row.ban_until };
+}
+function banText(b) {
+    return b.permanent
+        ? `Hesabın kalıcı olarak kapatıldı. Sebep: ${b.reason}`
+        : `Hesabın kapatıldı. Sebep: ${b.reason} — Bitiş: ${new Date(b.until).toLocaleString('tr-TR')}`;
+}
+function onlineUsernames() {
+    return [...new Set([...io.sockets.sockets.values()].filter(s => s.connected && s.data.username).map(s => s.data.username))];
+}
+function kickUser(username, reason) {
+    const low = String(username).toLowerCase();
+    for (const s of io.sockets.sockets.values()) {
+        if (s.data.username && s.data.username.toLowerCase() === low) {
+            s.emit('banned', reason);
+            setTimeout(() => { try { s.disconnect(true); } catch { /* yoksay */ } }, 400);
+        }
+    }
+}
+// Küfür ihlalinde ceza uygula: 1-2. ihlal uyarı, 3. ihlal kalıcı ban.
+async function applyStrike(socket, result) {
+    const username = socket.data.username;
+    const matches = (result && result.matches) || [];
+    try {
+        const { rows } = await pool.query('SELECT profanity_strikes, last_strike_at FROM users WHERE LOWER(username)=LOWER($1) LIMIT 1', [username]);
+        if (!rows[0]) return;
+        let strikes = rows[0].profanity_strikes || 0;
+        const last = rows[0].last_strike_at ? new Date(rows[0].last_strike_at).getTime() : 0;
+        if (Date.now() - last > STRIKE_WINDOW_MS) strikes = 0; // süre dolduysa temiz sayfa
+        strikes += 1;
+
+        if (strikes >= MAX_STRIKES) {
+            const reason = `Otomatik ban: küfür/içerik ihlali (${MAX_STRIKES}. ihlal)`;
+            await pool.query('UPDATE users SET profanity_strikes=$1, last_strike_at=NOW(), banned=TRUE, ban_until=NULL, ban_reason=$2 WHERE LOWER(username)=LOWER($3)', [strikes, reason, username]);
+            kickUser(username, `Küfür kuralını ${MAX_STRIKES} kez ihlal ettin. Hesabın kalıcı olarak kapatıldı.`);
+            console.log(`[BAN] ${username} otomatik banlandı (küfür: ${(matches || []).join(', ')}).`);
+        } else {
+            await pool.query('UPDATE users SET profanity_strikes=$1, last_strike_at=NOW() WHERE LOWER(username)=LOWER($2)', [strikes, username]);
+            socket.emit('profanity-warning', {
+                strikes, max: MAX_STRIKES, remaining: MAX_STRIKES - strikes,
+                words: matches, severity: result.severity || 0
+            });
+            console.log(`[UYARI] ${username} küfür uyarısı aldı (${strikes}/${MAX_STRIKES}): ${(matches || []).join(', ')}`);
+        }
+    } catch (e) { console.error('Strike uygulama hatası:', e.message); }
 }
 
 // ---------- Basit hız sınırı ----------
@@ -113,10 +185,15 @@ app.post('/api/login', async (req, res) => {
     const username = String(req.body.username || '').trim();
     const password = String(req.body.password || '');
     try {
-        const { rows } = await pool.query('SELECT id, username, password FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1', [username]);
+        const { rows } = await pool.query('SELECT id, username, password, banned, ban_until, ban_reason FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1', [username]);
         const user = rows[0];
         if (!user || !(await bcrypt.compare(password, user.password)))
             return res.status(400).json({ error: 'Kullanıcı bulunamadı veya şifre hatalı.' });
+
+        // ---- Ban kontrolü ----
+        const ban = banInfo(user);
+        if (ban) return res.status(403).json({ error: banText(ban), banned: true, until: ban.until, reason: ban.reason });
+        if (user.banned) await pool.query('UPDATE users SET banned=FALSE, ban_until=NULL, ban_reason=NULL WHERE id=$1', [user.id]).catch(() => {});
 
         // ---- Tek cihaz kuralı: yeni oturum açılınca eski oturum geçersiz olur ----
         const sid = crypto.randomUUID();
@@ -134,6 +211,127 @@ app.post('/api/login', async (req, res) => {
         console.error('Giriş hatası:', err.message);
         res.status(500).json({ error: 'Sunucu hatası, lütfen tekrar deneyin.' });
     }
+});
+
+// ============================================================================
+//  YÖNETİCİ PANELİ ("muhtar") — /muhtar adresinden erişilir
+// ============================================================================
+const requireAdmin = (req, res, next) =>
+    verifyAdminToken(req.headers['x-admin-token']) ? next() : res.status(401).json({ error: 'Yetkisiz. Lütfen tekrar giriş yap.' });
+
+app.get(['/muhtar', '/muhtar/'], (req, res) => res.sendFile(path.join(__dirname, 'Public', 'muhtar.html')));
+
+app.post('/api/admin/login', (req, res) => {
+    if (limited('admin:' + req.ip, 8, 60000)) return res.status(429).json({ error: 'Çok fazla deneme. Biraz bekleyin.' });
+    if (String(req.body.password || '') !== ADMIN_PASSWORD) return res.status(401).json({ error: 'Şifre hatalı.' });
+    res.json({ token: makeAdminToken() });
+});
+
+// Tüm veriler: kullanıcılar, kanallar, mesajlar, istatistikler
+app.get('/api/admin/data', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await pool.query('SELECT username, created_at, profanity_strikes, last_strike_at, banned, ban_until, ban_reason FROM users ORDER BY created_at DESC');
+        const online = onlineUsernames().map(u => u.toLowerCase());
+        const users = rows.map(r => ({
+            username: r.username,
+            createdAt: r.created_at,
+            strikes: r.profanity_strikes || 0,
+            lastStrikeAt: r.last_strike_at,
+            online: online.includes(r.username.toLowerCase()),
+            ban: banInfo(r) ? { until: r.ban_until || null, reason: r.ban_reason || 'Kural ihlali', permanent: !r.ban_until } : null
+        }));
+        const channels = Object.entries(texts).map(([id, t]) => ({
+            id, name: t.name, owner: t.owner || null,
+            messages: t.messages.map(m => ({
+                id: m.id, username: m.username, kind: m.kind || 'text',
+                text: m.kind === 'file' ? `[kod dosyası] ${m.name}` : m.text,
+                file: m.kind === 'file' ? m.name : null, size: m.size || 0, time: m.time
+            }))
+        }));
+        res.json({
+            users, channels,
+            stats: {
+                users: users.length,
+                online: online.length,
+                messages: channels.reduce((a, c) => a + c.messages.length, 0),
+                banned: users.filter(u => u.ban).length,
+                warnings: users.reduce((a, u) => a + u.strikes, 0)
+            }
+        });
+    } catch (e) { console.error('admin/data:', e.message); res.status(500).json({ error: 'Sunucu hatası.' }); }
+});
+
+// Ban (süreli veya kalıcı). minutes > 0 → süreli, aksi hâlde kalıcı.
+app.post('/api/admin/ban', requireAdmin, async (req, res) => {
+    const username = String(req.body.username || '').trim();
+    const minutes = Number(req.body.minutes);
+    const reason = String(req.body.reason || '').trim().slice(0, 200) || 'Kural ihlali';
+    if (!username) return res.status(400).json({ error: 'Kullanıcı adı gerekli.' });
+    const permanent = !(minutes > 0);
+    const until = permanent ? null : new Date(Date.now() + minutes * 60000);
+    try {
+        const { rowCount } = await pool.query('UPDATE users SET banned=TRUE, ban_until=$1, ban_reason=$2 WHERE LOWER(username)=LOWER($3)', [until, reason, username]);
+        if (!rowCount) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+        kickUser(username, `Hesabın yönetici tarafından kapatıldı. Sebep: ${reason}` + (permanent ? ' (Kalıcı ban)' : ` (Bitiş: ${until.toLocaleString('tr-TR')})`));
+        res.json({ success: true });
+    } catch (e) { console.error('admin/ban:', e.message); res.status(500).json({ error: 'Sunucu hatası.' }); }
+});
+
+app.post('/api/admin/unban', requireAdmin, async (req, res) => {
+    const username = String(req.body.username || '').trim();
+    if (!username) return res.status(400).json({ error: 'Kullanıcı adı gerekli.' });
+    try {
+        const { rowCount } = await pool.query('UPDATE users SET banned=FALSE, ban_until=NULL, ban_reason=NULL WHERE LOWER(username)=LOWER($1)', [username]);
+        if (!rowCount) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: 'Sunucu hatası.' }); }
+});
+
+app.post('/api/admin/reset-strikes', requireAdmin, async (req, res) => {
+    const username = String(req.body.username || '').trim();
+    if (!username) return res.status(400).json({ error: 'Kullanıcı adı gerekli.' });
+    try {
+        const { rowCount } = await pool.query('UPDATE users SET profanity_strikes=0, last_strike_at=NULL WHERE LOWER(username)=LOWER($1)', [username]);
+        if (!rowCount) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: 'Sunucu hatası.' }); }
+});
+
+// Tek mesaj sil
+app.post('/api/admin/delete-message', requireAdmin, (req, res) => {
+    const { channelId, msgId } = req.body || {};
+    const t = texts[channelId];
+    if (!t) return res.status(404).json({ error: 'Kanal bulunamadı.' });
+    const i = t.messages.findIndex(m => m.id === msgId);
+    if (i === -1) return res.status(404).json({ error: 'Mesaj bulunamadı.' });
+    t.messages.splice(i, 1);
+    io.to('t:' + channelId).emit('message-deleted', { msgId });
+    res.json({ success: true });
+});
+
+// Bir kullanıcının TÜM mesajlarını sil
+app.post('/api/admin/delete-user-messages', requireAdmin, (req, res) => {
+    const username = String(req.body.username || '').trim().toLowerCase();
+    if (!username) return res.status(400).json({ error: 'Kullanıcı adı gerekli.' });
+    let removed = 0;
+    for (const [id, t] of Object.entries(texts)) {
+        const gone = t.messages.filter(m => (m.username || '').toLowerCase() === username).map(m => m.id);
+        if (!gone.length) continue;
+        t.messages = t.messages.filter(m => (m.username || '').toLowerCase() !== username);
+        removed += gone.length;
+        gone.forEach(msgId => io.to('t:' + id).emit('message-deleted', { msgId }));
+    }
+    res.json({ success: true, removed });
+});
+
+// Bir kanaldaki tüm mesajları sil
+app.post('/api/admin/clear-messages', requireAdmin, (req, res) => {
+    const t = texts[req.body && req.body.channelId];
+    if (!t) return res.status(404).json({ error: 'Kanal bulunamadı.' });
+    const gone = t.messages.map(m => m.id);
+    t.messages = [];
+    gone.forEach(msgId => io.to('t:' + req.body.channelId).emit('message-deleted', { msgId }));
+    res.json({ success: true, removed: gone.length });
 });
 
 // ---------- WebRTC ICE (STUN/TURN) ----------
@@ -202,8 +400,10 @@ io.use(async (socket, next) => {
     if (!auth) return next(new Error('unauthorized'));
     try {
         // Tek cihaz kuralı: token'daki oturum, veritabanındaki güncel oturumla eşleşmeli
-        const { rows } = await pool.query('SELECT active_session FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1', [auth.u]);
+        const { rows } = await pool.query('SELECT active_session, banned, ban_until, ban_reason FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1', [auth.u]);
         if (!rows[0] || rows[0].active_session !== auth.sid) return next(new Error('session-replaced'));
+        const ban = banInfo(rows[0]);
+        if (ban) { const err = new Error('banned'); err.data = { until: ban.until, reason: ban.reason, permanent: ban.permanent, message: banText(ban) }; return next(err); }
     } catch (err) {
         console.error('Oturum doğrulama hatası:', err.message);
         return next(new Error('db-error'));
@@ -304,16 +504,18 @@ io.on('connection', (socket) => {
         broadcastRooms();
     });
 
-    socket.on('chat-message', ({ text } = {}) => {
+    socket.on('chat-message', async ({ text } = {}) => {
         const tid = socket.data.textId, t = texts[tid];
         text = String(text || '').trim().slice(0, 500);
         if (!t || !text || limited('chat:' + socket.id, 8, 5000)) return;
+        const result = analyze(text);
         const clean = censor(text);
-        if (clean !== text) socket.emit('error-msg', 'Mesajındaki uygunsuz kelimeler gizlendi.');
         const msg = { id: crypto.randomUUID(), username, kind: 'text', text: clean, time: Date.now(), reactions: {} };
         t.messages.push(msg);
         if (t.messages.length > 100) t.messages.shift();
         io.to('t:' + tid).emit('chat-message', msg);
+        // Yalnızca gönderen görebilsin: uyarı/ban akışı
+        if (result.profane) await applyStrike(socket, result);
     });
 
     // Kod paylaşımı: girilen kod, "kod-<kullanıcıadı>.txt" dosyası olarak sohbete gönderilir.

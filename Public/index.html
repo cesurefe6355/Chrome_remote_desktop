@@ -410,9 +410,15 @@ socket.on('connect_error', e => {
     alert('Hesabına başka bir cihazdan giriş yapıldı. Bu oturum kapatıldı.');
     return logout();
   }
+  if (e.message === 'banned') {
+    const d = e.data || {};
+    alert((d.message || 'Bu hesap banlandı.') + (d.permanent ? '\n\n(Kalıcı ban)' : d.until ? `\n\nBitiş: ${new Date(d.until).toLocaleString('tr-TR')}` : ''));
+    return logout();
+  }
   $('meSt').textContent = 'Bağlantı yok';
 });
 socket.on('session-replaced', m => { alert(m || 'Hesabına başka bir cihazdan giriş yapıldı.'); logout(); });
+socket.on('banned', m => { alert(m || 'Hesabın banlandı.'); logout(); });
 socket.on('disconnect', () => { $('meSt').textContent = 'Bağlantı koptu...'; cleanup(); });
 socket.on('connect', () => { $('meSt').textContent = 'Bağlandı'; if (textId) socket.emit('join-text', { channelId: textId }); if (voiceId) joinVoice(voiceId); });
 
@@ -584,6 +590,16 @@ function addMsg(m) {
   box.appendChild(d); if (bottom) box.scrollTop = box.scrollHeight;
 }
 socket.on('chat-message', m => { addMsg(m); if (m.username !== user) play('msg'); });
+socket.on('message-deleted', ({ msgId }) => {
+  const m = document.querySelector(`.msg[data-id="${msgId}"]`); if (m) m.remove();
+  const box = $('msgs');
+  if (box && !box.querySelector('.msg') && textId) box.innerHTML = `<div class="empty"><h2>#${textName(textId)} kanalına hoş geldin!</h2>Burası bu kanalın başlangıcı.</div>`;
+});
+// Küfür uyarısı: 1-2. ihlal uyarı, 3. ihlalde hesap kalıcı banlanır
+socket.on('profanity-warning', w => {
+  play('err');
+  info(`⚠️ Uyarı ${w.strikes}/${w.max}`, `Mesajında uygunsuz ifade tespit edildi: ${(w.words || []).join(', ')}.\n\n${w.remaining} ihlal daha yaparsan hesabın KALICI olarak banlanacak.`);
+});
 socket.on('reaction-update', ({ msgId, reactions, emoji, added }) => {
   const m = document.querySelector(`.msg[data-id="${msgId}"]`); if (m) renderRx(m.querySelector('.rxs'), reactions);
   if (added) { floatEmoji(emoji); play('react'); }

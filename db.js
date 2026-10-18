@@ -48,12 +48,22 @@ async function initDb() {
             password          TEXT         NOT NULL,
             created_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
             accepted_terms_at TIMESTAMPTZ,
-            active_session    TEXT
+            active_session    TEXT,
+            profanity_strikes INTEGER      NOT NULL DEFAULT 0,
+            last_strike_at    TIMESTAMPTZ,
+            banned            BOOLEAN      NOT NULL DEFAULT FALSE,
+            ban_until         TIMESTAMPTZ,
+            ban_reason        TEXT
         );
     `);
     // Mevcut tablolara sonradan eklenen kolonlar (geriye dönük uyumluluk)
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS accepted_terms_at TIMESTAMPTZ;`);
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS active_session TEXT;`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS profanity_strikes INTEGER NOT NULL DEFAULT 0;`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_strike_at TIMESTAMPTZ;`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS banned BOOLEAN NOT NULL DEFAULT FALSE;`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ban_until TIMESTAMPTZ;`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ban_reason TEXT;`);
     // Kullanıcı adı büyük/küçük harf duyarsız benzersiz olsun (eski JSON mantığıyla aynı)
     await pool.query(`
         CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower_idx

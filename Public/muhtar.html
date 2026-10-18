@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LumoLive · Yönetici Paneli (Muhtar)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:'gg sans','Noto Sans','Helvetica Neue',Helvetica,Arial,sans-serif}
+body{background:#1e1f22;color:#dbdee1;min-height:100vh}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#1a1b1e;border-radius:5px}::-webkit-scrollbar-track{background:#2b2d31}
+svg{width:18px;height:18px;fill:currentColor;display:block}
+button{padding:8px 14px;border-radius:6px;border:0;background:#5865F2;color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
+button:hover{background:#4752c4}
+button.g{background:#404249}button.g:hover{background:#4e5058}
+button.red{background:#da373c}button.red:hover{background:#a12828}
+button.green{background:#248046}button.green:hover{background:#1a6334}
+button:disabled{opacity:.5;cursor:default}
+
+/* ---------- Giriş ekranı ---------- */
+#login{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.card{background:#2b2d31;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:34px 30px;width:100%;max-width:400px;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.55)}
+.card .logo{font-size:26px;font-weight:800;color:#f2f3f5;margin-bottom:4px}
+.card .logo span{background:linear-gradient(90deg,#5865F2,#a259ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.card .sub{color:#949ba4;font-size:13px;margin-bottom:22px}
+.shield{font-size:42px;margin-bottom:10px}
+input{width:100%;padding:12px 14px;border-radius:9px;border:1px solid transparent;background:#1e1f22;color:#dbdee1;font-size:15px;outline:0;transition:.2s}
+input:focus{border-color:#5865F2;box-shadow:0 0 0 3px rgba(88,101,242,.2)}
+.card button{width:100%;margin-top:14px;padding:12px}
+.err{margin-top:12px;font-size:13px;color:#ffb3b5;background:rgba(237,66,69,.12);border-left:3px solid #ed4245;border-radius:8px;padding:9px 12px;display:none;text-align:left}
+.err.on{display:block}
+
+/* ---------- Panel ---------- */
+#panel{display:none;padding:20px;max-width:1300px;margin:0 auto}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.top h1{font-size:20px;color:#f2f3f5;display:flex;align-items:center;gap:10px}
+.top h1 .badge{font-size:11px;background:linear-gradient(135deg,#5865F2,#a259ff);padding:3px 9px;border-radius:20px;font-weight:700}
+.top .meta{font-size:12px;color:#80848e}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px}
+.stat{background:#2b2d31;border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:16px}
+.stat b{display:block;font-size:26px;color:#f2f3f5;margin-bottom:3px}
+.stat small{font-size:12px;color:#949ba4;text-transform:uppercase;letter-spacing:.5px;font-weight:700}
+.stat.blue b{color:#5865F2}.stat.green b{color:#23a55a}.stat.red b{color:#ed4245}.stat.yellow b{color:#f1c40f}
+.tabs{display:flex;gap:6px;background:#232428;padding:5px;border-radius:10px;margin-bottom:16px;width:fit-content;flex-wrap:wrap}
+.tab{background:none;color:#949ba4;font-weight:700;font-size:13px;padding:9px 18px;border-radius:7px}
+.tab:hover{background:#2b2d31;color:#dbdee1}
+.tab.on{background:linear-gradient(135deg,#5865F2,#7c4dff);color:#fff}
+.tab.on:hover{background:linear-gradient(135deg,#5865F2,#7c4dff)}
+.view{display:none}.view.on{display:block}
+.panelbox{background:#2b2d31;border:1px solid rgba(255,255,255,.05);border-radius:12px;overflow:hidden}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:12px 14px;border-bottom:1px solid #232428;white-space:nowrap}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:#949ba4;background:#26282d;font-weight:800}
+tr:hover td{background:#2e3035}
+.pill{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;display:inline-block}
+.pill.online{background:rgba(35,165,90,.16);color:#3ee07f}
+.pill.offline{background:#3a3c42;color:#949ba4}
+.pill.ban{background:rgba(237,66,69,.16);color:#ff8b8d}
+.pill.warn{background:rgba(241,196,15,.15);color:#f1c40f}
+.pill.ok{background:rgba(88,101,242,.15);color:#a8b1ff}
+.acts{display:flex;gap:6px;flex-wrap:wrap}
+.acts button{padding:6px 10px;font-size:12px}
+.chanbar{display:flex;gap:8px;align-items:center;padding:12px 14px;background:#26282d;flex-wrap:wrap}
+.chanbar select{background:#1e1f22;color:#dbdee1;border:1px solid #3a3c42;border-radius:6px;padding:8px 10px;font-size:13px;outline:0}
+.msglist{max-height:62vh;overflow-y:auto}
+.mrow{display:flex;gap:12px;padding:10px 14px;border-bottom:1px solid #232428;align-items:flex-start}
+.mrow:hover{background:#2e3035}
+.mrow .who{font-weight:700;color:#f2f3f5;min-width:130px;flex-shrink:0;font-size:13px}
+.mrow .txt{flex:1;color:#b5bac1;word-break:break-word;font-size:14px}
+.mrow .tm{color:#80848e;font-size:11px;flex-shrink:0}
+.mrow button{padding:5px 10px;font-size:12px;flex-shrink:0}
+.empty{padding:36px;text-align:center;color:#80848e}
+
+/* ---------- Modal ---------- */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:99;justify-content:center;align-items:center;padding:20px}
+.ov.on{display:flex}
+.box{background:#313338;border-radius:12px;padding:24px;width:100%;max-width:440px}
+.box h3{color:#f2f3f5;font-size:18px;margin-bottom:6px}
+.box .hint{color:#949ba4;font-size:13px;margin-bottom:16px}
+.box label{display:block;font-size:12px;font-weight:700;color:#b5bac1;text-transform:uppercase;margin:14px 0 6px}
+.box select{width:100%;padding:10px;border-radius:6px;border:0;background:#1e1f22;color:#dbdee1;font-size:14px;outline:0}
+.box .rowbtns{display:flex;justify-content:flex-end;gap:8px;margin-top:22px}
+.toast{position:fixed;top:18px;right:18px;z-index:300;display:flex;flex-direction:column;gap:8px}
+.tmsg{background:#111214;color:#f2f3f5;padding:11px 16px;border-radius:8px;border-left:4px solid #5865F2;font-size:14px;box-shadow:0 6px 18px rgba(0,0,0,.5);animation:sin .25s}
+.tmsg.ok{border-color:#23a55a}.tmsg.err{border-color:#ed4245}
+@keyframes sin{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
+</style>
+</head>
+<body>
+
+<!-- ============ GİRİŞ ============ -->
+<div id="login">
+  <div class="card">
+    <div class="shield">🛡️</div>
+    <div class="logo">Lumo<span>Muhtar</span></div>
+    <div class="sub">Yönetici Paneli · Yetkili giriş</div>
+    <input type="password" id="pw" placeholder="Yönetici şifresi" autocomplete="current-password">
+    <button id="btnLogin">Panele Gir</button>
+    <div class="err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- ============ PANEL ============ -->
+<div id="panel">
+  <div class="top">
+    <h1>🛡️ Yönetici Paneli <span class="badge">MUHTAR</span></h1>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="meta" id="lastRefresh"></span>
+      <button class="g" id="btnRefresh">↻ Yenile</button>
+      <button class="red" id="btnLogout">Çıkış</button>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="stat blue"><b id="stUsers">0</b><small>Kullanıcı</small></div>
+    <div class="stat green"><b id="stOnline">0</b><small>Çevrimiçi</small></div>
+    <div class="stat yellow"><b id="stWarn">0</b><small>Küfür Uyarısı</small></div>
+    <div class="stat red"><b id="stBanned">0</b><small>Banlı</small></div>
+    <div class="stat"><b id="stMsg">0</b><small>Mesaj</small></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab on" data-v="users">👥 Kullanıcılar</button>
+    <button class="tab" data-v="msgs">💬 Sohbet Mesajları</button>
+  </div>
+
+  <div class="view on" id="v-users">
+    <div class="panelbox"><div class="tablewrap">
+      <table>
+        <thead><tr><th>Kullanıcı</th><th>Durum</th><th>Uyarı</th><th>Ban</th><th>Kayıt</th><th>İşlemler</th></tr></thead>
+        <tbody id="userRows"></tbody>
+      </table>
+    </div></div>
+  </div>
+
+  <div class="view" id="v-msgs">
+    <div class="panelbox">
+      <div class="chanbar">
+        <label style="margin:0;color:#949ba4;font-size:12px;font-weight:700">KANAL</label>
+        <select id="chanSel"></select>
+        <button class="red" id="btnClear">Kanaldaki Tüm Mesajları Sil</button>
+        <span class="meta" id="msgCount" style="margin-left:auto"></span>
+      </div>
+      <div class="msglist" id="msgList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BAN MODALI ============ -->
+<div class="ov" id="banModal"><div class="box">
+  <h3>Kullanıcıyı Banla</h3>
+  <div class="hint">Kullanıcı: <b id="banUser" style="color:#f2f3f5"></b></div>
+  <label>Süre</label>
+  <select id="banDur">
+    <option value="60">1 saat</option>
+    <option value="360">6 saat</option>
+    <option value="1440">1 gün</option>
+    <option value="10080">7 gün</option>
+    <option value="43200">30 gün</option>
+    <option value="0" selected>Kalıcı (süresiz)</option>
+  </select>
+  <label>Sebep</label>
+  <input id="banReason" placeholder="Örn: küfür, spam, kural ihlali">
+  <div class="rowbtns">
+    <button class="g" onclick="closeBan()">İptal</button>
+    <button class="red" id="btnBanGo">Ban Uygula</button>
+  </div>
+</div></div>
+
+<div class="toast" id="toasts"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+let token = sessionStorage.getItem('lumolive_admin_token') || '';
+let data = null, activeChan = null, banTarget = null;
+
+function toast(msg, kind) {
+  const d = document.createElement('div');
+  d.className = 'tmsg ' + (kind || ''); d.textContent = msg;
+  $('toasts').appendChild(d);
+  setTimeout(() => { d.style.opacity = 0; setTimeout(() => d.remove(), 300); }, 3200);
+}
+
+async function api(path, body) {
+  const res = await fetch(path, {
+    method: body === undefined ? 'GET' : 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+    body: body === undefined ? undefined : JSON.stringify(body)
+  });
+  const d = await res.json().catch(() => ({}));
+  if (res.status === 401) { logout(); throw new Error(d.error || 'Yetkisiz'); }
+  if (!res.ok) throw new Error(d.error || 'Hata');
+  return d;
+}
+
+// ---------- Giriş ----------
+$('btnLogin').onclick = doLogin;
+$('pw').onkeydown = e => { if (e.key === 'Enter') doLogin(); };
+async function doLogin() {
+  const pw = $('pw').value;
+  if (!pw) return;
+  try {
+    const r = await fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) });
+    const d = await r.json();
+    if (!r.ok) { $('loginErr').textContent = d.error || 'Giriş başarısız.'; $('loginErr').classList.add('on'); return; }
+    token = d.token; sessionStorage.setItem('lumolive_admin_token', token);
+    showPanel();
+  } catch { $('loginErr').textContent = 'Sunucuya bağlanılamadı.'; $('loginErr').classList.add('on'); }
+}
+function logout() { token = ''; sessionStorage.removeItem('lumolive_admin_token'); $('panel').style.display = 'none'; $('login').style.display = 'flex'; $('pw').value = ''; }
+$('btnLogout').onclick = logout;
+
+function showPanel() { $('login').style.display = 'none'; $('panel').style.display = 'block'; refresh(); setInterval(refresh, 5000); }
+
+// ---------- Sekmeler ----------
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + t.dataset.v));
+});
+
+// ---------- Veri ----------
+async function refresh() {
+  try {
+    data = await api('/api/admin/data');
+    renderStats(); renderUsers(); renderMsgs();
+    $('lastRefresh').textContent = 'Son güncelleme: ' + new Date().toLocaleTimeString('tr-TR');
+  } catch (e) { /* 401'de logout zaten olur */ }
+}
+$('btnRefresh').onclick = refresh;
+
+function renderStats() {
+  const s = data.stats;
+  $('stUsers').textContent = s.users; $('stOnline').textContent = s.online;
+  $('stWarn').textContent = s.warnings; $('stBanned').textContent = s.banned; $('stMsg').textContent = s.messages;
+}
+
+function fmtDate(t) { return t ? new Date(t).toLocaleString('tr-TR') : '-'; }
+
+function renderUsers() {
+  const tb = $('userRows'); tb.innerHTML = '';
+  if (!data.users.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Kullanıcı yok.</td></tr>'; return; }
+  data.users.forEach(u => {
+    const tr = document.createElement('tr');
+    const banPill = u.ban
+      ? `<span class="pill ban">${u.ban.permanent ? 'Kalıcı Ban' : 'Banlı · ' + new Date(u.ban.until).toLocaleString('tr-TR')}</span>`
+      : '<span class="pill ok">Temiz</span>';
+    const warnPill = `<span class="pill ${u.strikes ? 'warn' : 'offline'}">${u.strikes}/3</span>`;
+    const nameCell = document.createElement('td');
+    nameCell.innerHTML = '<b style="color:#f2f3f5"></b>' + (u.ban && u.ban.reason ? `<div style="font-size:11px;color:#80848e;margin-top:2px">Sebep: ${esc(u.ban.reason)}</div>` : '');
+    nameCell.querySelector('b').textContent = u.username;
+    tr.appendChild(nameCell);
+    tr.insertAdjacentHTML('beforeend', `<td><span class="pill ${u.online ? 'online' : 'offline'}">${u.online ? 'Çevrimiçi' : 'Çevrimdışı'}</span></td>`);
+    tr.insertAdjacentHTML('beforeend', `<td>${warnPill}</td>`);
+    tr.insertAdjacentHTML('beforeend', `<td>${banPill}</td>`);
+    tr.insertAdjacentHTML('beforeend', `<td style="color:#949ba4;font-size:12px">${fmtDate(u.createdAt)}</td>`);
+    const acts = document.createElement('td');
+    const wrap = document.createElement('div'); wrap.className = 'acts';
+    if (u.ban) wrap.appendChild(mkBtn('Ban Kaldır', 'green', () => act('unban', { username: u.username }, 'Ban kaldırıldı: ' + u.username)));
+    else wrap.appendChild(mkBtn('Banla', 'red', () => openBan(u.username)));
+    wrap.appendChild(mkBtn('Uyarıları Sıfırla', 'g', () => act('reset-strikes', { username: u.username }, 'Uyarılar sıfırlandı: ' + u.username)));
+    wrap.appendChild(mkBtn('Mesajlarını Sil', 'g', () => {
+      if (confirm(`${u.username} kullanıcısının TÜM mesajları silinsin mi?`)) act('delete-user-messages', { username: u.username }, 'Mesajlar silindi');
+    }));
+    acts.appendChild(wrap); tr.appendChild(acts);
+    tb.appendChild(tr);
+  });
+}
+
+function mkBtn(label, cls, fn) { const b = document.createElement('button'); b.className = cls; b.textContent = label; b.onclick = fn; return b; }
+
+function renderMsgs() {
+  const sel = $('chanSel');
+  const prev = activeChan;
+  sel.innerHTML = '';
+  data.channels.forEach(c => { const o = document.createElement('option'); o.value = c.id; o.textContent = '#' + c.name; sel.appendChild(o); });
+  if (!data.channels.length) { $('msgList').innerHTML = '<div class="empty">Kanal yok.</div>'; $('msgCount').textContent = ''; return; }
+  activeChan = data.channels.some(c => c.id === prev) ? prev : data.channels[0].id;
+  sel.value = activeChan;
+  const ch = data.channels.find(c => c.id === activeChan);
+  const list = $('msgList'); list.innerHTML = '';
+  $('msgCount').textContent = ch.messages.length + ' mesaj';
+  if (!ch.messages.length) { list.innerHTML = '<div class="empty">Bu kanalda mesaj yok.</div>'; return; }
+  [...ch.messages].reverse().forEach(m => {
+    const row = document.createElement('div'); row.className = 'mrow';
+    const who = document.createElement('div'); who.className = 'who'; who.textContent = m.username;
+    const txt = document.createElement('div'); txt.className = 'txt'; txt.textContent = m.text;
+    const tm = document.createElement('div'); tm.className = 'tm'; tm.textContent = fmtDate(m.time);
+    const del = document.createElement('button'); del.className = 'red'; del.textContent = 'Sil';
+    del.onclick = () => act('delete-message', { channelId: ch.id, msgId: m.id }, 'Mesaj silindi');
+    row.append(who, txt, tm, del); list.appendChild(row);
+  });
+}
+$('chanSel').onchange = e => { activeChan = e.target.value; renderMsgs(); };
+$('btnClear').onclick = () => {
+  if (!activeChan) return;
+  const ch = data.channels.find(c => c.id === activeChan);
+  if (confirm(`"#${ch.name}" kanalındaki TÜM mesajlar silinsin mi?`)) act('clear-messages', { channelId: activeChan }, 'Kanal temizlendi');
+};
+
+async function act(action, body, okMsg) {
+  try { await api('/api/admin/' + action, body); toast(okMsg, 'ok'); refresh(); }
+  catch (e) { toast(e.message || 'İşlem başarısız', 'err'); }
+}
+
+// ---------- Ban modalı ----------
+function openBan(username) { banTarget = username; $('banUser').textContent = username; $('banReason').value = ''; $('banModal').classList.add('on'); }
+function closeBan() { $('banModal').classList.remove('on'); banTarget = null; }
+$('btnBanGo').onclick = async () => {
+  const minutes = Number($('banDur').value);
+  const reason = $('banReason').value.trim();
+  await act('ban', { username: banTarget, minutes, reason }, 'Ban uygulandı: ' + banTarget);
+  closeBan();
+};
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+
+// Açılış
+if (token) showPanel(); else $('login').style.display = 'flex';
+</script>
+</body>
+</html>
