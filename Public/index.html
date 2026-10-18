@@ -234,13 +234,13 @@ input[type=range]{width:100%;accent-color:#5865F2;margin-top:4px}
         <div class="pk-scroll"><div class="pk-grid" id="srcList"></div></div>
       </div>
       <div id="srcGridWrap" style="display:none">
-        <div class="pk-label">Ne paylaşacaksın?</div>
+        <div class="pk-label">Chrome'da hangi sekme açılsın?</div>
         <div class="srcgrid" id="srcGrid">
           <div class="srcopt on" data-src="monitor"><span class="ico">🖥️</span><small>Tüm Ekran</small></div>
           <div class="srcopt" data-src="window"><span class="ico">🪟</span><small>Pencere</small></div>
           <div class="srcopt" data-src="browser"><span class="ico">🌐</span><small>Sekme</small></div>
         </div>
-        <div class="pk-note">Web tarayıcısında paylaşımı başlattığında Chrome kendi seçim penceresini zorunlu olarak gösterir; bu pencere tarayıcı tarafından kontrol edilir ve değiştirilemez. Tamamen bize ait seçiciyi görmek için uygulamayı masaüstü (LumoLive) sürümünde kullan.</div>
+        <div class="pk-note">Devam ettiğinde Chrome kendi seçim penceresini açacak. Oradan paylaşacağın ekranı/pencereyi seçip <b>Paylaş</b>'a bas — yayın o zaman başlar.</div>
       </div>
     </div>
 
@@ -731,7 +731,8 @@ $('btnShare').onclick = () => {
   if (!voiceId) return info('Önce bir ses kanalı', 'Ekran paylaşmak için önce bir ses kanalına katılmalısın.');
   $('srcGridWrap').style.display = DESKTOP ? 'none' : 'block';
   $('srcListWrap').style.display = DESKTOP ? 'flex' : 'none';
-  $('pkSub').textContent = DESKTOP ? 'Paylaşmak istediğin ekranı ya da pencereyi seç' : 'Paylaşmak istediğin türü seç';
+  $('pkSub').textContent = DESKTOP ? 'Paylaşmak istediğin ekranı ya da pencereyi seç' : "Ayarları seç, sonra Chrome'da ekranını seç";
+  $('btnGo').textContent = DESKTOP ? 'Paylaşmayı Başlat' : 'Devam Et · Ekranı Seç';
   if (DESKTOP) {
     selectedSource = null; activeTab = 'screen';
     $('srcTabs').querySelectorAll('.pk-tab').forEach(x => x.classList.toggle('on', x.dataset.t === 'screen'));
