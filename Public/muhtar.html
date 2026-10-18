@@ -31,7 +31,7 @@ input:focus{border-color:#5865F2;box-shadow:0 0 0 3px rgba(88,101,242,.2)}
 
 /* ---------- Panel ---------- */
 #panel{display:none;padding:20px;max-width:1300px;margin:0 auto}
-.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap;padding:14px 16px;border-radius:14px;background:linear-gradient(90deg,rgba(88,101,242,.16),rgba(162,89,255,.06) 55%,transparent);border:1px solid rgba(255,255,255,.05)}
 .top h1{font-size:20px;color:#f2f3f5;display:flex;align-items:center;gap:10px}
 .top h1 .badge{font-size:11px;background:linear-gradient(135deg,#5865F2,#a259ff);padding:3px 9px;border-radius:20px;font-weight:700}
 .top .meta{font-size:12px;color:#80848e}
@@ -62,6 +62,12 @@ tr:hover td{background:#2e3035}
 .acts button{padding:6px 10px;font-size:12px}
 .chanbar{display:flex;gap:8px;align-items:center;padding:12px 14px;background:#26282d;flex-wrap:wrap}
 .chanbar select{background:#1e1f22;color:#dbdee1;border:1px solid #3a3c42;border-radius:6px;padding:8px 10px;font-size:13px;outline:0}
+.toolbar{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#26282d;border-bottom:1px solid #232428;flex-wrap:wrap}
+.search{position:relative;flex:1;min-width:170px;max-width:360px}
+.search input{width:100%;padding:9px 12px 9px 34px;border-radius:8px;border:1px solid #3a3c42;background:#1e1f22;font-size:13px}
+.search input:focus{border-color:#5865F2;box-shadow:0 0 0 3px rgba(88,101,242,.18)}
+.search .mag{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#80848e;font-size:13px;pointer-events:none}
+.toolbar .meta{margin-left:auto;font-size:12px;color:#80848e;white-space:nowrap}
 .top select{background:#1e1f22;color:#dbdee1;border:1px solid #3a3c42;border-radius:8px;padding:9px 10px;font-size:13px;outline:0;font-weight:600}
 .top label{display:flex;align-items:center;gap:6px;font-size:11px;color:#949ba4;font-weight:800;letter-spacing:.4px}
 .msglist{max-height:62vh;overflow-y:auto}
@@ -136,7 +142,12 @@ tr:hover td{background:#2e3035}
   </div>
 
   <div class="view on" id="v-users">
-    <div class="panelbox"><div class="tablewrap">
+    <div class="panelbox">
+      <div class="toolbar">
+        <div class="search"><span class="mag">🔍</span><input id="userSearch" placeholder="Kullanıcı ara..." autocomplete="off"></div>
+        <span class="meta" id="userCount"></span>
+      </div>
+      <div class="tablewrap">
       <table>
         <thead><tr><th>Kullanıcı</th><th>Durum</th><th>Uyarı</th><th>Ban</th><th>Kayıt</th><th>İşlemler</th></tr></thead>
         <tbody id="userRows"></tbody>
@@ -149,6 +160,7 @@ tr:hover td{background:#2e3035}
       <div class="chanbar">
         <label style="margin:0;color:#949ba4;font-size:12px;font-weight:700">KANAL</label>
         <select id="chanSel"></select>
+        <div class="search" style="max-width:240px"><span class="mag">🔍</span><input id="msgSearch" placeholder="Mesajlarda ara..." autocomplete="off"></div>
         <button class="red" id="btnClear">Kanaldaki Tüm Mesajları Sil</button>
         <span class="meta" id="msgCount" style="margin-left:auto"></span>
       </div>
@@ -291,8 +303,11 @@ function fmtDate(t) { return t ? new Date(t).toLocaleString('tr-TR') : '-'; }
 
 function renderUsers() {
   const tb = $('userRows'); tb.innerHTML = '';
-  if (!data.users.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Kullanıcı yok.</td></tr>'; return; }
-  data.users.forEach(u => {
+  const q = ($('userSearch').value || '').trim().toLowerCase();
+  const list = data.users.filter(u => !q || u.username.toLowerCase().includes(q));
+  $('userCount').textContent = list.length + ' / ' + data.users.length + ' kullanıcı';
+  if (!list.length) { tb.innerHTML = `<tr><td colspan="6" class="empty">${q ? 'Eşleşen kullanıcı yok.' : 'Kullanıcı yok.'}</td></tr>`; return; }
+  list.forEach(u => {
     const tr = document.createElement('tr');
     const banPill = u.ban
       ? `<span class="pill ban">${u.ban.permanent ? 'Kalıcı Ban' : 'Banlı · ' + new Date(u.ban.until).toLocaleString('tr-TR')}</span>`
@@ -332,10 +347,14 @@ function renderMsgs() {
   activeChan = data.channels.some(c => c.id === prev) ? prev : data.channels[0].id;
   sel.value = activeChan;
   const ch = data.channels.find(c => c.id === activeChan);
-  const list = $('msgList'); list.innerHTML = '';
-  $('msgCount').textContent = ch.messages.length + ' mesaj';
-  if (!ch.messages.length) { list.innerHTML = '<div class="empty">Bu kanalda mesaj yok.</div>'; return; }
-  [...ch.messages].reverse().forEach(m => {
+  const list = $('msgList');
+  const keepScroll = list.scrollTop;
+  list.innerHTML = '';
+  const q = ($('msgSearch').value || '').trim().toLowerCase();
+  const msgs = ch.messages.filter(m => !q || (m.username + ' ' + (m.text || '')).toLowerCase().includes(q));
+  $('msgCount').textContent = q ? msgs.length + ' sonuç' : ch.messages.length + ' mesaj';
+  if (!msgs.length) { list.innerHTML = `<div class="empty">${q ? 'Eşleşen mesaj yok.' : 'Bu kanalda mesaj yok.'}</div>`; return; }
+  [...msgs].reverse().forEach(m => {
     const row = document.createElement('div'); row.className = 'mrow';
     const who = document.createElement('div'); who.className = 'who'; who.textContent = m.username;
     const txt = document.createElement('div'); txt.className = 'txt'; txt.textContent = m.text;
@@ -344,8 +363,11 @@ function renderMsgs() {
     del.onclick = () => act('delete-message', { channelId: ch.id, msgId: m.id }, 'Mesaj silindi');
     row.append(who, txt, tm, del); list.appendChild(row);
   });
+  list.scrollTop = keepScroll;
 }
 $('chanSel').onchange = e => { activeChan = e.target.value; renderMsgs(); };
+$('userSearch').oninput = () => { if (data) renderUsers(); };
+$('msgSearch').oninput = () => { if (data) renderMsgs(); };
 $('btnClear').onclick = () => {
   if (!activeChan) return;
   const ch = data.channels.find(c => c.id === activeChan);

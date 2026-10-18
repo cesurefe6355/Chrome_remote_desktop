@@ -215,6 +215,142 @@ input[type=range]{width:100%;accent-color:#5865F2;margin-top:4px}
 .pk-btns .g:hover{background:#3f4147}
 @media(max-width:760px){.pk-body{flex-direction:column}.pk-right{width:auto;border-top:1px solid rgba(0,0,0,.3)}.pk-left{border-right:0}}
 @media(max-width:900px){.members{display:none}.rail{display:none}}
+
+/* ===================================================================
+   ARAYÜZ v2 — daha temiz tasarım + daha kullanışlı arayüz
+   =================================================================== */
+:root{
+  --accent:#5865F2; --accent-2:#7c4dff;
+  --bg0:#1e1f22; --bg1:#232428; --bg2:#2b2d31; --bg3:#313338; --bg4:#383a40; --bg5:#40444b;
+  --t0:#f2f3f5; --t1:#dbdee1; --t2:#b5bac1; --t3:#949ba4; --t4:#80848e;
+  --sh1:0 2px 10px rgba(0,0,0,.35); --sh2:0 16px 44px rgba(0,0,0,.55);
+}
+::selection{background:var(--accent);color:#fff}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button{border-radius:9px;transition:background .15s,filter .15s,transform .1s,color .15s}
+button:active{transform:translateY(1px)}
+button.g{background:transparent;color:var(--t2)}
+button.g:hover{background:var(--bg5);color:var(--t0);filter:none}
+
+/* Kenar çubuğu */
+.srv{background:linear-gradient(135deg,var(--accent),var(--accent-2))}
+.ch{border-radius:8px;padding:7px 8px;gap:8px}
+.ch.on{background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 32%,transparent),color-mix(in srgb,var(--accent) 7%,transparent))}
+.ch.on::before{background:linear-gradient(180deg,var(--accent),var(--accent-2));top:6px;bottom:6px}
+.cat button{width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:7px;font-size:18px;font-weight:700}
+.cat button:hover{background:var(--bg5);color:var(--t0)}
+.vu{border-radius:8px;padding-left:32px}
+.panel{height:56px;padding:0 10px;border-top:1px solid rgba(0,0,0,.3)}
+.ib{border-radius:8px}
+.ib:hover{background:var(--bg5);color:var(--t0)}
+.ib.on{color:var(--accent)}
+
+/* Başlık çubuğu */
+.hd{height:54px;gap:10px;background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 10%,transparent),transparent 60%)}
+.hd .t{min-width:0}
+.hd .t #title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hd-r{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.hd-sub{font-size:12px;color:var(--t4);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:36vw}
+.hdburger{display:none}
+
+/* Mesajlar */
+.msgs{padding:14px 0 6px}
+.msg{margin-top:10px;padding:3px 16px}
+.msg:hover{background:#2e3035}
+.msg .content{flex:1;min-width:0}
+.msg .hdr{display:flex;align-items:baseline;gap:8px}
+.msg .hdr time{margin-left:0}
+.msg .nm{font-size:15px;font-weight:600}
+.msg time{font-size:11px;color:var(--t4)}
+.msg p{margin-top:1px}
+.msg.grp{margin-top:1px;padding-top:1px;padding-bottom:1px}
+.msg.grp .av{visibility:hidden}
+.msg.grp .hdr{display:none}
+.hovts{position:absolute;left:16px;top:7px;font-size:10px;color:var(--t4);opacity:0;transition:opacity .15s;pointer-events:none;font-variant-numeric:tabular-nums}
+.msg.grp:hover .hovts{opacity:1}
+body.compact .msg{margin-top:1px;padding-top:0;padding-bottom:0}
+body.compact .msg .av{width:30px;height:30px;font-size:13px}
+body.noav .msg .av,body.noav .vu .av{display:none}
+body.no-members .members{display:none}
+.empty{max-width:540px;margin:0 auto;text-align:center;padding:44px 18px;color:var(--t3)}
+.empty h2{color:var(--t0);font-size:25px;margin-bottom:8px}
+
+/* Sohbet kutusu */
+.center{position:relative}
+.inp{padding:0 16px 20px;gap:10px}
+.inpbox{flex:1;min-width:0;display:flex;align-items:center;background:var(--bg4);border-radius:12px;border:1px solid transparent;transition:border-color .15s,background .15s}
+.inpbox:focus-within{border-color:color-mix(in srgb,var(--accent) 65%,transparent);background:var(--bg5)}
+.inpbox input{flex:1;min-width:0;background:none;border:0;padding:12px 6px 12px 16px;color:var(--t1);font-size:15px;outline:0}
+.cc{display:none;font-size:11px;color:var(--t4);font-variant-numeric:tabular-nums;padding-right:2px}
+.cc.on{display:block}
+.send{background:none;color:var(--t3);padding:8px;margin-right:4px;border-radius:9px;display:flex}
+.send:hover{background:none;color:var(--accent);filter:none;transform:none}
+.plus{width:44px;height:44px;border-radius:12px}
+.plus:hover{background:var(--accent)}
+
+/* Aşağı kaydır */
+.jump{position:absolute;right:20px;bottom:78px;z-index:5;display:none;align-items:center;gap:6px;background:var(--accent);color:#fff;padding:9px 12px;border-radius:20px;box-shadow:var(--sh1);font-size:12px;font-weight:700}
+.jump.on{display:flex}
+.jump:hover{filter:brightness(1.1);background:var(--accent)}
+.jump svg{width:16px;height:16px}
+
+/* Üyeler */
+.members{padding:18px 8px}
+.mi{border-radius:8px}
+
+/* Modallar */
+.ov{background:rgba(0,0,0,.72);animation:ovIn .18s;padding:16px}
+#mInfo{z-index:140}
+#infoD{white-space:pre-wrap}
+@keyframes ovIn{from{opacity:0}to{opacity:1}}
+.box{border-radius:14px;box-shadow:var(--sh2);animation:boxIn .22s cubic-bezier(.2,.8,.2,1);max-height:90vh;overflow-y:auto}
+@keyframes boxIn{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+.box input:focus,.box select:focus,.box textarea:focus{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent)}
+
+/* Ayarlar penceresi */
+.box.sset{max-width:560px;padding:0;overflow:hidden}
+.set-top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.06)}
+.set-top h3{margin:0}
+.set-top .x{background:none;color:var(--t2);width:34px;height:34px;padding:0;border-radius:8px;font-size:14px}
+.set-top .x:hover{background:var(--bg5);color:#fff;filter:none}
+.set-tabs{display:flex;gap:4px;padding:8px 12px 0;overflow-x:auto}
+.stab{background:none;color:var(--t3);font-size:13px;font-weight:700;padding:9px 14px;border-radius:8px 8px 0 0;position:relative;white-space:nowrap}
+.stab:hover{background:var(--bg5);color:var(--t1);filter:none}
+.stab.on{color:#fff;filter:none}
+.stab.on::after{content:"";position:absolute;left:12px;right:12px;bottom:-2px;height:2px;background:var(--accent);border-radius:2px}
+.set-body{padding:18px 20px 22px;overflow-y:auto;max-height:62vh}
+.sv{display:none}.sv.on{display:block;animation:fade .2s}
+.prof{display:flex;align-items:center;gap:14px;background:var(--bg0);border-radius:12px;padding:14px;margin-bottom:16px}
+.prof .av{width:52px;height:52px;font-size:22px}
+.prof b{color:var(--t0);font-size:16px;display:block}
+.prof small{color:var(--t4);font-size:12px}
+.sec{font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--t4);margin:6px 0 2px}
+.accrow{display:flex;gap:10px;margin:8px 0 6px}
+.accdot{width:30px;height:30px;border-radius:50%;background:var(--c);border:3px solid transparent;padding:0}
+.accdot:hover{transform:scale(1.12);filter:none;background:var(--c)}
+.accdot.on{border-color:#fff;box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 45%,transparent)}
+.about b{color:var(--t0);font-size:20px;display:block}
+.about small{color:var(--t4);font-size:12px}
+.kv{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:14px;color:var(--t3)}
+.kv b{color:var(--t0)}
+.about-note{margin-top:14px;font-size:12px;color:var(--t4);line-height:1.6;background:var(--bg0);border-radius:10px;padding:12px}
+.switch{background:var(--bg0)}
+.switch.on{background:var(--accent)}
+
+/* Mobil çekmece */
+.scrim{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:55}
+.scrim.on{display:block}
+@media(max-width:768px){
+  .side{position:fixed;top:0;bottom:0;left:0;z-index:60;width:272px;transform:translateX(-102%);transition:transform .25s cubic-bezier(.2,.8,.2,1);box-shadow:var(--sh2)}
+  .app.nav-open .side{transform:none}
+  .hdburger{display:flex}
+  .hd-sub{display:none}
+  .inp{padding:0 10px 14px}
+  .msgs{padding:10px 0 4px}
+  .msg{padding:3px 10px}
+  .jump{bottom:72px;right:12px}
+  .set-body{max-height:66vh}
+}
 </style>
 </head>
 <body>
@@ -312,14 +448,57 @@ input[type=range]{width:100%;accent-color:#5865F2;margin-top:4px}
 <textarea id="codeText" spellcheck="false" placeholder="Kodu buraya yapıştır..."></textarea>
 <div class="acts"><button class="g" onclick="closeM('mCode')">İptal</button><button id="btnSendCode">Gönder</button></div></div></div>
 
-<div class="ov" id="mPass"><div class="box"><h3>Şifre Değiştir</h3>
-<p>Güvenlik için önce mevcut şifreni gir, sonra yeni şifreni belirle.</p>
-<label>Mevcut Şifre</label><input type="password" id="pwCur" autocomplete="current-password">
-<label>Yeni Şifre</label><input type="password" id="pwNew" autocomplete="new-password">
-<label>Yeni Şifre (tekrar)</label><input type="password" id="pwNew2" autocomplete="new-password">
-<div class="acts"><button class="g" onclick="closeM('mPass')">İptal</button><button id="btnPwSave">Kaydet</button></div></div></div>
+<div class="ov" id="mPass"><div class="box sset">
+  <div class="set-top">
+    <h3>Ayarlar</h3>
+    <button class="x" type="button" onclick="closeM('mPass')" title="Kapat">✕</button>
+  </div>
+  <div class="set-tabs">
+    <button class="stab on" type="button" data-s="acc">Hesap</button>
+    <button class="stab" type="button" data-s="notif">Bildirimler</button>
+    <button class="stab" type="button" data-s="look">Görünüm</button>
+    <button class="stab" type="button" data-s="about">Hakkında</button>
+  </div>
+  <div class="set-body">
+    <section class="sv on" id="sv-acc">
+      <div class="prof"><div class="av" id="setAv"></div><div><b id="setName"></b><small>LumoLive hesabı</small></div></div>
+      <div class="sec">Şifre Değiştir</div>
+      <label>Mevcut Şifre</label><input type="password" id="pwCur" autocomplete="current-password">
+      <label>Yeni Şifre</label><input type="password" id="pwNew" autocomplete="new-password">
+      <label>Yeni Şifre (tekrar)</label><input type="password" id="pwNew2" autocomplete="new-password">
+      <div class="acts"><button class="g" onclick="closeM('mPass')">Kapat</button><button id="btnPwSave">Şifreyi Güncelle</button></div>
+    </section>
 
-<div class="app">
+    <section class="sv" id="sv-notif">
+      <div class="row2"><span>🔔 Mesaj ve katılım sesleri</span><div class="switch on" id="swSnd2"></div></div>
+      <div class="row2"><span>🔊 Sesi dene</span><button class="g" type="button" id="btnTestSnd">Test et</button></div>
+      <div class="about-note">Sesler tarayıcıda üretilir; hiçbir dosya indirilmez. Sesi kapatmak tüm bildirim seslerini susturur.</div>
+    </section>
+
+    <section class="sv" id="sv-look">
+      <div class="sec">Vurgu Rengi</div>
+      <div class="accrow" id="accRow">
+        <button class="accdot on" type="button" data-c="#5865F2" style="--c:#5865F2" title="Blurple"></button>
+        <button class="accdot" type="button" data-c="#23a55a" style="--c:#23a55a" title="Yeşil"></button>
+        <button class="accdot" type="button" data-c="#eb459e" style="--c:#eb459e" title="Pembe"></button>
+        <button class="accdot" type="button" data-c="#f0b132" style="--c:#f0b132" title="Turuncu"></button>
+      </div>
+      <div class="row2"><span>📏 Sıkışık mesaj görünümü</span><div class="switch" id="swCompact"></div></div>
+      <div class="row2"><span>🙈 Avatarları gizle</span><div class="switch" id="swNoAv"></div></div>
+      <div class="row2"><span>👥 Üye listesi</span><div class="switch on" id="swMembers"></div></div>
+    </section>
+
+    <section class="sv" id="sv-about">
+      <div class="about"><b>LumoLive</b><small>Web sürümü · arayüz v2</small></div>
+      <div class="kv" style="margin-top:14px"><span>Kullanıcı</span><b id="abUser">-</b></div>
+      <div class="kv"><span>Gecikme (ping)</span><b id="abPing">-- ms</b></div>
+      <div class="about-note">Küfür filtreli metin sohbeti, sesli sohbet, ekran paylaşımı ve <b>kod-&lt;kullanıcıadı&gt;.txt</b> olarak kod paylaşımı desteklenir.</div>
+    </section>
+  </div>
+</div></div>
+
+<div class="scrim" id="scrim"></div>
+<div class="app" id="app">
 <div class="rail"><div class="srv">LL</div></div>
 <div class="side">
   <div class="sh"><span class="lg">LumoLive</span></div>
@@ -348,11 +527,28 @@ input[type=range]{width:100%;accent-color:#5865F2;margin-top:4px}
 </div>
 
 <div class="main">
-  <div class="hd"><div class="t"><i id="titleIc"></i><span id="title"></span><span class="matchip" id="deskBadge">🖥️ Masaüstü modu</span></div></div>
+  <div class="hd">
+    <div class="t">
+      <button class="ib hdburger" id="btnBurger" title="Kanalları göster"><i data-ic="menu"></i></button>
+      <i id="titleIc"></i><span id="title"></span><span class="matchip" id="deskBadge">🖥️ Masaüstü modu</span>
+    </div>
+    <div class="hd-r">
+      <span class="hd-sub" id="hdSub">Metin kanalı</span>
+      <button class="ib" id="btnMembers" title="Üye listesini göster/gizle"><i data-ic="users"></i></button>
+    </div>
+  </div>
   <div class="body">
     <div id="textView">
       <div class="center"><div class="msgs" id="msgs"></div>
-        <div class="inp"><button class="plus" id="btnCode" title="Kod paylaş — kod-kullanıcıadı.txt olarak gönderilir"><i data-ic="plus"></i></button><input id="chatIn" maxlength="500" autocomplete="off" placeholder="Mesaj gönder"></div></div>
+        <button class="jump" id="jump" title="En alta in"><i data-ic="down"></i><span id="jumpN"></span></button>
+        <div class="inp">
+          <button class="plus" id="btnCode" title="Kod paylaş — kod-kullanıcıadı.txt olarak gönderilir"><i data-ic="plus"></i></button>
+          <div class="inpbox">
+            <input id="chatIn" maxlength="500" autocomplete="off" placeholder="Mesaj gönder">
+            <span class="cc" id="cc">0/500</span>
+            <button class="send" id="btnSend" title="Gönder (Enter)"><i data-ic="send"></i></button>
+          </div>
+        </div></div>
       <div class="members"><h4>Çevrimiçi — <span id="cnt">0</span></h4><div id="mList"></div></div>
     </div>
     <div id="voiceView">
@@ -392,6 +588,10 @@ const IC = {
   file: 'M6 2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6H6zm7 1.5L18.5 9H13V3.5zM8 13h8v2H8v-2zm0 4h8v2H8v-2z',
   spk: 'M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z',
   gear: 'M19.14 12.94a7.49 7.49 0 0 0 .06-.94 7.49 7.49 0 0 0-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.58.24-1.12.55-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.62-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.3.6.22l2.39-.96c.5.39 1.04.7 1.62.94l.36 2.54c.04.24.25.42.5.42h3.84c.25 0 .46-.18.5-.42l.36-2.54c.58-.24 1.12-.55 1.62-.94l2.39.96c.22.08.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z',
+  users: 'M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm-8 0a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-2.67 0-8 1.34-8 4v3h16v-3c0-2.66-5.33-4-8-4zm8 0c-.29 0-.62.02-.97.05A5.9 5.9 0 0 1 18 17v3h6v-3c0-2.66-5.33-4-8-4z',
+  send: 'M2.01 21L23 12 2.01 3 2 10l15 2-15 2z',
+  down: 'M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z',
+  menu: 'M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z',
   hang: 'M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 0 1-.29-.7c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85a.99.99 0 0 1-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z'
 };
 const svg = n => `<svg viewBox="0 0 24 24"><path d="${IC[n]}"/></svg>`;
@@ -537,8 +737,14 @@ socket.on('online-list', l => {
   l.forEach(n => { const d = document.createElement('div'); d.className = 'mi'; d.appendChild(avatar(n)); const s = document.createElement('span'); s.textContent = n; d.appendChild(s); c.appendChild(d); });
 });
 
-function openCreate(type) { $('newType').value = type; openM('mCreate'); $('newName').focus(); }
-$('btnCreate').onclick = () => { const v = $('newName').value.trim(); if (!v) return; socket.emit('create-channel', { roomName: v, type: $('newType').value }); closeM('mCreate'); $('newName').value = ''; };
+function openCreate(type) { $('newType').value = type; $('newName').value = ''; openM('mCreate'); setTimeout(() => $('newName').focus(), 50); }
+$('btnCreate').onclick = () => {
+  const v = $('newName').value.trim();
+  if (v.length < 3) return info('Eksik isim', 'Kanal adı en az 3 karakter olmalı.');
+  if (!/^[\p{L}\p{N}_.-]{3,20}$/u.test(v)) return info('Geçersiz isim', 'Kanal adı 3-20 karakter olmalı; yalnızca harf, rakam, nokta, tire ve alt çizgi kullanabilirsin.');
+  socket.emit('create-channel', { roomName: v, type: $('newType').value });
+  closeM('mCreate'); $('newName').value = '';
+};
 $('newName').onkeydown = e => { if (e.key === 'Enter') $('btnCreate').click(); };
 socket.on('channel-created', ({ type, id }) => type === 'text' ? selectText(id) : openVoice(id));
 
@@ -547,14 +753,17 @@ const voiceName = id => (chans.voice.find(c => c.id === id) || {}).name || id;
 function setView(v) {
   view = v; $('textView').style.display = v === 'text' ? 'flex' : 'none'; $('voiceView').style.display = v === 'voice' ? 'flex' : 'none';
   $('title').textContent = v === 'text' ? textName(textId) : voiceName(voiceId); $('titleIc').innerHTML = svg(v === 'text' ? 'hash' : 'spk'); renderChannels();
+  $('hdSub').textContent = v === 'text' ? 'Metin kanalı' : 'Sesli kanal';
+  if (window.innerWidth <= 768) { $('app').classList.remove('nav-open'); $('scrim').classList.remove('on'); }
 }
 
 // ----- Metin kanalı -----
-function selectText(id) { textId = id; $('msgs').innerHTML = ''; socket.emit('join-text', { channelId: id }); setView('text'); }
+function selectText(id) { textId = id; $('msgs').innerHTML = ''; jumpN = 0; updateJump(); socket.emit('join-text', { channelId: id }); setView('text'); }
 socket.on('text-joined', ({ channelId, messages }) => {
   if (channelId !== textId) return;
   $('msgs').innerHTML = ''; messages.forEach(addMsg);
-  if (!messages.length) $('msgs').innerHTML = `<div class="empty"><h2>#${textName(channelId)} kanalına hoş geldin!</h2>Burası bu kanalın başlangıcı.</div>`;
+  if (!messages.length) $('msgs').innerHTML = `<div class="empty"><h2>#${textName(channelId)} kanalına hoş geldin!</h2>Burası bu kanalın başlangıcı. Aşağıdaki kutudan ilk mesajı yaz.</div>`;
+  const box = $('msgs'); box.scrollTop = box.scrollHeight; jumpN = 0; updateJump();
 });
 const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 function toolbar(id) { const t = document.createElement('div'); t.className = 'tb';
@@ -587,18 +796,45 @@ function fileCard(m) {
   return w;
 }
 function addMsg(m) {
-  const e = $('msgs').querySelector('.empty'); if (e) e.remove();
-  const d = document.createElement('div'); d.className = 'msg'; d.dataset.id = m.id; d.appendChild(avatar(m.username));
-  const c = document.createElement('div'), h = document.createElement('div');
-  const b = document.createElement('b'); b.textContent = m.username; b.style.color = color(m.username).replace('45%', '70%');
+  const box = $('msgs');
+  const e = box.querySelector('.empty'); if (e) e.remove();
+  // Discord tarzı gruplama: aynı kullanıcı, 5 dk içinde, ardışık metin mesajları
+  const last = box.lastElementChild && box.lastElementChild.classList.contains('msg') ? box.lastElementChild : null;
+  const grouped = last && last.dataset.user === m.username && m.kind !== 'file' && last.dataset.kind !== 'file'
+    && (m.time - Number(last.dataset.time)) < 5 * 60 * 1000;
+  const d = document.createElement('div'); d.className = 'msg' + (grouped ? ' grp' : '');
+  d.dataset.id = m.id; d.dataset.user = m.username; d.dataset.time = m.time; d.dataset.kind = m.kind || 'text';
+  d.appendChild(avatar(m.username));
+  const c = document.createElement('div'); c.className = 'content';
+  const h = document.createElement('div'); h.className = 'hdr';
+  const b = document.createElement('b'); b.className = 'nm'; b.textContent = m.username; b.style.color = color(m.username).replace('45%', '70%');
   const t = document.createElement('time'); t.textContent = hhmm(m.time); h.append(b, t); c.appendChild(h);
   if (m.kind === 'file') c.appendChild(fileCard(m));
   else { const p = document.createElement('p'); p.textContent = m.text; c.appendChild(p); }
   const rx = document.createElement('div'); rx.className = 'rxs'; renderRx(rx, m.reactions || {});
-  c.appendChild(rx); d.append(c, toolbar(m.id));
-  const box = $('msgs'), bottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
-  box.appendChild(d); if (bottom) box.scrollTop = box.scrollHeight;
+  c.appendChild(rx);
+  const hv = document.createElement('span'); hv.className = 'hovts'; hv.textContent = hhmm(m.time);
+  d.append(c, hv, toolbar(m.id));
+  const bottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
+  box.appendChild(d);
+  if (bottom) { box.scrollTop = box.scrollHeight; jumpN = 0; }
+  else if (m.username !== user) jumpN++;
+  updateJump();
 }
+// ----- "En alta in" düğmesi + okunmamış sayacı -----
+let jumpN = 0;
+function updateJump() {
+  const box = $('msgs'), j = $('jump'); if (!box || !j) return;
+  const far = box.scrollHeight - box.scrollTop - box.clientHeight > 320;
+  j.classList.toggle('on', far);
+  $('jumpN').textContent = jumpN > 0 ? jumpN : '';
+}
+$('msgs').addEventListener('scroll', () => {
+  const box = $('msgs');
+  if (box.scrollHeight - box.scrollTop - box.clientHeight < 120) jumpN = 0;
+  updateJump();
+});
+$('jump').onclick = () => { const box = $('msgs'); box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' }); jumpN = 0; updateJump(); };
 socket.on('chat-message', m => { addMsg(m); if (m.username !== user) play('msg'); });
 socket.on('message-deleted', ({ msgId }) => {
   const m = document.querySelector(`.msg[data-id="${msgId}"]`); if (m) m.remove();
@@ -614,7 +850,19 @@ socket.on('reaction-update', ({ msgId, reactions, emoji, added }) => {
   const m = document.querySelector(`.msg[data-id="${msgId}"]`); if (m) renderRx(m.querySelector('.rxs'), reactions);
   if (added) { floatEmoji(emoji); play('react'); }
 });
-$('chatIn').onkeydown = e => { if (e.key === 'Enter' && e.target.value.trim()) { socket.emit('chat-message', { text: e.target.value }); e.target.value = ''; } };
+function sendChat() {
+  const el = $('chatIn'), v = el.value;
+  if (!v.trim()) return;
+  socket.emit('chat-message', { text: v });
+  el.value = ''; $('cc').classList.remove('on'); el.focus();
+}
+$('btnSend').onclick = sendChat;
+$('chatIn').onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } };
+$('chatIn').addEventListener('input', e => {
+  const n = e.target.value.length;
+  $('cc').textContent = n + '/500';
+  $('cc').classList.toggle('on', n > 400);
+});
 
 // ----- Kod paylaşımı (+) : girilen kod "kod-<kullanıcıadı>.txt" olarak sohbete gider -----
 $('btnCode').onclick = () => {
@@ -629,8 +877,80 @@ $('btnSendCode').onclick = () => {
   closeM('mCode');
 };
 
-// ----- Ayarlar: kullanıcının kendi şifresini değiştirmesi -----
-$('btnSet').onclick = () => { ['pwCur', 'pwNew', 'pwNew2'].forEach(i => $(i).value = ''); openM('mPass'); setTimeout(() => $('pwCur').focus(), 50); };
+// ----- Ayarlar penceresi (sekmeli) -----
+function openSettings(tab) {
+  ['pwCur', 'pwNew', 'pwNew2'].forEach(i => { const el = $(i); if (el) el.value = ''; });
+  $('setAv').style.background = color(user); $('setAv').textContent = user[0].toUpperCase();
+  $('setName').textContent = user; $('abUser').textContent = user;
+  $('swSnd2').classList.toggle('on', soundOn);
+  $('swCompact').classList.toggle('on', document.body.classList.contains('compact'));
+  $('swNoAv').classList.toggle('on', document.body.classList.contains('noav'));
+  $('swMembers').classList.toggle('on', !document.body.classList.contains('no-members'));
+  setSettingTab(tab || 'acc');
+  openM('mPass');
+}
+function setSettingTab(s) {
+  document.querySelectorAll('.stab').forEach(x => x.classList.toggle('on', x.dataset.s === s));
+  document.querySelectorAll('.sv').forEach(v => v.classList.toggle('on', v.id === 'sv-' + s));
+}
+document.querySelectorAll('.stab').forEach(t => t.onclick = () => setSettingTab(t.dataset.s));
+$('btnSet').onclick = () => openSettings('acc');
+
+// Bildirim sesleri (ayarlar içindeki anahtar)
+$('swSnd2').onclick = () => {
+  soundOn = !soundOn; localStorage.setItem('lumolive_sound', soundOn ? '1' : '0');
+  $('swSnd2').classList.toggle('on', soundOn); $('btnSnd').classList.toggle('off', !soundOn);
+  if (soundOn) play('unmute');
+};
+$('btnTestSnd').onclick = () => { const was = soundOn; soundOn = true; play('msg'); soundOn = was; };
+
+// Görünüm: vurgu rengi + görünüm anahtarları
+const ACCENTS = { '#5865F2': '#7c4dff', '#23a55a': '#1abc9c', '#eb459e': '#a259ff', '#f0b132': '#e67e22' };
+function applyAccent(c) {
+  if (!ACCENTS[c]) c = '#5865F2';
+  document.documentElement.style.setProperty('--accent', c);
+  document.documentElement.style.setProperty('--accent-2', ACCENTS[c]);
+  localStorage.setItem('lumolive_accent', c);
+  document.querySelectorAll('.accdot').forEach(d => d.classList.toggle('on', d.dataset.c === c));
+}
+document.querySelectorAll('.accdot').forEach(d => d.onclick = () => { applyAccent(d.dataset.c); play('react'); });
+applyAccent(localStorage.getItem('lumolive_accent') || '#5865F2');
+
+function applyCompact(on) { document.body.classList.toggle('compact', on); localStorage.setItem('lumolive_compact', on ? '1' : '0'); $('swCompact').classList.toggle('on', on); }
+function applyNoAv(on) { document.body.classList.toggle('noav', on); localStorage.setItem('lumolive_noav', on ? '1' : '0'); $('swNoAv').classList.toggle('on', on); }
+function applyMembers(on) { document.body.classList.toggle('no-members', !on); localStorage.setItem('lumolive_members', on ? '1' : '0'); $('swMembers').classList.toggle('on', on); $('btnMembers').classList.toggle('on', on); }
+$('swCompact').onclick = () => applyCompact(!document.body.classList.contains('compact'));
+$('swNoAv').onclick = () => applyNoAv(!document.body.classList.contains('noav'));
+$('swMembers').onclick = () => applyMembers(document.body.classList.contains('no-members'));
+applyCompact(localStorage.getItem('lumolive_compact') === '1');
+applyNoAv(localStorage.getItem('lumolive_noav') === '1');
+applyMembers(localStorage.getItem('lumolive_members') !== '0');
+
+// ----- Modal davranışı: ESC ve dışarı tıklayınca kapat -----
+const openModals = () => [...document.querySelectorAll('.ov')].filter(o => getComputedStyle(o).display !== 'none');
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const z = o => Number(getComputedStyle(o).zIndex) || 99;
+  const o = openModals().sort((a, b) => z(a) - z(b));
+  if (o.length) closeM(o[o.length - 1].id);
+});
+document.querySelectorAll('.ov').forEach(o => o.addEventListener('mousedown', e => { if (e.target === o) closeM(o.id); }));
+// Klavye kısayolu: Ctrl/Cmd + K → mesaj kutusuna git
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    if (view === 'text') $('chatIn').focus();
+  }
+});
+
+// ----- Mobil: kanal çekmecesi + üye listesi düğmesi -----
+$('btnBurger').onclick = () => {
+  const open = $('app').classList.toggle('nav-open');
+  $('scrim').classList.toggle('on', open);
+};
+$('scrim').onclick = () => { $('app').classList.remove('nav-open'); $('scrim').classList.remove('on'); };
+$('btnMembers').onclick = () => { applyMembers(document.body.classList.contains('no-members')); $('btnMembers').classList.toggle('on', !document.body.classList.contains('no-members')); };
+setInterval(() => { const el = $('abPing'); if (el) el.textContent = $('netMs').textContent; }, 1000);
 $('btnPwSave').onclick = async () => {
   const cur = $('pwCur').value, nw = $('pwNew').value, n2 = $('pwNew2').value;
   if (!cur) return info('Eksik bilgi', 'Mevcut şifreni girmelisin.');
@@ -681,6 +1001,7 @@ function waitMsg(t) {
 $('vid').onplaying = () => { waitMsg(null); retries = 0; };
 function renderVoice() {
   const g = $('tiles'); g.innerHTML = '';
+  if (view === 'voice') $('hdSub').textContent = 'Sesli kanal · ' + voiceMembers.length + ' kişi';
   voiceMembers.forEach(m => {
     const t = document.createElement('div'); t.className = 'tile'; t.dataset.sid = m.id;
     const av = avatar(m.username, 'big'); av.dataset.sid = m.id; t.appendChild(av);
