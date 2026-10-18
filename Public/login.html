@@ -3,6 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="LumoLive — güvenli metin ve sesli sohbet, ekran paylaşımı ve kod paylaşımı. Gizlilik sözleşmesi ve kullanım koşulları.">
+    <meta name="theme-color" content="#5865F2">
+    <meta property="og:title" content="LumoLive">
+    <meta property="og:description" content="Güvenli metin ve sesli sohbet, ekran paylaşımı ve kod paylaşımı.">
+    <meta property="og:type" content="website">
     <title>LumoLive - Giriş / Kayıt Ol</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif; }
@@ -129,6 +134,12 @@
         .btn:hover { background:#4752c4; }
         .btn.ghost { background:transparent; color:#b5bac1; }
         .btn.ghost:hover { background:#3f4147; }
+        .legal-foot { margin-top:18px; padding-top:14px; border-top:1px solid #2b2d31; display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:6px 10px; font-size:12px; color:#80848e; }
+        .legal-foot a { color:#949ba4; text-decoration:none; }
+        .legal-foot a:hover { color:#dbdee1; text-decoration:underline; }
+        .tagline { text-align:center; color:#949ba4; font-size:13px; line-height:1.5; margin:-6px 0 16px; }
+        .noscript-note { background:#3a2224; border:1px solid #5c2b2f; color:#f2b8b5; border-radius:8px; padding:10px 12px; font-size:12.5px; line-height:1.5; margin-bottom:14px; }
+        .noscript-note a { color:#fff; }
         @media (max-width:520px){ .auth-card{padding:26px 20px} }
     </style>
 </head>
@@ -137,8 +148,10 @@
     <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
 
     <div class="auth-card">
+        <noscript><div class="noscript-note">LumoLive'i kullanmak için tarayıcında JavaScript'i etkinleştirmelisin. <a href="/privacy.html">Gizlilik Sözleşmesi ve Kullanım Koşulları</a></div></noscript>
         <div class="logo">Lumo<span>Live</span></div>
         <div class="subtitle">Canlı yayın dünyasına hoş geldin! ✨</div>
+        <p class="tagline">Metin sohbeti, sesli sohbet, ekran paylaşımı ve kod paylaşımı — tek yerde, güvenli.</p>
 
         <div class="tabs" id="tabs">
             <div class="tab-ind"></div>
@@ -208,6 +221,12 @@
         </div>
 
         <div id="msg" class="msg-box"></div>
+
+        <footer class="legal-foot">
+            <a href="/privacy.html">Gizlilik Sözleşmesi</a><span>·</span>
+            <a href="/privacy.html">Kullanım Koşulları</a><span>·</span>
+            <a href="/.well-known/security.txt">Güvenlik</a>
+        </footer>
     </div>
 
     <!-- Gizlilik Sözleşmesi Modalı -->

@@ -10,12 +10,111 @@ const { analyze, censor, isValidName } = require('./filter');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { maxHttpBufferSize: 1e6 });
+
+// Socket.IO sertleştirme: istek boyutu, zaman aşımı ve Origin kontrolü (CSWSH koruması)
+const io = new Server(server, {
+    maxHttpBufferSize: 256e3,
+    pingTimeout: 25000,
+    pingInterval: 25000,
+    allowRequest: (req, callback) => {
+        const origin = req.headers.origin;
+        if (!origin) return callback(null, true); // tarayıcı dışı istemciler (yine token ile doğrulanır)
+        try {
+            const host = String(req.headers.host || '').toLowerCase();
+            callback(null, new URL(origin).host.toLowerCase() === host);
+        } catch { callback(null, false); }
+    }
+});
 
 app.disable('x-powered-by');
+// Render/Cloudflare arkasında gerçek istemci IP'si (hız sınırı tüm siteyi kilitlemesin)
+app.set('trust proxy', 1);
+
+const CANONICAL_HOST = process.env.PUBLIC_HOST || '';
+const baseUrl = req => `${req.headers['x-forwarded-proto'] || req.protocol}://${CANONICAL_HOST || req.get('host')}`;
+
+// ---------- Güvenlik başlıkları (tarama raporundaki eksikler kapatıldı) ----------
+// WebSocket bağlantısı yalnızca aynı host'a izin verir (veri sızdırma yüzeyi daraltılır).
+const cspFor = (req) => {
+    const host = String(req.headers.host || '').toLowerCase().replace(/[^a-z0-9.:\-\[\]]/g, '');
+    const connect = host ? `'self' ws://${host} wss://${host}` : "'self' ws: wss:";
+    return [
+        "default-src 'self'",
+        "base-uri 'self'",
+        "object-src 'none'",
+        "frame-ancestors 'self'",
+        "form-action 'self'",
+        "img-src 'self' data: blob:",
+        "media-src 'self' blob:",
+        "font-src 'self' data:",
+        "style-src 'self' 'unsafe-inline'",
+        "script-src 'self' 'unsafe-inline'",
+        `connect-src ${connect}`,
+        "worker-src 'self' blob:",
+        "manifest-src 'self'"
+    ].join('; ');
+};
+
+app.use((req, res, next) => {
+    res.setHeader('Content-Security-Policy', cspFor(req));
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'camera=(), geolocation=(), payment=(), usb=(), microphone=(self), display-capture=(self), autoplay=(self), fullscreen=(self), clipboard-write=(self)');
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+    res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+    res.setHeader('X-DNS-Prefetch-Control', 'off');
+    res.setHeader('X-XSS-Protection', '0');
+    res.setHeader('Origin-Agent-Cluster', '?1');
+    // HSTS yalnızca HTTPS üzerinden gönderilir (yerel HTTP geliştirmeyi bozmaz)
+    if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+    }
+    next();
+});
+
+// API yanıtları önbelleğe alınmasın, arama motorlarına kapalı olsun
+app.use('/api', (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+    next();
+});
+
+// ---------- robots.txt & security.txt (RFC 9116) ----------
+app.get('/robots.txt', (req, res) => {
+    res.type('text/plain').send([
+        'User-agent: *',
+        'Allow: /$',
+        'Allow: /login.html',
+        'Allow: /privacy.html',
+        'Disallow: /api/',
+        'Disallow: /muhtar',
+        'Disallow: /muhtar.html',
+        'Disallow: /index.html',
+        ''
+    ].join('\n'));
+});
+app.get('/.well-known/security.txt', (req, res) => {
+    const contact = process.env.SECURITY_CONTACT || (baseUrl(req) + '/privacy.html');
+    res.type('text/plain').send([
+        `Contact: ${contact}`,
+        `Expires: ${new Date(Date.now() + 365 * 864e5).toISOString()}`,
+        'Preferred-Languages: tr, en',
+        `Canonical: ${baseUrl(req)}/.well-known/security.txt`,
+        `Policy: ${baseUrl(req)}/privacy.html`,
+        ''
+    ].join('\n'));
+});
+app.get('/security.txt', (req, res) => res.redirect(301, '/.well-known/security.txt'));
+
 app.use(express.json({ limit: '10kb' }));
-app.use(express.static(path.join(__dirname, 'Public')));
-app.get('/', (req, res) => res.redirect('/index.html'));
+// Doğrudan /muhtar.html erişimini engelle (yalnızca /muhtar üzerinden sunulur)
+app.get('/muhtar.html', (req, res) => res.redirect(302, '/muhtar'));
+// index:false → "/" isteği aşağıdaki yönlendirmeye düşer (giriş sayfası + gizlilik bağlantısı)
+app.use(express.static(path.join(__dirname, 'Public'), { index: false }));
+// Kök adres giriş sayfasına gider: yeni ziyaretçi ve arama motorları gizlilik bağlantısını görür
+app.get('/', (req, res) => res.redirect('/login.html'));
 
 // ---------- Kullanıcı veritabanı: PostgreSQL (Render) ----------
 // Bağlantı ve "users" tablosunun oluşturulması db.js içindedir (initDb).
@@ -35,7 +134,9 @@ function verifyToken(t) {
     const [p, s] = t.split('.');
     if (!p || !s) return null;
     const good = sign(p);
-    if (s.length !== good.length || !crypto.timingSafeEqual(Buffer.from(s), Buffer.from(good))) return null;
+    // Bayt uzunluğu karşılaştırması: çok baytlı karakterler timingSafeEqual'ı patlatmasın
+    const sb = Buffer.from(s), gb = Buffer.from(good);
+    if (sb.length !== gb.length || !crypto.timingSafeEqual(sb, gb)) return null;
     try { const d = JSON.parse(Buffer.from(p, 'base64url').toString()); return d.e > Date.now() ? { u: d.u, sid: d.s } : null; } catch { return null; }
 }
 
@@ -44,10 +145,17 @@ const MAX_STRIKES = 3;                                  // 3. ihlalde hesap banl
 const STRIKE_WINDOW_MS = 24 * 3600e3;                   // 24 saat cezasız geçerse sayaç sıfırlanır
 
 // ---------- Yönetici (admin / "muhtar") oturumu ----------
-// Baştaki/sondaki boşluk ve satır sonu karakterlerini temizle (env değerlerinde sık görülür).
-const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || '').trim() || 'muhtar123';
-if (!String(process.env.ADMIN_PASSWORD || '').trim()) console.warn('[UYARI] ADMIN_PASSWORD tanımlı değil — varsayılan şifre (muhtar123) kullanılıyor. Render > Environment üzerinden güvenli bir şifre ayarlayın.');
-else console.log('[BİLGİ] Yönetici paneli (/muhtar) aktif. Şifre uzunluğu: ' + ADMIN_PASSWORD.length);
+// Varsayılan şifre KALDIRILDI: ADMIN_PASSWORD yoksa panel devre dışı kalır (güvenli varsayılan).
+const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || '').trim().replace(/^["']|["']$/g, '');
+const ADMIN_ENABLED = ADMIN_PASSWORD.length >= 6;
+if (!ADMIN_ENABLED) {
+    console.error('[GÜVENLİK] ADMIN_PASSWORD tanımlı değil veya 6 karakterden kısa — /muhtar paneli DEVRE DIŞI.');
+    console.error('           Render > Environment bölümüne güçlü bir ADMIN_PASSWORD ekleyip yeniden deploy edin.');
+} else {
+    console.log('[BİLGİ] Yönetici paneli (/muhtar) aktif. Şifre uzunluğu: ' + ADMIN_PASSWORD.length);
+    if (ADMIN_PASSWORD.length < 12) console.warn('[GÜVENLİK] ADMIN_PASSWORD kısa; en az 12 karakter önerilir.');
+}
+if (!process.env.SECRET) console.warn('[GÜVENLİK] SECRET tanımlı değil — oturumlar sunucu yeniden başlayınca geçersiz olur. Render > Environment üzerinden sabit ve uzun bir SECRET ayarlayın.');
 const ADMIN_SESSION_MS = 12 * 3600e3;                   // 12 saat
 function makeAdminToken() {
     const p = Buffer.from(JSON.stringify({ a: 1, e: Date.now() + ADMIN_SESSION_MS })).toString('base64url');
@@ -58,7 +166,8 @@ function verifyAdminToken(t) {
     const [p, s] = t.split('.');
     if (!p || !s) return false;
     const good = sign(p);
-    if (s.length !== good.length || !crypto.timingSafeEqual(Buffer.from(s), Buffer.from(good))) return false;
+    const sb = Buffer.from(s), gb = Buffer.from(good);
+    if (sb.length !== gb.length || !crypto.timingSafeEqual(sb, gb)) return false;
     try { const d = JSON.parse(Buffer.from(p, 'base64url').toString()); return d.a === 1 && d.e > Date.now(); } catch { return false; }
 }
 
@@ -238,16 +347,27 @@ app.post('/api/account/change-password', async (req, res) => {
 // ============================================================================
 //  YÖNETİCİ PANELİ ("muhtar") — /muhtar adresinden erişilir
 // ============================================================================
-const requireAdmin = (req, res, next) =>
+const requireAdmin = (req, res, next) => {
+    if (!ADMIN_ENABLED) return res.status(503).json({ error: 'Yönetici paneli devre dışı.' });
     verifyAdminToken(req.headers['x-admin-token']) ? next() : res.status(401).json({ error: 'Yetkisiz. Lütfen tekrar giriş yap.' });
+};
 
-app.get(['/muhtar', '/muhtar/'], (req, res) => res.sendFile(path.join(__dirname, 'Public', 'muhtar.html')));
+app.get(['/muhtar', '/muhtar/'], (req, res) => {
+    res.set('X-Robots-Tag', 'noindex, nofollow');
+    res.set('Cache-Control', 'no-store');
+    if (!ADMIN_ENABLED) return res.status(503).type('text/plain')
+        .send('Yönetici paneli devre dışı. Sunucu yöneticisi ADMIN_PASSWORD ortam değişkenini ayarlamalı.');
+    res.sendFile(path.join(__dirname, 'Public', 'muhtar.html'));
+});
 
 app.post('/api/admin/login', (req, res) => {
-    if (limited('admin:' + req.ip, 8, 60000)) return res.status(429).json({ error: 'Çok fazla deneme. Biraz bekleyin.' });
-    // Tırnak/boşluk hatalarına karşı toleranslı karşılaştırma
-    const given = String(req.body.password || '').trim().replace(/^["']|["']$/g, '');
-    if (given !== ADMIN_PASSWORD) return res.status(401).json({ error: 'Şifre hatalı.' });
+    if (!ADMIN_ENABLED) return res.status(503).json({ error: 'Yönetici paneli devre dışı.' });
+    if (limited('admin:' + req.ip, 5, 5 * 60000)) return res.status(429).json({ error: 'Çok fazla deneme. 5 dakika sonra tekrar deneyin.' });
+    const given = String(req.body.password || '').trim();
+    // Sabit uzunlukta özet + timingSafeEqual → zamanlama saldırısına karşı
+    const a = crypto.createHash('sha256').update(given).digest();
+    const b = crypto.createHash('sha256').update(ADMIN_PASSWORD).digest();
+    if (!crypto.timingSafeEqual(a, b)) return res.status(401).json({ error: 'Şifre hatalı.' });
     res.json({ token: makeAdminToken() });
 });
 
@@ -451,8 +571,11 @@ const mkText = (createdBy, system = false, owner = null, name = null) => ({
 });
 
 // Sitede yalnızca 2 ana yer vardır: bir metin + bir sesli kanal.
-const rooms = { 'genel-sesli-sohbet': mkRoom('Sistem', true, null, 'Genel Sesli Sohbet') };
-const texts = { 'genel-sohbet': mkText('Sistem', true, null, 'Genel Sohbet') };
+// Object.create(null): "__proto__", "constructor" gibi özel anahtarlarla arama yapılamaz (DoS koruması).
+const rooms = Object.create(null);
+rooms['genel-sesli-sohbet'] = mkRoom('Sistem', true, null, 'Genel Sesli Sohbet');
+const texts = Object.create(null);
+texts['genel-sohbet'] = mkText('Sistem', true, null, 'Genel Sohbet');
 
 const MAX_CHANNELS_PER_USER = 2; // her kullanıcı en fazla 2 kanal açabilir
 const userChannelCount = (u) => [...Object.values(texts), ...Object.values(rooms)]
@@ -505,15 +628,28 @@ function endStream(roomId) {
     io.to(roomId).emit('room-stream-ended');
 }
 
+// Bozuk/eksik istemci verisi (örn. null yük) sunucuyu çökertmesin:
+// her socket olayını try/catch + async hata yakalama ile sarmala.
+function safeOn(socket, event, fn) {
+    socket.on(event, (...args) => {
+        try {
+            const r = fn(...args);
+            if (r && typeof r.catch === 'function') r.catch(e => console.error(`[socket:${event}]`, e && e.message));
+        } catch (e) {
+            console.error(`[socket:${event}]`, e && e.message);
+        }
+    });
+}
+
 io.on('connection', (socket) => {
     const username = socket.data.username;
     socket.emit('room-list-update', snapshot());
     broadcastOnline();
 
     // Sunucu gecikmesi (ping) ölçümü için basit yankı
-    socket.on('latency', (start, cb) => { if (typeof cb === 'function') cb(start); });
+    safeOn(socket, 'latency', (start, cb) => { if (typeof cb === 'function') cb(start); });
 
-    socket.on('create-channel', ({ roomName, type } = {}) => {
+    safeOn(socket, 'create-channel', ({ roomName, type } = {}) => {
         if (limited('room:' + socket.id, 5, 60000)) return socket.emit('error-msg', 'Çok hızlı kanal oluşturuyorsun.');
         const raw = String(roomName || '').trim();
         if (!isValidName(raw, 3, 20)) return socket.emit('error-msg', 'Kanal adı 3-20 karakter olmalı (harf, rakam, _ . -) ve uygunsuz kelime içermemeli.');
@@ -529,7 +665,7 @@ io.on('connection', (socket) => {
         socket.emit('channel-created', { type: isText ? 'text' : 'voice', id });
     });
 
-    socket.on('join-text', ({ channelId } = {}) => {
+    safeOn(socket, 'join-text', ({ channelId } = {}) => {
         const t = texts[channelId];
         if (!t) return socket.emit('error-msg', 'Kanal bulunamadı.');
         if (socket.data.textId) socket.leave('t:' + socket.data.textId);
@@ -541,13 +677,13 @@ io.on('connection', (socket) => {
     });
 
     // Kod/dosya içeriğini indirme anında gönder
-    socket.on('get-code', ({ msgId } = {}, cb) => {
+    safeOn(socket, 'get-code', ({ msgId } = {}, cb) => {
         const t = texts[socket.data.textId];
         const m = t && t.messages.find(x => x.id === msgId && x.kind === 'file');
         if (typeof cb === 'function') cb(m ? { code: m.code, name: m.name } : null);
     });
 
-    socket.on('voice-state', ({ muted, deaf } = {}) => {
+    safeOn(socket, 'voice-state', ({ muted, deaf } = {}) => {
         const room = rooms[socket.data.roomId];
         const m = room && room.members.find(x => x.id === socket.id);
         if (!m) return;
@@ -556,7 +692,7 @@ io.on('connection', (socket) => {
         broadcastRooms();
     });
 
-    socket.on('join-room', ({ roomId } = {}) => {
+    safeOn(socket, 'join-room', ({ roomId } = {}) => {
         const room = rooms[roomId];
         if (!room) return socket.emit('error-msg', 'Oda bulunamadı.');
         if (socket.data.roomId) leaveRoom(socket); // aynı anda tek odada ol
@@ -575,7 +711,7 @@ io.on('connection', (socket) => {
         broadcastRooms();
     });
 
-    socket.on('chat-message', async ({ text } = {}) => {
+    safeOn(socket, 'chat-message', async ({ text } = {}) => {
         const tid = socket.data.textId, t = texts[tid];
         text = String(text || '').trim().slice(0, 500);
         if (!t || !text || limited('chat:' + socket.id, 8, 5000)) return;
@@ -590,7 +726,7 @@ io.on('connection', (socket) => {
     });
 
     // Kod paylaşımı: girilen kod, "kod-<kullanıcıadı>.txt" dosyası olarak sohbete gönderilir.
-    socket.on('code-message', ({ code } = {}) => {
+    safeOn(socket, 'code-message', ({ code } = {}) => {
         const tid = socket.data.textId, t = texts[tid];
         if (!t) return socket.emit('error-msg', 'Önce bir metin kanalı seç.');
         if (limited('code:' + socket.id, 5, 60000)) return socket.emit('error-msg', 'Çok sık kod paylaşıyorsun, biraz bekle.');
@@ -608,7 +744,7 @@ io.on('connection', (socket) => {
     });
 
     const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
-    socket.on('react', ({ msgId, emoji } = {}) => {
+    safeOn(socket, 'react', ({ msgId, emoji } = {}) => {
         const tid = socket.data.textId, t = texts[tid];
         if (!t || !EMOJIS.includes(emoji) || limited('react:' + socket.id, 15, 5000)) return;
         const msg = t.messages.find(m => m.id === msgId);
@@ -620,7 +756,7 @@ io.on('connection', (socket) => {
         io.to('t:' + tid).emit('reaction-update', { msgId, reactions: msg.reactions, emoji, by: username, added });
     });
 
-    socket.on('start-stream-in-room', () => {
+    safeOn(socket, 'start-stream-in-room', () => {
         const roomId = socket.data.roomId, room = rooms[roomId];
         if (!room) return socket.emit('error-msg', 'Önce bir odaya katıl.');
         if (room.isLive) return socket.emit('error-msg', 'Bu odada zaten aktif bir yayın var!');
@@ -631,27 +767,38 @@ io.on('connection', (socket) => {
     });
 
     // İzleyici bağlantı kuramazsa yayıncıdan yeniden teklif ister
-    socket.on('want-stream', () => {
+    safeOn(socket, 'want-stream', () => {
         const room = rooms[socket.data.roomId];
         if (!room || !room.isLive || room.hostSocketId === socket.id || limited('ws:' + socket.id, 6, 60000)) return;
         io.to(room.hostSocketId).emit('viewer-wants-stream', { viewerId: socket.id });
     });
 
-    socket.on('stop-stream', () => {
+    safeOn(socket, 'stop-stream', () => {
         const roomId = socket.data.roomId, room = rooms[roomId];
         if (room && room.hostSocketId === socket.id) { endStream(roomId); broadcastRooms(); }
     });
 
-    socket.on('leave-room', () => leaveRoom(socket));
+    safeOn(socket, 'leave-room', () => leaveRoom(socket));
 
-    socket.on('signal', (data = {}) => {
+    safeOn(socket, 'signal', (data = {}) => {
         const target = io.sockets.sockets.get(data.target);
         // sadece aynı odadaki kişilere sinyal gönderilebilir
         if (!target || !socket.data.roomId || target.data.roomId !== socket.data.roomId) return;
         target.emit('signal', { sender: socket.id, signal: data.signal, type: data.type });
     });
 
-    socket.on('disconnect', () => { leaveRoom(socket); broadcastOnline(); });
+    safeOn(socket, 'disconnect', () => { leaveRoom(socket); broadcastOnline(); });
+});
+
+// ---------- Hata yakalama: yığın izi / sunucu bilgisi sızdırma ----------
+app.use('/api', (req, res) => res.status(404).json({ error: 'Bulunamadı.' }));
+app.use((req, res) => res.status(404).type('text/plain').send('Sayfa bulunamadı.'));
+app.use((err, req, res, next) => {
+    if (res.headersSent) return next(err);
+    if (err && (err.type === 'entity.too.large' || err.status === 413)) return res.status(413).json({ error: 'İstek çok büyük.' });
+    if (err && err.type === 'entity.parse.failed') return res.status(400).json({ error: 'Geçersiz istek gövdesi.' });
+    console.error('İstek hatası:', err && err.message);
+    res.status(400).json({ error: 'Geçersiz istek.' });
 });
 
 const PORT = process.env.PORT || 3000;

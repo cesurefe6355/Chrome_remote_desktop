@@ -32,8 +32,9 @@ Sesli sohbet + canlı ekran yayını uygulaması. İki şekilde çalışır:
 ## 🛡️ Yönetici Paneli ("muhtar")
 
 Tarayıcıdan `site-adresin/muhtar` yazarak girilir (örn. `https://chrome-remote-desktop-w9hm.onrender.com/muhtar`).
-Şifre `.env` içindeki **`ADMIN_PASSWORD`** değeridir. (Ayarlanmazsa varsayılan `muhtar123` kullanılır —
-**mutlaka değiştir!**)
+Şifre, sunucudaki **`ADMIN_PASSWORD`** ortam değişkenidir. **Varsayılan şifre yoktur:** değişken tanımlı
+değilse panel güvenlik gereği **tamamen kapalıdır** (503). Render'da `Environment` bölümüne en az
+12 karakterlik güçlü bir şifre ekleyip yeniden deploy et.
 
 Panelden yapılabilenler:
 
@@ -101,3 +102,35 @@ Yani "hiç Chrome tasarımı olmasın" isteği için uygulamayı **masaüstü s�
 Çözünürlük (720p → 4K), kare hızı (30 → 144 FPS), bit hızı, kodek (AV1 / VP9 / H.264),
 içerik türü ve sistem sesi paylaşımı seçiciden ayarlanır. Nakliye WebRTC (P2P) üzerindendir;
 farklı ağlardaki izleyiciler için `.env` içinde TURN ayarları kullanılabilir.
+
+---
+
+## 🔐 Güvenlik
+
+Tarama raporundaki (DiagnoSEO) bulgular kapatıldı; sunucu her yanıtta şu başlıkları gönderir:
+
+| Başlık | Değer / amaç |
+| --- | --- |
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains; preload` (yalnızca HTTPS'te) |
+| `Content-Security-Policy` | Dış kaynak yasağı; `frame-ancestors 'self'`; WebSocket yalnızca aynı host |
+| `X-Content-Type-Options` | `nosniff` |
+| `X-Frame-Options` | `SAMEORIGIN` (clickjacking) |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` |
+| `Permissions-Policy` | Kamera/konum/ödeme kapalı; mikrofon ve ekran paylaşımı yalnızca site içi |
+| `Cross-Origin-Opener-Policy` / `Cross-Origin-Resource-Policy` | `same-origin` |
+
+Ek olarak:
+
+- `/.well-known/security.txt` (RFC 9116) ve `/robots.txt` yayınlanır; `/muhtar` ve `/api/` arama motorlarına kapalıdır.
+- **`ADMIN_PASSWORD` tanımlı değilse yönetici paneli çalışmaz** (bilinen varsayılan şifre açığı kapatıldı).
+- Yönetici girişi **5 deneme / 5 dakika** ile sınırlıdır; şifre karşılaştırması zamanlama saldırısına dayanıklıdır.
+- `trust proxy` etkinleştirildi → Render/Cloudflare arkasında hız sınırları gerçek istemci IP'sine uygulanır.
+- Socket.IO: Origin doğrulaması (CSWSH), 256 KB istek sınırı ve bozuk payload'lara karşı güvenli olay sarmalayıcı.
+- Bilinmeyen `/api/*` yolları JSON 404 döner; hata yanıtlarında yığın izi sızmaz.
+- Gövde limiti 10 KB, mesaj limiti 500 karakter, kod paylaşımı limiti ~100 KB'dir.
+
+### Sunucu tarafında yapılması gerekenler
+
+1. Render → **Environment**: `ADMIN_PASSWORD` (12+ karakter) ve `SECRET` (sabit, rastgele) mutlaka tanımlı olmalı.
+2. İsteğe bağlı: `SECURITY_CONTACT=mailto:...` ve özel alan adı için `PUBLIC_HOST=ornek.com`.
+3. DNS tarafı (kodla çözülemez): **SPF** kaydı ekle, **DMARC** politikasını `p=none` → `quarantine` yap, **DNSSEC** etkinleştir.
