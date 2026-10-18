@@ -6,6 +6,7 @@ const path = require('path');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { pool, initDb } = require('./db');
+const { containsProfanity, censor, isValidName } = require('./filter');
 
 const app = express();
 const server = http.createServer(app);
@@ -22,9 +23,12 @@ app.get('/', (req, res) => res.redirect('/index.html'));
 // ---------- Oturum token'ı (sunucu yeniden başlasa da geçerli kalması için SECRET env ayarla) ----------
 const SECRET = process.env.SECRET || crypto.randomBytes(32).toString('hex');
 const sign = (p) => crypto.createHmac('sha256', SECRET).update(p).digest('base64url');
-function makeToken(username, sid) {
-    const p = Buffer.from(JSON.stringify({ u: username, s: sid, e: Date.now() + 30 * 864e5 })).toString('base64url');
-    return p + '.' + sign(p);
+// "Beni hatırla" işaretliyse 30 gün, işaretli değilse 1 saat geçerli olur.
+const SESSION_MS = 3600e3, REMEMBER_MS = 30 * 864e5;
+function makeToken(username, sid, remember) {
+    const expiresAt = Date.now() + (remember ? REMEMBER_MS : SESSION_MS);
+    const p = Buffer.from(JSON.stringify({ u: username, s: sid, e: expiresAt })).toString('base64url');
+    return { token: p + '.' + sign(p), expiresAt };
 }
 function verifyToken(t) {
     if (typeof t !== 'string') return null;
@@ -70,13 +74,11 @@ app.get('/api/captcha', (req, res) => {
     res.json(newCaptcha());
 });
 
-const USER_RE = /^[\p{L}\p{N}_.-]{3,20}$/u;
-
 app.post('/api/register', async (req, res) => {
     if (limited('reg:' + req.ip, 5, 60000)) return res.status(429).json({ error: 'Çok fazla deneme. Biraz bekleyin.' });
     const username = String(req.body.username || '').trim();
     const password = String(req.body.password || '');
-    if (!USER_RE.test(username)) return res.status(400).json({ error: 'Kullanıcı adı 3-20 karakter olmalı (harf, rakam, _ . -).' });
+    if (!isValidName(username, 3, 20)) return res.status(400).json({ error: 'Kullanıcı adı 3-20 karakter olmalı (harf, rakam, _ . -) ve uygunsuz kelime içermemeli.' });
     if (password.length < 6 || password.length > 72) return res.status(400).json({ error: 'Şifre 6-72 karakter olmalı.' });
 
     if (req.body.acceptTerms !== true)
@@ -125,7 +127,9 @@ app.post('/api/login', async (req, res) => {
                 s.disconnect(true);
             }
         }
-        res.json({ success: true, username: user.username, token: makeToken(user.username, sid) });
+        const remember = req.body.remember === true;
+        const { token, expiresAt } = makeToken(user.username, sid, remember);
+        res.json({ success: true, username: user.username, token, remember, expiresAt });
     } catch (err) {
         console.error('Giriş hatası:', err.message);
         res.status(500).json({ error: 'Sunucu hatası, lütfen tekrar deneyin.' });
@@ -169,16 +173,27 @@ app.get('/api/ice', async (req, res) => {
 });
 
 // ---------- Odalar ----------
-const mkRoom = (createdBy, system = false) => ({ createdBy, system, isLive: false, hostSocketId: null, hostName: null, members: [], messages: [] });
-const rooms = { 'lobi': mkRoom('Sistem', true), 'oyun-gecesi': mkRoom('Sistem', true) };
+const mkRoom = (createdBy, system = false, owner = null, name = null) => ({
+    createdBy, system, owner, name: name || createdBy,
+    isLive: false, hostSocketId: null, hostName: null, members: [], messages: []
+});
+const mkText = (createdBy, system = false, owner = null, name = null) => ({
+    createdBy, system, owner, name: name || createdBy, messages: []
+});
 
-const mkText = (createdBy, system = false) => ({ createdBy, system, messages: [] });
-const texts = { 'genel': mkText('Sistem', true), 'sohbet': mkText('Sistem', true) };
+// Sitede yalnızca 2 ana yer vardır: bir metin + bir sesli kanal.
+const rooms = { 'genel-sesli-sohbet': mkRoom('Sistem', true, null, 'Genel Sesli Sohbet') };
+const texts = { 'genel-sohbet': mkText('Sistem', true, null, 'Genel Sohbet') };
+
+const MAX_CHANNELS_PER_USER = 2; // her kullanıcı en fazla 2 kanal açabilir
+const userChannelCount = (u) => [...Object.values(texts), ...Object.values(rooms)]
+    .filter(c => c.owner && c.owner.toLowerCase() === String(u).toLowerCase()).length;
 
 const roomsList = () => Object.entries(rooms).map(([id, r]) => ({
-    id, isLive: r.isLive, hostName: r.hostName, members: r.members.map(m => ({ id: m.id, username: m.username, muted: m.muted, deaf: m.deaf }))
+    id, name: r.name, isLive: r.isLive, hostName: r.hostName,
+    members: r.members.map(m => ({ id: m.id, username: m.username, muted: m.muted, deaf: m.deaf }))
 }));
-const snapshot = () => ({ text: Object.keys(texts), voice: roomsList() });
+const snapshot = () => ({ text: Object.entries(texts).map(([id, t]) => ({ id, name: t.name })), voice: roomsList() });
 const broadcastRooms = () => io.emit('room-list-update', snapshot());
 const broadcastOnline = () => io.emit('online-list', [...new Set([...io.sockets.sockets.values()].filter(x => x.connected && x.data.username).map(x => x.data.username))]);
 
@@ -229,13 +244,16 @@ io.on('connection', (socket) => {
 
     socket.on('create-channel', ({ roomName, type } = {}) => {
         if (limited('room:' + socket.id, 5, 60000)) return socket.emit('error-msg', 'Çok hızlı kanal oluşturuyorsun.');
-        const id = String(roomName || '').trim().replace(/\s+/g, '-').toLowerCase().replace(/[^\p{L}\p{N}-]/gu, '').slice(0, 24);
+        const raw = String(roomName || '').trim();
+        if (!isValidName(raw, 3, 20)) return socket.emit('error-msg', 'Kanal adı 3-20 karakter olmalı (harf, rakam, _ . -) ve uygunsuz kelime içermemeli.');
+        if (userChannelCount(username) >= MAX_CHANNELS_PER_USER) return socket.emit('error-msg', `En fazla ${MAX_CHANNELS_PER_USER} kanal açabilirsin.`);
+        const id = raw.replace(/\s+/g, '-').toLowerCase().replace(/[^\p{L}\p{N}-]/gu, '').slice(0, 24);
         if (!id) return socket.emit('error-msg', 'Geçersiz kanal adı!');
         const isText = type === 'text';
-        const pool = isText ? texts : rooms;
-        if (pool[id]) return socket.emit('error-msg', 'Bu kanal zaten var!');
-        if (Object.keys(pool).length >= 50) return socket.emit('error-msg', 'Kanal limiti doldu.');
-        pool[id] = isText ? mkText(username) : mkRoom(username);
+        const bucket = isText ? texts : rooms;
+        if (bucket[id]) return socket.emit('error-msg', 'Bu kanal zaten var!');
+        if (Object.keys(bucket).length >= 50) return socket.emit('error-msg', 'Kanal limiti doldu.');
+        bucket[id] = isText ? mkText(username, false, username, raw) : mkRoom(username, false, username, raw);
         broadcastRooms();
         socket.emit('channel-created', { type: isText ? 'text' : 'voice', id });
     });
@@ -246,7 +264,16 @@ io.on('connection', (socket) => {
         if (socket.data.textId) socket.leave('t:' + socket.data.textId);
         socket.data.textId = channelId;
         socket.join('t:' + channelId);
-        socket.emit('text-joined', { channelId, messages: t.messages });
+        // Dosya (kod) içeriklerini şimdi göndermeyiz; indirilirken 'get-code' ile istenir.
+        const messages = t.messages.map(m => m.kind === 'file' ? { ...m, code: undefined } : m);
+        socket.emit('text-joined', { channelId, messages });
+    });
+
+    // Kod/dosya içeriğini indirme anında gönder
+    socket.on('get-code', ({ msgId } = {}, cb) => {
+        const t = texts[socket.data.textId];
+        const m = t && t.messages.find(x => x.id === msgId && x.kind === 'file');
+        if (typeof cb === 'function') cb(m ? { code: m.code, name: m.name } : null);
     });
 
     socket.on('voice-state', ({ muted, deaf } = {}) => {
@@ -281,7 +308,27 @@ io.on('connection', (socket) => {
         const tid = socket.data.textId, t = texts[tid];
         text = String(text || '').trim().slice(0, 500);
         if (!t || !text || limited('chat:' + socket.id, 8, 5000)) return;
-        const msg = { id: crypto.randomUUID(), username, text, time: Date.now(), reactions: {} };
+        const clean = censor(text);
+        if (clean !== text) socket.emit('error-msg', 'Mesajındaki uygunsuz kelimeler gizlendi.');
+        const msg = { id: crypto.randomUUID(), username, kind: 'text', text: clean, time: Date.now(), reactions: {} };
+        t.messages.push(msg);
+        if (t.messages.length > 100) t.messages.shift();
+        io.to('t:' + tid).emit('chat-message', msg);
+    });
+
+    // Kod paylaşımı: girilen kod, "kod-<kullanıcıadı>.txt" dosyası olarak sohbete gönderilir.
+    socket.on('code-message', ({ code } = {}) => {
+        const tid = socket.data.textId, t = texts[tid];
+        if (!t) return socket.emit('error-msg', 'Önce bir metin kanalı seç.');
+        if (limited('code:' + socket.id, 5, 60000)) return socket.emit('error-msg', 'Çok sık kod paylaşıyorsun, biraz bekle.');
+        code = String(code || '');
+        if (!code.trim()) return;
+        if (code.length > 100000) return socket.emit('error-msg', 'Kod çok büyük (en fazla ~100 KB).');
+        const msg = {
+            id: crypto.randomUUID(), username, kind: 'file',
+            name: `kod-${username}.txt`, size: Buffer.byteLength(code, 'utf8'),
+            code, time: Date.now(), reactions: {}
+        };
         t.messages.push(msg);
         if (t.messages.length > 100) t.messages.shift();
         io.to('t:' + tid).emit('chat-message', msg);

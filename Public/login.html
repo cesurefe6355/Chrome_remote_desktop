@@ -93,6 +93,11 @@
         .terms a { color:var(--brand); text-decoration:none; font-weight:700; }
         .terms a:hover { text-decoration:underline; }
 
+        /* Beni hatırla */
+        .remember { display:flex; gap:10px; align-items:center; margin-top:14px; text-align:left; }
+        .remember label { text-transform:none; font-size:13px; font-weight:500; color:#b5bac1; letter-spacing:0; margin:0; cursor:pointer; }
+        .remember label small { color:#6d7178; font-weight:400; }
+
         /* ---------- Buton ---------- */
         .auth-btn { margin-top:18px; padding:12px; border-radius:9px; border:none; width:100%; color:#fff; font-size:15px; font-weight:700; cursor:pointer;
             background:linear-gradient(135deg,#5865F2,#7c4dff); background-size:200% 200%; transition:.25s; position:relative; overflow:hidden; }
@@ -153,9 +158,13 @@
                     <input type="password" id="loginPassword" autocomplete="current-password" placeholder="Şifreni gir...">
                     <button class="eye" onclick="togglePass('loginPassword', this)" tabindex="-1">👁</button>
                 </div>
+                <div class="remember">
+                    <div class="cbox" id="rememberBox" onclick="toggleRemember()"></div>
+                    <label onclick="toggleRemember()">Beni hatırla <small>(bu cihazda uzun süre açık kalsın)</small></label>
+                </div>
                 <button class="auth-btn" id="loginBtn" onclick="handleLogin()">Giriş Yap</button>
             </div>
-            <div class="note">🔒 Aynı hesaba aynı anda yalnızca tek cihazdan girilebilir.</div>
+            <div class="note">🔒 Aynı hesaba aynı anda yalnızca tek cihazdan girilebilir. Beni hatırla kapalıysa 1 saat sonra otomatik çıkış yapılır.</div>
         </div>
 
         <!-- KAYIT FORMU -->
@@ -163,7 +172,7 @@
             <div class="form-group">
                 <label>Kullanıcı Adı Seç</label>
                 <div class="field">
-                    <input type="text" id="regUsername" autocomplete="username" maxlength="20" placeholder="Bir kullanıcı adı belirle...">
+                    <input type="text" id="regUsername" autocomplete="username" maxlength="20" placeholder="En az 3 karakter (harf, rakam, _ . -)">
                 </div>
                 <label>Şifre Belirle</label>
                 <div class="field">
@@ -271,7 +280,8 @@
         }
 
         // ---- Robot doğrulaması ----
-        let captchaId = null, humanChecked = false, termsChecked = false;
+        let captchaId = null, humanChecked = false, termsChecked = false, rememberChecked = false;
+        function toggleRemember() { rememberChecked = !rememberChecked; $('rememberBox').classList.toggle('on', rememberChecked); }
         function toggleHuman() {
             humanChecked = !humanChecked;
             $('humanBox').classList.toggle('on', humanChecked);
@@ -343,12 +353,14 @@
             try {
                 const res = await fetch('/api/login', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ username, password, remember: rememberChecked })
                 });
                 const data = await res.json();
                 if (res.ok) {
                     localStorage.setItem('lumolive_user', data.username);
                     localStorage.setItem('lumolive_token', data.token);
+                    localStorage.setItem('lumolive_remember', data.remember ? '1' : '0');
+                    localStorage.setItem('lumolive_exp', String(data.expiresAt || 0));
                     showOk('Giriş başarılı! Yönlendiriliyorsun...');
                     setTimeout(() => window.location.href = '/index.html', 500);
                 } else { showErr(data.error || 'Giriş bilgileri hatalı.'); busy(btn, false); }

@@ -51,7 +51,9 @@ svg{width:20px;height:20px;fill:currentColor;display:block}
 .msg .av{width:40px;height:40px;font-size:16px}
 .msg b{color:#f2f3f5;font-size:15px}.msg time{color:#949ba4;font-size:12px;margin-left:8px}
 .msg p{white-space:pre-wrap;word-break:break-word;line-height:1.35;font-size:15px}
-.inp{padding:0 16px 24px}.inp input{width:100%;padding:11px 16px;border-radius:8px;border:0;background:#383a40;color:#dbdee1;font-size:15px;outline:0}
+.inp{display:flex;align-items:center;gap:8px;padding:0 16px 24px}.inp input{flex:1;min-width:0;padding:11px 16px;border-radius:8px;border:0;background:#383a40;color:#dbdee1;font-size:15px;outline:0}
+.plus{width:44px;height:44px;border-radius:50%;background:#383a40;color:#b5bac1;flex-shrink:0;padding:0;display:flex;align-items:center;justify-content:center}
+.plus:hover{background:#4752c4;color:#fff}
 .members{width:240px;background:#2b2d31;padding:24px 8px;overflow-y:auto;flex-shrink:0}
 .members h4{font-size:12px;color:#949ba4;text-transform:uppercase;padding:0 8px 8px}
 .mi{display:flex;align-items:center;gap:12px;padding:6px 8px;border-radius:4px;color:#949ba4;font-weight:500}.mi:hover{background:#35373c;color:#dbdee1}
@@ -79,6 +81,17 @@ button:hover{background:#4752c4}button.red{background:#da373c}button.red:hover{b
 .box h3{color:#f2f3f5;font-size:20px;margin-bottom:12px}.box p{color:#b5bac1;font-size:14px;margin-bottom:16px}
 .box label{display:block;font-size:12px;font-weight:700;color:#b5bac1;text-transform:uppercase;margin:12px 0 6px}
 .box input,.box select{width:100%;padding:10px;border-radius:4px;border:0;background:#1e1f22;color:#dbdee1;font-size:15px;outline:0}
+.box textarea{width:100%;padding:10px;border-radius:4px;border:0;background:#1e1f22;color:#dbdee1;font-size:13px;font-family:ui-monospace,Consolas,'Courier New',monospace;outline:0;resize:vertical;min-height:120px}
+
+/* Kod/dosya mesajı kartı */
+.file{display:flex;align-items:center;gap:12px;background:#2b2d31;border:1px solid #232428;border-radius:8px;padding:12px 14px;margin-top:6px;max-width:460px;cursor:pointer;transition:.15s}
+.file:hover{border-color:#5865F2;background:#313338}
+.file .fic{width:38px;height:38px;border-radius:8px;background:#1e1f22;color:#5865F2;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.file .finfo{flex:1;min-width:0}
+.file .finfo b{display:block;color:#f2f3f5;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file .finfo small{color:#949ba4;font-size:12px}
+.file .fdl{background:#5865F2;color:#fff;padding:7px 14px;border-radius:6px;flex-shrink:0}
+.file .fdl:hover{background:#4752c4}
 .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}.acts .g{background:none}.acts .g:hover{text-decoration:underline;background:none}
 .toasts{position:fixed;top:16px;right:16px;z-index:200;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 .toast{background:#111214;color:#f2f3f5;padding:10px 14px;border-radius:6px;border-left:4px solid #5865F2;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,.5);animation:slide .25s;transition:opacity .3s}
@@ -210,7 +223,7 @@ input[type=range]{width:100%;accent-color:#5865F2;margin-top:4px}
 
 <div class="ov" id="mCreate"><div class="box"><h3>Kanal Oluştur</h3>
 <label>Kanal Türü</label><select id="newType"><option value="text"># Metin Kanalı</option><option value="voice">Ses Kanalı</option></select>
-<label>Kanal Adı</label><input id="newName" maxlength="24" placeholder="yeni-kanal">
+<label>Kanal Adı</label><input id="newName" maxlength="20" placeholder="en az 3 karakter (harf, rakam, _ . -)">
 <div class="acts"><button class="g" onclick="closeM('mCreate')">İptal</button><button id="btnCreate">Oluştur</button></div></div></div>
 
 <div class="ov" id="mStream"><div class="pk">
@@ -293,6 +306,12 @@ input[type=range]{width:100%;accent-color:#5865F2;margin-top:4px}
 
 <div class="ov" id="mInfo"><div class="box"><h3 id="infoT"></h3><p id="infoD"></p><div class="acts"><button onclick="closeM('mInfo')">Tamam</button></div></div></div>
 
+<div class="ov" id="mCode"><div class="box"><h3>Kod Paylaş</h3>
+<p>Kodu yapıştır; <b id="codeFileName">kod-kullanici.txt</b> olarak sohbete gönderilir.</p>
+<label>Kod</label>
+<textarea id="codeText" spellcheck="false" placeholder="Kodu buraya yapıştır..."></textarea>
+<div class="acts"><button class="g" onclick="closeM('mCode')">İptal</button><button id="btnSendCode">Gönder</button></div></div></div>
+
 <div class="app">
 <div class="rail"><div class="srv">LL</div></div>
 <div class="side">
@@ -325,7 +344,7 @@ input[type=range]{width:100%;accent-color:#5865F2;margin-top:4px}
   <div class="body">
     <div id="textView">
       <div class="center"><div class="msgs" id="msgs"></div>
-        <div class="inp"><input id="chatIn" maxlength="500" autocomplete="off" placeholder="Mesaj gönder"></div></div>
+        <div class="inp"><button class="plus" id="btnCode" title="Kod paylaş — kod-kullanıcıadı.txt olarak gönderilir"><i data-ic="plus"></i></button><input id="chatIn" maxlength="500" autocomplete="off" placeholder="Mesaj gönder"></div></div>
       <div class="members"><h4>Çevrimiçi — <span id="cnt">0</span></h4><div id="mList"></div></div>
     </div>
     <div id="voiceView">
@@ -361,13 +380,15 @@ const IC = {
   out: 'M10 17l1.4-1.4-2.6-2.6H20v-2H8.8l2.6-2.6L10 7l-5 5 5 5zM4 5h8V3H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8v-2H4V5z',
   bell: 'M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6V11c0-3.07-1.63-5.64-4.5-6.32V4a1.5 1.5 0 0 0-3 0v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z',
   hash: 'M5.9 21l.9-4H3l.4-2h3.8l1-4H4.4l.4-2h3.8l.9-4h2l-.9 4h4l.9-4h2l-.9 4H20l-.4 2h-3.8l-1 4h3.8l-.4 2h-3.8l-.9 4h-2l.9-4h-4l-.9 4h-2zm4.3-6h4l1-4h-4l-1 4z',
+  plus: 'M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5z',
+  file: 'M6 2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6H6zm7 1.5L18.5 9H13V3.5zM8 13h8v2H8v-2zm0 4h8v2H8v-2z',
   spk: 'M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z',
   hang: 'M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 0 1-.29-.7c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85a.99.99 0 0 1-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z'
 };
 const svg = n => `<svg viewBox="0 0 24 24"><path d="${IC[n]}"/></svg>`;
 document.querySelectorAll('[data-ic]').forEach(e => e.innerHTML = svg(e.dataset.ic));
 $('meName').textContent = user; $('meAv').style.background = color(user); $('meAv').textContent = user[0].toUpperCase();
-function logout() { if (voiceId) socket.emit('leave-room'); localStorage.removeItem('lumolive_user'); localStorage.removeItem('lumolive_token'); location.href = '/login.html'; }
+function logout() { if (voiceId) socket.emit('leave-room'); ['lumolive_user', 'lumolive_token', 'lumolive_remember', 'lumolive_exp'].forEach(k => localStorage.removeItem(k)); location.href = '/login.html'; }
 
 // ----- Durum -----
 let chans = { text: [], voice: [] }, view = 'text', textId = '', voiceId = '', voiceMembers = [], hostSid = null;
@@ -479,10 +500,10 @@ function row(ic, name, on) {
 }
 function renderChannels() {
   const t = $('tList'); t.innerHTML = '';
-  chans.text.forEach(id => { const r = row('hash', id, view === 'text' && textId === id); r.onclick = () => selectText(id); t.appendChild(r); });
+  chans.text.forEach(c => { const r = row('hash', c.name, view === 'text' && textId === c.id); r.onclick = () => selectText(c.id); t.appendChild(r); });
   const v = $('vList'); v.innerHTML = '';
   chans.voice.forEach(r => {
-    const el = row('spk', r.id, view === 'voice' && voiceId === r.id); el.onclick = () => openVoice(r.id); v.appendChild(el);
+    const el = row('spk', r.name, view === 'voice' && voiceId === r.id); el.onclick = () => openVoice(r.id); v.appendChild(el);
     r.members.forEach(m => {
       const u = document.createElement('div'); u.className = 'vu';
       const av = avatar(m.username); av.dataset.sid = m.id; u.appendChild(av);
@@ -494,7 +515,7 @@ function renderChannels() {
     });
   });
 }
-socket.on('room-list-update', list => { chans = list; renderChannels(); if (!textId && list.text.length) selectText(list.text[0]); });
+socket.on('room-list-update', list => { chans = list; renderChannels(); if ((!textId || !list.text.some(c => c.id === textId)) && list.text.length) selectText(list.text[0].id); });
 socket.on('online-list', l => {
   $('cnt').textContent = l.length; const c = $('mList'); c.innerHTML = '';
   l.forEach(n => { const d = document.createElement('div'); d.className = 'mi'; d.appendChild(avatar(n)); const s = document.createElement('span'); s.textContent = n; d.appendChild(s); c.appendChild(d); });
@@ -505,9 +526,11 @@ $('btnCreate').onclick = () => { const v = $('newName').value.trim(); if (!v) re
 $('newName').onkeydown = e => { if (e.key === 'Enter') $('btnCreate').click(); };
 socket.on('channel-created', ({ type, id }) => type === 'text' ? selectText(id) : openVoice(id));
 
+const textName = id => (chans.text.find(c => c.id === id) || {}).name || id;
+const voiceName = id => (chans.voice.find(c => c.id === id) || {}).name || id;
 function setView(v) {
   view = v; $('textView').style.display = v === 'text' ? 'flex' : 'none'; $('voiceView').style.display = v === 'voice' ? 'flex' : 'none';
-  $('title').textContent = v === 'text' ? textId : voiceId; $('titleIc').innerHTML = svg(v === 'text' ? 'hash' : 'spk'); renderChannels();
+  $('title').textContent = v === 'text' ? textName(textId) : voiceName(voiceId); $('titleIc').innerHTML = svg(v === 'text' ? 'hash' : 'spk'); renderChannels();
 }
 
 // ----- Metin kanalı -----
@@ -515,7 +538,7 @@ function selectText(id) { textId = id; $('msgs').innerHTML = ''; socket.emit('jo
 socket.on('text-joined', ({ channelId, messages }) => {
   if (channelId !== textId) return;
   $('msgs').innerHTML = ''; messages.forEach(addMsg);
-  if (!messages.length) $('msgs').innerHTML = `<div class="empty"><h2>#${channelId} kanalına hoş geldin!</h2>Burası bu kanalın başlangıcı.</div>`;
+  if (!messages.length) $('msgs').innerHTML = `<div class="empty"><h2>#${textName(channelId)} kanalına hoş geldin!</h2>Burası bu kanalın başlangıcı.</div>`;
 });
 const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 function toolbar(id) { const t = document.createElement('div'); t.className = 'tb';
@@ -524,15 +547,39 @@ function renderRx(box, rx) { box.innerHTML = '';
   for (const e in rx) { const u = rx[e]; if (!u.length) continue; const b = document.createElement('button'); b.className = 'rx' + (u.includes(user) ? ' mine' : '');
     b.title = u.join(', '); b.textContent = e + ' ' + u.length; b.onclick = () => socket.emit('react', { msgId: box.closest('.msg').dataset.id, emoji: e }); box.appendChild(b); } }
 function floatEmoji(e) { const d = document.createElement('div'); d.className = 'fl'; d.textContent = e; d.style.left = (30 + Math.random() * 40) + 'vw'; document.body.appendChild(d); setTimeout(() => d.remove(), 1600); }
+function fileCard(m) {
+  const w = document.createElement('div'); w.className = 'file';
+  const save = code => {
+    const blob = new Blob([code || ''], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = m.name;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  };
+  const download = () => {
+    if (typeof m.code === 'string') return save(m.code);
+    // İçerik sunucuda; indirme anında istenir
+    socket.emit('get-code', { msgId: m.id }, res => { if (res) save(res.code); else toast('Kod alınamadı', 'leave'); });
+  };
+  const ic = document.createElement('div'); ic.className = 'fic'; ic.innerHTML = svg('file');
+  const info = document.createElement('div'); info.className = 'finfo';
+  const nm = document.createElement('b'); nm.textContent = m.name;
+  const sz = document.createElement('small'); sz.textContent = (m.size >= 1024 ? (m.size / 1024).toFixed(1) + ' KB' : (m.size || 0) + ' B') + ' · indirmek için tıkla';
+  info.append(nm, sz);
+  const dl = document.createElement('button'); dl.className = 'fdl'; dl.innerHTML = svg('file') + ' İndir';
+  dl.querySelector('svg').style.cssText = 'width:16px;height:16px;vertical-align:-3px;margin-right:4px';
+  dl.onclick = e => { e.stopPropagation(); download(); };
+  w.onclick = download; w.append(ic, info, dl);
+  return w;
+}
 function addMsg(m) {
   const e = $('msgs').querySelector('.empty'); if (e) e.remove();
   const d = document.createElement('div'); d.className = 'msg'; d.dataset.id = m.id; d.appendChild(avatar(m.username));
   const c = document.createElement('div'), h = document.createElement('div');
   const b = document.createElement('b'); b.textContent = m.username; b.style.color = color(m.username).replace('45%', '70%');
-  const t = document.createElement('time'); t.textContent = hhmm(m.time); h.append(b, t);
-  const p = document.createElement('p'); p.textContent = m.text;
+  const t = document.createElement('time'); t.textContent = hhmm(m.time); h.append(b, t); c.appendChild(h);
+  if (m.kind === 'file') c.appendChild(fileCard(m));
+  else { const p = document.createElement('p'); p.textContent = m.text; c.appendChild(p); }
   const rx = document.createElement('div'); rx.className = 'rxs'; renderRx(rx, m.reactions || {});
-  c.append(h, p, rx); d.append(c, toolbar(m.id));
+  c.appendChild(rx); d.append(c, toolbar(m.id));
   const box = $('msgs'), bottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
   box.appendChild(d); if (bottom) box.scrollTop = box.scrollHeight;
 }
@@ -542,6 +589,19 @@ socket.on('reaction-update', ({ msgId, reactions, emoji, added }) => {
   if (added) { floatEmoji(emoji); play('react'); }
 });
 $('chatIn').onkeydown = e => { if (e.key === 'Enter' && e.target.value.trim()) { socket.emit('chat-message', { text: e.target.value }); e.target.value = ''; } };
+
+// ----- Kod paylaşımı (+) : girilen kod "kod-<kullanıcıadı>.txt" olarak sohbete gider -----
+$('btnCode').onclick = () => {
+  if (!textId) return info('Kanal yok', 'Kod paylaşmak için önce bir metin kanalı seç.');
+  $('codeFileName').textContent = `kod-${user}.txt`;
+  $('codeText').value = ''; openM('mCode'); setTimeout(() => $('codeText').focus(), 50);
+};
+$('btnSendCode').onclick = () => {
+  const code = $('codeText').value;
+  if (!code.trim()) return;
+  socket.emit('code-message', { code });
+  closeM('mCode');
+};
 
 // ----- Ses kanalı -----
 function cleanup() {
@@ -585,7 +645,7 @@ function renderVoice() {
 }
 socket.on('room-joined', async ({ roomId, isLive, hostName, hostSocketId, members }) => {
   setNames(members); voiceMembers = members; hostSid = isLive ? hostSocketId : null;
-  $('vstat').style.display = 'flex';$('vstatName').textContent = roomId;
+  $('vstat').style.display = 'flex';$('vstatName').textContent = voiceName(roomId);
   showStage(isLive); $('who').textContent = isLive ? `${hostName} yayında` : '';
   if (isLive && hostSocketId !== socket.id) waitMsg('Yayına bağlanılıyor...');
   renderVoice(); syncBtns(); vs(); play('join');
@@ -889,6 +949,17 @@ socket.on('error-msg', m => { play('err'); info('Hata', m); });
 $('vid').onclick = e => { if (!isHost) { e.target.muted = false; e.target.play(); } };
 function fsc() { const s = $('stage'); document.fullscreenElement ? document.exitFullscreen() : s.requestFullscreen(); }
 window.addEventListener('beforeunload', () => socket.emit('leave-room'));
+
+// ----- Oturum süresi: "Beni hatırla" kapalıysa 1 saat sonra otomatik çıkış -----
+(function sessionGuard() {
+  if (localStorage.getItem('lumolive_remember') === '1') return;
+  const exp = Number(localStorage.getItem('lumolive_exp') || 0);
+  if (!exp) return;
+  const left = exp - Date.now();
+  if (left <= 0) { alert('1 saatlik oturum süren doldu. Güvenlik için tekrar giriş yapmalısın.'); return logout(); }
+  setTimeout(() => { alert('1 saatlik oturum süren doldu. Güvenlik için çıkış yapıldı.'); logout(); }, left);
+})();
+
 setView('text'); syncBtns();
 </script>
 </body>
