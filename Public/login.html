@@ -141,7 +141,14 @@
         .noscript-note { background:#3a2224; border:1px solid #5c2b2f; color:#f2b8b5; border-radius:8px; padding:10px 12px; font-size:12.5px; line-height:1.5; margin-bottom:14px; }
         .noscript-note a { color:#fff; }
         @media (max-width:520px){ .auth-card{padding:26px 20px} }
-    </style>
+    
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+body{min-height:100vh;min-height:100dvh}
+label{text-transform:none;letter-spacing:0;font-size:13px;font-weight:600}
+.cbox:focus-visible,.eye:focus-visible,.tab-btn:focus-visible,.auth-btn:focus-visible,.cap-ref:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.subtitle,.tagline,.note,.legal-foot,.remember label small{color:#8e939b}
+.pw-hint{font-size:12px;color:#8e939b;min-height:16px;text-align:left}
+</style>
 </head>
 <body>
     <div class="bg"></div>
@@ -162,14 +169,14 @@
         <!-- GİRİŞ FORMU -->
         <div id="login-form" class="form-section active">
             <div class="form-group">
-                <label>Kullanıcı Adı</label>
+                <label for="loginUsername">Kullanıcı adı</label>
                 <div class="field">
                     <input type="text" id="loginUsername" autocomplete="username" maxlength="20" placeholder="Kullanıcı adını gir...">
                 </div>
-                <label>Şifre</label>
+                <label for="loginPassword">Şifre</label>
                 <div class="field">
                     <input type="password" id="loginPassword" autocomplete="current-password" placeholder="Şifreni gir...">
-                    <button class="eye" onclick="togglePass('loginPassword', this)" tabindex="-1">👁</button>
+                    <button class="eye" type="button" aria-label="Şifreyi göster" onclick="togglePass('loginPassword', this)">👁</button>
                 </div>
                 <div class="remember">
                     <div class="cbox" id="rememberBox" onclick="toggleRemember()"></div>
@@ -183,16 +190,16 @@
         <!-- KAYIT FORMU -->
         <div id="register-form" class="form-section">
             <div class="form-group">
-                <label>Kullanıcı Adı Seç</label>
+                <label for="regUsername">Kullanıcı adı seç</label>
                 <div class="field">
                     <input type="text" id="regUsername" autocomplete="username" maxlength="20" placeholder="En az 3 karakter (harf, rakam, _ . -)">
                 </div>
-                <label>Şifre Belirle</label>
+                <label for="regPassword">Şifre belirle</label>
                 <div class="field">
                     <input type="password" id="regPassword" autocomplete="new-password" maxlength="72" placeholder="Güçlü bir şifre gir..." oninput="checkStrength()">
-                    <button class="eye" onclick="togglePass('regPassword', this)" tabindex="-1">👁</button>
+                    <button class="eye" type="button" aria-label="Şifreyi göster" onclick="togglePass('regPassword', this)">👁</button>
                 </div>
-                <div class="strength"><i id="strBar"></i></div>
+                <div class="strength"><i id="strBar"></i></div><div class="pw-hint" id="strTxt" aria-live="polite"></div>
 
                 <!-- Robot doğrulaması -->
                 <div class="verify">
@@ -205,7 +212,7 @@
                             <div class="cap-q" id="capQ">Yükleniyor...</div>
                             <button class="cap-ref" onclick="loadCaptcha()" title="Yeni soru">↻</button>
                         </div>
-                        <label style="margin-top:12px">Cevap</label>
+                        <label for="capA" style="margin-top:12px">Cevap</label>
                         <div class="field"><input type="text" id="capA" inputmode="numeric" placeholder="Sonucu yaz"></div>
                     </div>
                 </div>
@@ -213,14 +220,14 @@
                 <!-- Gizlilik sözleşmesi -->
                 <div class="terms">
                     <div class="cbox" id="termsBox" onclick="toggleTerms()"></div>
-                    <label onclick="toggleTerms()"><a href="/privacy.html" onclick="event.preventDefault();openPrivacy()">Gizlilik Sözleşmesi</a> ve <a href="/privacy.html" onclick="event.preventDefault();openPrivacy()">Kullanım Koşulları</a>'nı okudum, kabul ediyorum.</label>
+                    <label onclick="toggleTerms()"><a href="/privacy.html" onclick="event.preventDefault();event.stopPropagation();openPrivacy()">Gizlilik Sözleşmesi</a> ve <a href="/privacy.html" onclick="event.preventDefault();event.stopPropagation();openPrivacy()">Kullanım Koşulları</a>'nı okudum, kabul ediyorum.</label>
                 </div>
 
                 <button class="auth-btn" id="regBtn" onclick="handleRegister()">Hesap Oluştur</button>
             </div>
         </div>
 
-        <div id="msg" class="msg-box"></div>
+        <div id="msg" class="msg-box" role="alert"></div>
 
         <footer class="legal-foot">
             <a href="/privacy.html">Gizlilik Sözleşmesi</a><span>·</span>
@@ -235,7 +242,7 @@
             <h3>Gizlilik Sözleşmesi ve Kullanım Koşulları</h3>
             <div class="modal-body">
                 <h4>1. Toplanan Veriler</h4>
-                <p>LumoLive; hizmeti sunabilmek için yalnızca kullanıcı adını, şifrenin bcrypt ile geri döndürülemez biçimde şifrelenmiş özetini ve hesabın oluşturulma tarihini saklar. Şifreniz hiçbir zaman düz metin olarak tutulmaz.</p>
+                <p>LumoLive; hizmeti sunabilmek için yalnızca kullanıcı adını, şifrenin bcrypt ile geri döndürülemez biçimde şifrelenmiş özetini hesabın oluşturulma tarihini ve sözleşme kabul zamanını saklar. Şifreniz hiçbir zaman düz metin olarak tutulmaz.</p>
                 <h4>2. Verilerin Kullanımı</h4>
                 <ul>
                     <li>Hesabınıza giriş yapmanızı sağlamak,</li>
@@ -280,7 +287,7 @@
 
         function togglePass(id, btn) {
             const i = $(id); const show = i.type === 'password';
-            i.type = show ? 'text' : 'password'; btn.textContent = show ? '🙈' : '👁';
+            i.type = show ? 'text' : 'password'; btn.textContent = show ? '🙈' : '👁'; btn.setAttribute('aria-label', show ? 'Şifreyi gizle' : 'Şifreyi göster');
         }
 
         // ---- Şifre gücü ----
@@ -296,6 +303,7 @@
             const map = [['0%', '#5865F2'], ['25%', '#ed4245'], ['45%', '#e67e22'], ['65%', '#f1c40f'], ['85%', '#23a55a'], ['100%', '#23a55a']];
             const [w, c] = map[Math.min(s, 5)];
             bar.style.width = v ? w : '0'; bar.style.background = c;
+            $('strTxt').textContent = v ? ['','Çok zayıf','Zayıf','Orta','Güçlü','Çok güçlü'][Math.min(s,5)] || 'Çok zayıf' : '';
         }
 
         // ---- Robot doğrulaması ----
@@ -387,10 +395,21 @@
         }
 
         document.addEventListener('keydown', e => {
-            if (e.key !== 'Enter') return;
+            if (e.key === 'Escape') return closePrivacy();
+            if (e.key !== 'Enter' || $('privacyModal').classList.contains('on') || e.target.closest('button,.cbox')) return;
             $('login-form').classList.contains('active') ? handleLogin() : handleRegister();
         });
         $('privacyModal').addEventListener('click', e => { if (e.target.id === 'privacyModal') closePrivacy(); });
+    
+        // Erişilebilirlik: onay kutuları klavye ile kullanılabilsin
+        const syncCb = c => c.setAttribute('aria-checked', c.classList.contains('on'));
+        const cbObs = new MutationObserver(ms => ms.forEach(m => syncCb(m.target)));
+        document.querySelectorAll('.cbox').forEach(c => {
+            c.tabIndex = 0; c.setAttribute('role', 'checkbox'); syncCb(c);
+            cbObs.observe(c, { attributes: true, attributeFilter: ['class'] });
+            c.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); c.click(); } });
+        });
+        if (matchMedia('(hover:hover)').matches) $('loginUsername').focus();
     </script>
 </body>
 </html>

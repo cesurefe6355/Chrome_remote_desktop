@@ -9,10 +9,10 @@
 <title>LumoLive</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:'gg sans','Noto Sans','Helvetica Neue',Helvetica,Arial,sans-serif}
-body{background:#313338;color:#dbdee1;height:100vh;overflow:hidden}
+body{background:#313338;color:#dbdee1;height:100vh;height:100dvh;overflow:hidden}
 ::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:#1a1b1e;border-radius:4px}
 svg{width:20px;height:20px;fill:currentColor;display:block}
-.app{display:flex;height:100vh}
+.app{display:flex;height:100vh;height:100dvh}
 .rail{width:72px;background:#1e1f22;display:flex;flex-direction:column;align-items:center;padding-top:12px;flex-shrink:0}
 .srv{width:48px;height:48px;border-radius:16px;background:#5865F2;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;position:relative}
 .srv::before{content:"";position:absolute;left:-12px;width:4px;height:40px;background:#fff;border-radius:0 4px 4px 0}
@@ -354,6 +354,14 @@ body.no-members .members{display:none}
   .jump{bottom:72px;right:12px}
   .set-body{max-height:66vh}
 }
+
+/* ---------- v3: erişilebilirlik ve mobil düzeltmeleri ---------- */
+:root{--t4:#9096a0}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+.inp{padding-bottom:max(20px,env(safe-area-inset-bottom))}
+.ch,.mi{min-height:36px}
+body.mem-open .members{display:block!important;position:fixed;right:0;top:54px;bottom:0;z-index:50;box-shadow:var(--sh2)}
+@media(max-width:768px){.inp{padding-bottom:max(14px,env(safe-area-inset-bottom))}.ib,.cb{min-width:40px;min-height:40px}}
 </style>
 </head>
 <body>
@@ -575,6 +583,7 @@ body.no-members .members{display:none}
 const user = localStorage.getItem('lumolive_user'), token = localStorage.getItem('lumolive_token');
 if (!user || !token) location.replace('/login.html');
 const $ = id => document.getElementById(id);
+const escH = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const openM = id => $(id).style.display = 'flex', closeM = id => $(id).style.display = 'none';
 const info = (t, d) => { $('infoT').textContent = t; $('infoD').textContent = d; openM('mInfo'); };
 const color = n => `hsl(${[...n].reduce((a, c) => a + c.charCodeAt(0) * 7, 0) % 360},55%,45%)`;
@@ -692,7 +701,7 @@ setInterval(() => {
 }, 100);
 
 // ----- Mikrofon / Sağırlaştırma -----
-const micReady = navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
+const micReady = (navigator.mediaDevices || { getUserMedia: () => Promise.reject() }).getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
   .then(s => { micStream = s; watch('me', s); syncBtns(); }).catch(() => syncBtns());
 const vs = () => socket.emit('voice-state', { muted: !micStream || !micOn, deaf });
 function syncBtns() {
@@ -766,7 +775,7 @@ function selectText(id) { textId = id; $('msgs').innerHTML = ''; jumpN = 0; upda
 socket.on('text-joined', ({ channelId, messages }) => {
   if (channelId !== textId) return;
   $('msgs').innerHTML = ''; messages.forEach(addMsg);
-  if (!messages.length) $('msgs').innerHTML = `<div class="empty"><h2>#${textName(channelId)} kanalına hoş geldin!</h2>Burası bu kanalın başlangıcı. Aşağıdaki kutudan ilk mesajı yaz.</div>`;
+  if (!messages.length) $('msgs').innerHTML = `<div class="empty"><h2>#${escH(textName(channelId))} kanalına hoş geldin!</h2>Burası bu kanalın başlangıcı. Aşağıdaki kutudan ilk mesajı yaz.</div>`;
   const box = $('msgs'); box.scrollTop = box.scrollHeight; jumpN = 0; updateJump();
 });
 const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
@@ -843,7 +852,7 @@ socket.on('chat-message', m => { addMsg(m); if (m.username !== user) play('msg')
 socket.on('message-deleted', ({ msgId }) => {
   const m = document.querySelector(`.msg[data-id="${msgId}"]`); if (m) m.remove();
   const box = $('msgs');
-  if (box && !box.querySelector('.msg') && textId) box.innerHTML = `<div class="empty"><h2>#${textName(textId)} kanalına hoş geldin!</h2>Burası bu kanalın başlangıcı.</div>`;
+  if (box && !box.querySelector('.msg') && textId) box.innerHTML = `<div class="empty"><h2>#${escH(textName(textId))} kanalına hoş geldin!</h2>Burası bu kanalın başlangıcı.</div>`;
 });
 // Küfür uyarısı: 1-2. ihlal uyarı, 3. ihlalde hesap kalıcı banlanır
 socket.on('profanity-warning', w => {
@@ -1331,6 +1340,12 @@ window.addEventListener('beforeunload', () => socket.emit('leave-room'));
   if (left <= 0) { alert('1 saatlik oturum süren doldu. Güvenlik için tekrar giriş yapmalısın.'); return logout(); }
   setTimeout(() => { alert('1 saatlik oturum süren doldu. Güvenlik için çıkış yapıldı.'); logout(); }, left);
 })();
+
+// Esc / boşluğa tıklama ile pencereleri kapat, ikon düğmelerine erişilebilir ad ver
+document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.ov').forEach(o => { if (o.style.display === 'flex') closeM(o.id); }); });
+document.querySelectorAll('.ov').forEach(o => o.addEventListener('mousedown', e => { if (e.target === o) closeM(o.id); }));
+document.querySelectorAll('button[title]').forEach(b => b.setAttribute('aria-label', b.title));
+$('btnMembers').addEventListener('click', () => { if (innerWidth <= 900) document.body.classList.toggle('mem-open'); });
 
 setView('text'); syncBtns();
 </script>

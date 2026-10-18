@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
 <title>LumoLive · Yönetici Paneli (Muhtar)</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:'gg sans','Noto Sans','Helvetica Neue',Helvetica,Arial,sans-serif}
@@ -92,6 +93,13 @@ tr:hover td{background:#2e3035}
 .tmsg{background:#111214;color:#f2f3f5;padding:11px 16px;border-radius:8px;border-left:4px solid #5865F2;font-size:14px;box-shadow:0 6px 18px rgba(0,0,0,.5);animation:sin .25s}
 .tmsg.ok{border-color:#23a55a}.tmsg.err{border-color:#ed4245}
 @keyframes sin{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+body{min-height:100vh;min-height:100dvh}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #a8b1ff;outline-offset:2px}
+.stat small,th{color:#a0a6af}
+.empty,.top .meta,.toolbar .meta{color:#9096a0}
+.box{max-height:90vh;overflow-y:auto}
+@media(max-width:640px){#panel{padding:12px}.acts button{padding:8px 11px}.mrow{flex-wrap:wrap}.mrow .who{min-width:0}}
 </style>
 </head>
 <body>
@@ -284,7 +292,8 @@ document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
 });
 
 // ---------- Veri ----------
-async function refresh() {
+async function refresh(force) {
+  if (!force && document.querySelector('.ov.on')) return; // modal açıkken liste yeniden çizilmesin
   try {
     data = await api('/api/admin/data');
     renderStats(); renderUsers(); renderMsgs();
@@ -304,7 +313,7 @@ function fmtDate(t) { return t ? new Date(t).toLocaleString('tr-TR') : '-'; }
 function renderUsers() {
   const tb = $('userRows'); tb.innerHTML = '';
   const q = ($('userSearch').value || '').trim().toLowerCase();
-  const list = data.users.filter(u => !q || u.username.toLowerCase().includes(q));
+  const list = data.users.filter(u => !q || u.username.toLowerCase().includes(q)).sort((a, b) => (b.online - a.online) || a.username.localeCompare(b.username, 'tr'));
   $('userCount').textContent = list.length + ' / ' + data.users.length + ' kullanıcı';
   if (!list.length) { tb.innerHTML = `<tr><td colspan="6" class="empty">${q ? 'Eşleşen kullanıcı yok.' : 'Kullanıcı yok.'}</td></tr>`; return; }
   list.forEach(u => {
@@ -341,8 +350,8 @@ function mkBtn(label, cls, fn) { const b = document.createElement('button'); b.c
 function renderMsgs() {
   const sel = $('chanSel');
   const prev = activeChan;
-  sel.innerHTML = '';
-  data.channels.forEach(c => { const o = document.createElement('option'); o.value = c.id; o.textContent = '#' + c.name; sel.appendChild(o); });
+  const sig = data.channels.map(c => c.id + ':' + c.name).join('|');
+  if (sel.dataset.sig !== sig) { sel.innerHTML = ''; data.channels.forEach(c => { const o = document.createElement('option'); o.value = c.id; o.textContent = '#' + c.name; sel.appendChild(o); }); sel.dataset.sig = sig; }
   if (!data.channels.length) { $('msgList').innerHTML = '<div class="empty">Kanal yok.</div>'; $('msgCount').textContent = ''; return; }
   activeChan = data.channels.some(c => c.id === prev) ? prev : data.channels[0].id;
   sel.value = activeChan;
@@ -375,7 +384,7 @@ $('btnClear').onclick = () => {
 };
 
 async function act(action, body, okMsg) {
-  try { await api('/api/admin/' + action, body); toast(okMsg, 'ok'); refresh(); }
+  try { await api('/api/admin/' + action, body); toast(okMsg, 'ok'); refresh(true); }
   catch (e) { toast(e.message || 'İşlem başarısız', 'err'); }
 }
 
@@ -417,8 +426,14 @@ $('btnDelGo').onclick = async () => {
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
 
+// Esc ve boşluğa tıklama ile modal kapat
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeBan(); closePw(); closeDel(); } });
+document.querySelectorAll('.ov').forEach(o => o.addEventListener('mousedown', e => { if (e.target === o) { closeBan(); closePw(); closeDel(); } }));
+$('banReason').addEventListener('keydown', e => { if (e.key === 'Enter') $('btnBanGo').click(); });
+$('pwNewB').addEventListener('keydown', e => { if (e.key === 'Enter') $('btnPwGo').click(); });
+$('delConfirm').addEventListener('keydown', e => { if (e.key === 'Enter') $('btnDelGo').click(); });
 // Açılış
-if (token) showPanel(); else $('login').style.display = 'flex';
+if (token) showPanel(); else { $('login').style.display = 'flex'; $('pw').focus(); }
 </script>
 </body>
 </html>
