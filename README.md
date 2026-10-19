@@ -20,6 +20,12 @@ Sesli sohbet + canlı ekran yayını uygulaması. İki şekilde çalışır:
   **1. ve 2. ihlal → uyarı**, **3. ihlal → hesap kalıcı olarak banlanır** ve kullanıcı oturumdan atılır.
   (24 saat cezasız geçerse uyarı sayacı sıfırlanır.)
 - **Kod paylaşımı:** Sohbetteki **+** butonuna bas → kodu yapıştır → sohbete **`kod-<kullanıcıadı>.txt`** dosyası olarak gönderilir (indirilebilir).
+- **Spam koruması (otomatik):** 5 saniyede 5'ten fazla mesaj, dakikada 20'den fazla mesaj, aynı mesajı tekrar tekrar gönderme
+  ve anlamsız karakter yığınları engellenir. Tekrarlayan ihlallerde kademeli kısa susturma uygulanır
+  (10 sn → 30 sn → 2 dk); sayaç 5 dakika temiz kalınca sıfırlanır. Reddedilen mesaj kutuda kalır, kaybolmaz.
+- **Masaüstü bildirimleri:** Chrome arka plandayken yeni mesajlar işletim sistemi bildirimi olarak görünür;
+  bildirime tıklayınca ilgili kanal açılır. Sekme başlığında okunmamış mesaj sayısı `(3) LumoLive` şeklinde gösterilir.
+  Bildirim izni Ayarlar → Bildirimler veya üst çubuktaki 🔔 düğmesinden verilir.
 - **Ekran yayını:** Kanal içinde ekran paylaşımı, kalite seçenekleri (720p→4K, 30→144 FPS, bit hızı, kodek, sistem sesi).
 - **Modern arayüz:** Discord tarzı mesaj gruplama, "en alta in" düğmesi + okunmamış sayacı,
   Enter ile gönder / Shift+Enter ile alt satır, `Ctrl+K` ile mesaj kutusuna gitme.

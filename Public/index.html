@@ -6,6 +6,7 @@
 <meta name="description" content="LumoLive — güvenli metin ve sesli sohbet, ekran paylaşımı ve kod paylaşımı.">
 <meta name="theme-color" content="#313338">
 <meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%235865F2'/%3E%3Ctext x='32' y='45' font-family='Arial,sans-serif' font-size='38' font-weight='bold' text-anchor='middle' fill='white'%3EL%3C/text%3E%3C/svg%3E">
 <title>LumoLive</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:'gg sans','Noto Sans','Helvetica Neue',Helvetica,Arial,sans-serif}
@@ -253,6 +254,10 @@ button.g:hover{background:var(--bg5);color:var(--t0);filter:none}
 .hd .t{min-width:0}
 .hd .t #title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hd-r{display:flex;align-items:center;gap:8px;flex-shrink:0}
+#btnNotif{position:relative}
+#btnNotif .ndot{display:none;position:absolute;top:5px;right:5px;width:8px;height:8px;border-radius:50%;background:#ed4245;box-shadow:0 0 0 2px var(--bg3)}
+#btnNotif.unread .ndot{display:block}
+#btnNotif.on{color:var(--accent)}
 .hd-sub{font-size:12px;color:var(--t4);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:36vw}
 .hdburger{display:none}
 
@@ -288,6 +293,9 @@ body.no-members .members{display:none}
 .cc.on{display:block}
 .send{background:none;color:var(--t3);padding:8px;margin-right:4px;border-radius:9px;display:flex}
 .send:hover{background:none;color:var(--accent);filter:none;transform:none}
+.send:disabled,.plus:disabled{opacity:.35;cursor:not-allowed;filter:none;transform:none}
+.cc.slow{display:none;color:#f0b132;font-weight:700;white-space:nowrap}
+.cc.slow.on{display:block}
 .plus{width:44px;height:44px;border-radius:12px}
 .plus:hover{background:var(--accent)}
 
@@ -337,6 +345,9 @@ body.no-members .members{display:none}
 .kv{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:14px;color:var(--t3)}
 .kv b{color:var(--t0)}
 .about-note{margin-top:14px;font-size:12px;color:var(--t4);line-height:1.6;background:var(--bg0);border-radius:10px;padding:12px}
+.nstate{font-size:11px;color:var(--t4);font-weight:500;margin-left:6px}
+.nstate.ok{color:#23a55a}
+.nstate.err{color:#ed4245}
 .switch{background:var(--bg0)}
 .switch.on{background:var(--accent)}
 
@@ -496,7 +507,9 @@ body.mem-open .members{display:block!important;position:fixed;right:0;top:54px;b
     <section class="sv" id="sv-notif">
       <div class="row2"><span>🔔 Mesaj ve katılım sesleri</span><div class="switch on" id="swSnd2"></div></div>
       <div class="row2"><span>🔊 Sesi dene</span><button class="g" type="button" id="btnTestSnd">Test et</button></div>
-      <div class="about-note">Sesler tarayıcıda üretilir; hiçbir dosya indirilmez. Sesi kapatmak tüm bildirim seslerini susturur.</div>
+      <div class="row2"><span>🖥️ Masaüstü bildirimleri <small class="nstate" id="notifState">Kapalı</small></span><div class="switch" id="swNotif"></div></div>
+      <div class="row2"><span>🔢 Sekme başlığında okunmamış sayısı</span><div class="switch on" id="swBadge"></div></div>
+      <div class="about-note">Chrome arka plandayken yeni mesajlar masaüstü bildirimi olarak görünür; bildirime tıklayınca ilgili kanal açılır. Sekme başlığındaki sayı, görmediğin mesajları gösterir. Sesler tarayıcıda üretilir; hiçbir dosya indirilmez.</div>
     </section>
 
     <section class="sv" id="sv-look">
@@ -559,6 +572,7 @@ body.mem-open .members{display:block!important;position:fixed;right:0;top:54px;b
     </div>
     <div class="hd-r">
       <span class="hd-sub" id="hdSub">Metin kanalı</span>
+      <button class="ib" id="btnNotif" title="Masaüstü bildirimleri"><i data-ic="bell"></i><span class="ndot" id="notifDot"></span></button>
       <button class="ib" id="btnMembers" title="Üye listesini göster/gizle"><i data-ic="users"></i></button>
     </div>
   </div>
@@ -570,6 +584,7 @@ body.mem-open .members{display:block!important;position:fixed;right:0;top:54px;b
           <button class="plus" id="btnCode" title="Kod paylaş — kod-kullanıcıadı.txt olarak gönderilir"><i data-ic="plus"></i></button>
           <div class="inpbox">
             <input id="chatIn" maxlength="500" autocomplete="off" placeholder="Mesaj gönder">
+            <span class="cc slow" id="slow"></span>
             <span class="cc" id="cc">0/500</span>
             <button class="send" id="btnSend" title="Gönder (Enter)"><i data-ic="send"></i></button>
           </div>
@@ -698,6 +713,131 @@ $('btnSnd').classList.toggle('off', !soundOn);
 $('btnSnd').onclick = () => { soundOn = !soundOn; localStorage.setItem('lumolive_sound', soundOn ? '1' : '0'); $('btnSnd').classList.toggle('off', !soundOn); play('unmute'); };
 const setNames = ms => { names = {}; ms.forEach(m => names[m.id] = m.username); };
 
+// ----- Masaüstü bildirimleri + sekme başlığı rozeti -----
+const BASE_TITLE = document.title || 'LumoLive';
+const notifSupported = 'Notification' in window;
+const permGranted = () => notifSupported && Notification.permission === 'granted';
+let notifyOn = localStorage.getItem('lumolive_notify') === '1' || (localStorage.getItem('lumolive_notify') == null && permGranted());
+let badgeOn = localStorage.getItem('lumolive_badge') !== '0';
+let unread = 0, hiddenAt = 0;
+if (!permGranted()) notifyOn = false;
+
+function syncNotifUI() {
+  const btn = $('btnNotif'), sw = $('swNotif'), st = $('notifState');
+  if (!btn || !sw || !st) return;
+  btn.classList.toggle('on', notifyOn);
+  sw.classList.toggle('on', notifyOn);
+  $('swBadge').classList.toggle('on', badgeOn);
+  let txt = 'Kapalı', cls = '';
+  if (!notifSupported) { txt = 'Desteklenmiyor'; cls = 'err'; }
+  else if (!window.isSecureContext) { txt = 'HTTPS gerekli'; cls = 'err'; }
+  else if (Notification.permission === 'denied') { txt = 'Tarayıcı engelledi'; cls = 'err'; }
+  else if (notifyOn && Notification.permission === 'granted') { txt = 'Açık'; cls = 'ok'; }
+  else if (Notification.permission === 'default') { txt = 'İzin gerekli'; }
+  st.textContent = txt; st.className = 'nstate ' + cls;
+  btn.title = 'Masaüstü bildirimleri: ' + (notifyOn ? 'açık' : 'kapalı');
+}
+function setNotifyPref(on) {
+  notifyOn = !!on && permGranted();
+  localStorage.setItem('lumolive_notify', notifyOn ? '1' : '0');
+  syncNotifUI();
+  toast(notifyOn ? 'Masaüstü bildirimleri açık' : 'Masaüstü bildirimleri kapalı', notifyOn ? 'live' : 'leave');
+}
+async function toggleNotifications() {
+  if (!notifSupported) return info('Desteklenmiyor', 'Bu tarayıcı masaüstü bildirimlerini desteklemiyor.');
+  if (!window.isSecureContext) return info('Güvenli bağlantı gerekli', 'Masaüstü bildirimleri için site HTTPS üzerinden açılmalı (Render adresi HTTPS kullanır).');
+  if (Notification.permission === 'denied') return info('Bildirimler engelli',
+    'Chrome adres çubuğundaki kilit simgesine tıkla → "Bildirimler" → "İzin ver" seç. Sonra bu düğmeye tekrar bas.');
+  if (notifyOn) return setNotifyPref(false);
+  if (!permGranted()) {
+    let p = 'denied';
+    try { p = await Notification.requestPermission(); } catch { /* yoksay */ }
+    if (p !== 'granted') { syncNotifUI(); return info('İzin verilmedi', 'Bildirimleri görmek için Chrome\'un izin isteminde "İzin ver" seçmelisin.'); }
+  }
+  setNotifyPref(true);
+  try {
+    const n = new Notification('LumoLive', { body: 'Bildirimler açık. Chrome arka plandayken yeni mesajları burada göreceksin.', tag: 'lumolive-test', silent: true });
+    setTimeout(() => { try { n.close(); } catch { /* yoksay */ } }, 5000);
+  } catch { /* yoksay */ }
+}
+function updateTitleBadge() {
+  document.title = (badgeOn && unread > 0) ? `(${unread > 99 ? '99+' : unread}) ${BASE_TITLE}` : BASE_TITLE;
+  const b = $('btnNotif'); if (b) b.classList.toggle('unread', unread > 0);
+}
+function clearUnread() { if (unread !== 0) { unread = 0; updateTitleBadge(); } }
+function markUnread() { unread++; updateTitleBadge(); }
+function showDesktopNotification(n) {
+  if (!notifyOn || !permGranted()) return;
+  if (!document.hidden && document.hasFocus()) return;
+  try {
+    const nt = new Notification(`${n.username} · #${n.channelName || 'kanal'}`, {
+      body: n.preview || 'Yeni mesaj', tag: 'lumolive-' + (n.channelId || 'ch'), renotify: true, silent: true
+    });
+    nt.onclick = () => {
+      try { window.focus(); } catch { /* yoksay */ }
+      try { nt.close(); } catch { /* yoksay */ }
+      if (n.channelId && n.channelId !== textId) selectText(n.channelId);
+      clearUnread();
+    };
+  } catch { /* yoksay */ }
+}
+// Chrome arka plandayken gelen mesajlar: masaüstü bildirimi + başlık rozeti
+socket.on('notify-message', n => {
+  if (!n || n.username === user) return;
+  const looking = view === 'text' && !document.hidden && document.hasFocus() && n.channelId === textId;
+  if (looking) return;
+  markUnread();
+  showDesktopNotification(n);
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) hiddenAt = Date.now();
+  else if (hiddenAt) { hiddenAt = 0; clearUnread(); }
+});
+window.addEventListener('focus', () => { if (!document.hidden) clearUnread(); });
+$('btnNotif').onclick = toggleNotifications;
+$('swNotif').onclick = toggleNotifications;
+$('swBadge').onclick = () => {
+  badgeOn = !badgeOn; localStorage.setItem('lumolive_badge', badgeOn ? '1' : '0');
+  $('swBadge').classList.toggle('on', badgeOn); updateTitleBadge();
+};
+syncNotifUI();
+updateTitleBadge();
+// İlk kullanımda bildirim izni için tek seferlik ipucu (izin istemi yalnızca tıklamayla açılır)
+if (notifSupported && window.isSecureContext && Notification.permission === 'default' && !localStorage.getItem('lumolive_notif_hint')) {
+  setTimeout(() => {
+    localStorage.setItem('lumolive_notif_hint', '1');
+    toast('Arka planda bildirim için üstteki 🔔 düğmesine bas', 'live');
+  }, 5000);
+}
+
+// ----- Spam cezası sayacı (sunucu kaynaklı) -----
+let spamUntil = 0, spamTick = null, lastSentAt = 0;
+function spamLock(ms) {
+  if (!(ms > 0)) return;
+  spamUntil = Math.max(spamUntil, Date.now() + ms);
+  $('slow').classList.add('on');
+  $('btnSend').disabled = true; $('btnCode').disabled = true;
+  const paint = () => {
+    const s = Math.ceil((spamUntil - Date.now()) / 1000);
+    if (s <= 0) {
+      clearInterval(spamTick); spamTick = null; spamUntil = 0;
+      $('slow').classList.remove('on'); $('slow').textContent = '';
+      $('btnSend').disabled = false; $('btnCode').disabled = false;
+    } else $('slow').textContent = `⏳ ${s} sn`;
+  };
+  paint();
+  if (spamTick) clearInterval(spamTick);
+  spamTick = setInterval(paint, 250);
+}
+socket.on('spam-blocked', d => {
+  d = d || {};
+  const ms = d.mutedUntil ? Math.max(0, d.mutedUntil - Date.now()) : (d.retryAfter || 2000);
+  if (ms > 0) spamLock(ms);
+  const secs = Math.max(1, Math.ceil(ms / 1000));
+  const base = d.reason || 'Çok hızlı yazıyorsun.';
+  toast(d.mutedUntil ? `${base} ${secs} sn mesaj gönderemezsin.` : `${base} ${secs} sn bekle.`, 'leave');
+});
+
 // ----- Konuşma göstergesi (yeşil halka) -----
 function unwatch(k) { const w = watchers[k]; if (w) { try { w.src.disconnect(); } catch {} delete watchers[k]; } }
 function watch(k, stream) {
@@ -784,7 +924,7 @@ function setView(v) {
 }
 
 // ----- Metin kanalı -----
-function selectText(id) { textId = id; $('msgs').innerHTML = ''; jumpN = 0; updateJump(); socket.emit('join-text', { channelId: id }); setView('text'); }
+function selectText(id) { clearUnread(); textId = id; $('msgs').innerHTML = ''; jumpN = 0; updateJump(); socket.emit('join-text', { channelId: id }); setView('text'); }
 socket.on('text-joined', ({ channelId, messages }) => {
   if (channelId !== textId) return;
   $('msgs').innerHTML = ''; messages.forEach(addMsg);
@@ -879,8 +1019,16 @@ socket.on('reaction-update', ({ msgId, reactions, emoji, added }) => {
 function sendChat() {
   const el = $('chatIn'), v = el.value;
   if (!v.trim()) return;
-  socket.emit('chat-message', { text: v });
-  el.value = ''; $('cc').classList.remove('on'); el.focus();
+  const now = Date.now();
+  if (now < spamUntil) return toast(`Biraz bekle: ${Math.ceil((spamUntil - now) / 1000)} sn`, 'leave');
+  if (now - lastSentAt < 550) return; // yanlışlıkla çift Enter
+  lastSentAt = now;
+  // Kutu hemen temizlenir; sunucu reddederse metin geri konur (kullanıcı kaybetmez)
+  el.value = ''; $('cc').textContent = '0/500'; $('cc').classList.remove('on'); el.focus();
+  socket.emit('chat-message', { text: v }, res => {
+    if (res && res.ok) return;
+    if (!el.value.trim()) { el.value = v; el.dispatchEvent(new Event('input')); }
+  });
 }
 $('btnSend').onclick = sendChat;
 $('chatIn').onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } };
@@ -899,8 +1047,10 @@ $('btnCode').onclick = () => {
 $('btnSendCode').onclick = () => {
   const code = $('codeText').value;
   if (!code.trim()) return;
-  socket.emit('code-message', { code });
-  closeM('mCode');
+  socket.emit('code-message', { code }, res => {
+    if (res && res.ok) { $('codeText').value = ''; closeM('mCode'); }
+    // Spam/hata durumunda modal açık kalır; kod kaybolmaz
+  });
 };
 
 // ----- Ayarlar penceresi (sekmeli) -----
@@ -912,6 +1062,7 @@ function openSettings(tab) {
   $('swCompact').classList.toggle('on', document.body.classList.contains('compact'));
   $('swNoAv').classList.toggle('on', document.body.classList.contains('noav'));
   $('swMembers').classList.toggle('on', !document.body.classList.contains('no-members'));
+  syncNotifUI();
   setSettingTab(tab || 'acc');
   openM('mPass');
 }

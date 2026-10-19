@@ -233,6 +233,95 @@ function limited(key, max, ms) {
 }
 setInterval(() => { const n = Date.now(); for (const [k, v] of hits) if (!v.some(t => n - t < 60000)) hits.delete(k); }, 60000);
 
+// ---------- Sohbet spam koruması ----------
+// Amaç: hızlı ardışık mesaj, aynı mesajı tekrarlama ve anlamsız karakter yığınlarını engellemek.
+// İhlaller kademeli kısa susturmalara dönüşür; 5 dakika temiz kalınca ihlal sayacı sıfırlanır.
+const SPAM = {
+    BURST_MS: 5000, BURST_MAX: 5,           // 5 sn içinde en fazla 5 mesaj
+    WINDOW_MS: 60000, WINDOW_MAX: 20,       // 1 dk içinde en fazla 20 mesaj
+    MIN_INTERVAL_MS: 500,                   // iki mesaj arasında en az 0,5 sn
+    DUP_MS: 30000,                          // aynı mesajı 30 sn içinde tekrar etme
+    RECENT_MAX: 8,                          // son 8 mesajı karşılaştır
+    VIOLATION_WINDOW_MS: 5 * 60000,         // 5 dk temiz kalınca ihlaller sıfırlanır
+    MUTE_STEPS: [0, 10000, 30000, 120000],  // 1. ihlal uyarı, 2. 10 sn, 3. 30 sn, 4+ 2 dk
+    SHORT_COOLDOWN: 2000
+};
+const spamState = new Map();
+
+function spamGet(username) {
+    const key = String(username || '').toLowerCase();
+    let s = spamState.get(key);
+    if (!s) {
+        s = { times: [], recent: [], violations: 0, lastViolationAt: 0, muteUntil: 0 };
+        spamState.set(key, s);
+    }
+    return s;
+}
+function spamIsMuted(username) {
+    const s = spamState.get(String(username || '').toLowerCase());
+    return s && s.muteUntil > Date.now() ? s : null;
+}
+function spamViolation(s, now, reason) {
+    if (now - s.lastViolationAt > SPAM.VIOLATION_WINDOW_MS) s.violations = 0;
+    s.violations += 1;
+    s.lastViolationAt = now;
+    const step = Math.min(s.violations - 1, SPAM.MUTE_STEPS.length - 1);
+    const muteMs = SPAM.MUTE_STEPS[step];
+    if (muteMs > 0) s.muteUntil = Math.max(s.muteUntil, now + muteMs);
+    const muted = s.muteUntil > now;
+    return {
+        ok: false, reason,
+        violations: s.violations,
+        mutedUntil: muted ? s.muteUntil : 0,
+        retryAfter: muted ? s.muteUntil - now : SPAM.SHORT_COOLDOWN
+    };
+}
+function spamCheck(username, text) {
+    const s = spamGet(username), now = Date.now();
+    s.times = s.times.filter(t => now - t < SPAM.WINDOW_MS);
+    if (s.muteUntil > now) {
+        return {
+            ok: false, reason: 'Spam koruması nedeniyle kısa süre mesaj gönderemezsin.',
+            violations: s.violations, mutedUntil: s.muteUntil, retryAfter: s.muteUntil - now
+        };
+    }
+    const norm = String(text || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    // Aynı mesajı tekrar tekrar gönderme (kısa mesajlarda 3. tekrar engellenir)
+    s.recent = s.recent.filter(x => now - x.at < SPAM.DUP_MS);
+    const dup = norm ? s.recent.filter(x => x.text === norm).length : 0;
+    if (norm.length >= 12 && dup >= 1) return spamViolation(s, now, 'Aynı mesajı tekrar gönderme.');
+    if (norm.length < 12 && dup >= 2) return spamViolation(s, now, 'Aynı mesajı tekrar tekrar gönderme.');
+    // Anlamsız karakter yığını (örn. 200 karakterin yalnızca 5'i farklı)
+    if (norm.length >= 120 && new Set(norm).size <= 8) return spamViolation(s, now, 'Anlamsız karakter yığını gönderme.');
+    // Hız sınırları
+    const lastAt = s.times.length ? s.times[s.times.length - 1] : 0;
+    if (now - lastAt < SPAM.MIN_INTERVAL_MS) return spamViolation(s, now, 'Çok hızlı mesaj gönderiyorsun.');
+    if (s.times.filter(t => now - t < SPAM.BURST_MS).length >= SPAM.BURST_MAX)
+        return spamViolation(s, now, 'Çok hızlı mesaj gönderiyorsun.');
+    if (s.times.length >= SPAM.WINDOW_MAX)
+        return spamViolation(s, now, 'Çok fazla mesaj gönderdin, biraz bekle.');
+
+    s.times.push(now);
+    if (norm) { s.recent.push({ text: norm, at: now }); if (s.recent.length > SPAM.RECENT_MAX) s.recent.shift(); }
+    return { ok: true };
+}
+function emitSpamBlock(socket, r) {
+    socket.emit('spam-blocked', {
+        reason: r.reason || 'Çok hızlı mesaj gönderiyorsun.',
+        retryAfter: Math.max(500, r.retryAfter || 0),
+        mutedUntil: r.mutedUntil || 0,
+        violations: r.violations || 0
+    });
+}
+// 30 dakika boyunca mesaj atmayan ve susturması biten kullanıcıların kaydını temizle
+setInterval(() => {
+    const now = Date.now();
+    for (const [k, s] of spamState) {
+        const last = Math.max(s.times.length ? s.times[s.times.length - 1] : 0, s.lastViolationAt || 0);
+        if (s.muteUntil <= now && now - last > 30 * 60000) spamState.delete(k);
+    }
+}, 5 * 60000);
+
 // ---------- Robot doğrulaması (basit matematik CAPTCHA) ----------
 // Sunucu tarafında tutulur; cevap istemciye asla gönderilmez.
 const captchas = new Map();
@@ -645,6 +734,12 @@ io.on('connection', (socket) => {
     const username = socket.data.username;
     socket.emit('room-list-update', snapshot());
     broadcastOnline();
+    // Devam eden spam cezası varsa istemciye bildir (sayfa yenilense bile sayaç devam eder)
+    const muted = spamIsMuted(username);
+    if (muted) socket.emit('spam-blocked', {
+        reason: 'Devam eden spam cezası.', retryAfter: muted.muteUntil - Date.now(),
+        mutedUntil: muted.muteUntil, violations: muted.violations
+    });
 
     // Sunucu gecikmesi (ping) ölçümü için basit yankı
     safeOn(socket, 'latency', (start, cb) => { if (typeof cb === 'function') cb(start); });
@@ -711,28 +806,50 @@ io.on('connection', (socket) => {
         broadcastRooms();
     });
 
-    safeOn(socket, 'chat-message', async ({ text } = {}) => {
+    safeOn(socket, 'chat-message', async ({ text } = {}, ack) => {
+        const reply = res => { if (typeof ack === 'function') { try { ack(res); } catch { /* yoksay */ } } };
         const tid = socket.data.textId, t = texts[tid];
         text = String(text || '').trim().slice(0, 500);
-        if (!t || !text || limited('chat:' + socket.id, 8, 5000)) return;
+        if (!t || !text) return reply({ ok: false, error: 'empty' });
+        // Spam koruması: hız, tekrar ve karakter yığını kontrolü
+        const spam = spamCheck(username, text);
+        if (!spam.ok) { emitSpamBlock(socket, spam); return reply({ ok: false, spam: true }); }
         const result = analyze(text);
         const clean = censor(text);
         const msg = { id: crypto.randomUUID(), username, kind: 'text', text: clean, time: Date.now(), reactions: {} };
         t.messages.push(msg);
         if (t.messages.length > 100) t.messages.shift();
         io.to('t:' + tid).emit('chat-message', msg);
+        reply({ ok: true });
+        // Arka plan bildirimi: yalnızca aynı metin kanalındakilere hafif özet (gönderen hariç)
+        socket.to('t:' + tid).emit('notify-message', {
+            channelId: tid, channelName: t.name, username, kind: 'text',
+            preview: clean.replace(/\s+/g, ' ').slice(0, 140), time: msg.time
+        });
         // Yalnızca gönderen görebilsin: uyarı/ban akışı
         if (result.profane) await applyStrike(socket, result);
     });
 
     // Kod paylaşımı: girilen kod, "kod-<kullanıcıadı>.txt" dosyası olarak sohbete gönderilir.
-    safeOn(socket, 'code-message', ({ code } = {}) => {
+    safeOn(socket, 'code-message', ({ code } = {}, ack) => {
+        const reply = res => { if (typeof ack === 'function') { try { ack(res); } catch { /* yoksay */ } } };
         const tid = socket.data.textId, t = texts[tid];
-        if (!t) return socket.emit('error-msg', 'Önce bir metin kanalı seç.');
-        if (limited('code:' + socket.id, 5, 60000)) return socket.emit('error-msg', 'Çok sık kod paylaşıyorsun, biraz bekle.');
+        if (!t) { socket.emit('error-msg', 'Önce bir metin kanalı seç.'); return reply({ ok: false }); }
+        const sm = spamIsMuted(username);
+        if (sm) {
+            emitSpamBlock(socket, {
+                reason: 'Spam koruması nedeniyle kısa süre kod paylaşamazsın.',
+                mutedUntil: sm.muteUntil, retryAfter: sm.muteUntil - Date.now(), violations: sm.violations
+            });
+            return reply({ ok: false });
+        }
+        if (limited('code:' + socket.id, 5, 60000)) {
+            emitSpamBlock(socket, { reason: 'Çok sık kod paylaşıyorsun, biraz bekle.', retryAfter: 60000 });
+            return reply({ ok: false });
+        }
         code = String(code || '');
-        if (!code.trim()) return;
-        if (code.length > 100000) return socket.emit('error-msg', 'Kod çok büyük (en fazla ~100 KB).');
+        if (!code.trim()) return reply({ ok: false });
+        if (code.length > 100000) { socket.emit('error-msg', 'Kod çok büyük (en fazla ~100 KB).'); return reply({ ok: false }); }
         const msg = {
             id: crypto.randomUUID(), username, kind: 'file',
             name: `kod-${username}.txt`, size: Buffer.byteLength(code, 'utf8'),
@@ -741,6 +858,11 @@ io.on('connection', (socket) => {
         t.messages.push(msg);
         if (t.messages.length > 100) t.messages.shift();
         io.to('t:' + tid).emit('chat-message', msg);
+        reply({ ok: true });
+        socket.to('t:' + tid).emit('notify-message', {
+            channelId: tid, channelName: t.name, username, kind: 'file',
+            preview: '📄 ' + msg.name, time: msg.time
+        });
     });
 
     const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
