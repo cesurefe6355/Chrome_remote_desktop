@@ -1510,22 +1510,25 @@ $('btnGo').onclick = async () => {
     if (!selectedSource) return info('Kaynak seç', 'Lütfen paylaşacağın ekranı veya pencereyi seç.');
     await window.lumoDesktop.pickSource(selectedSource);
   }
-  const video = {
+  const video = DESKTOP ? true : {
     width: { ideal: w, max: w },
     height: { ideal: h, max: h },
-    frameRate: { ideal: fps, min: Math.min(30, fps), max: fps }
+    frameRate: { ideal: fps, max: fps },
+    displaySurface: streamCfg.src
   };
-  if (!DESKTOP) video.displaySurface = streamCfg.src;
   try {
     screen = await navigator.mediaDevices.getDisplayMedia({ video, audio: streamCfg.audio });
-  } catch { return info('İzin Hatası', 'Ekran paylaşımı başlatılamadı veya iptal edildi.'); }
+  } catch (err) {
+    console.error('getDisplayMedia error:', err);
+    return info('İzin Hatası', 'Ekran paylaşımı başlatılamadı veya iptal edildi: ' + (err.message || err.name || ''));
+  }
   closeM('mStream'); isHost = true;
   const vt = screen.getVideoTracks()[0];
   try {
     await vt.applyConstraints({
       width: { ideal: w, max: w },
       height: { ideal: h, max: h },
-      frameRate: { ideal: fps, min: Math.min(30, fps), max: fps }
+      frameRate: { ideal: fps, max: fps }
     });
   } catch {}
   vt.contentHint = 'motion';
