@@ -215,6 +215,18 @@ input[type=range]{width:100%;accent-color:#5865F2;margin-top:4px}
 .pk-right .optgrid{margin-bottom:2px}
 .pk-sec{font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#80848e;margin:14px 0 4px}
 .pk-sec:first-child{margin-top:0}
+/* Uzaktan kontrol şık kullanıcı kartları */
+.rc-user-card{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;margin-bottom:5px;background:#2b2d31;border:1px solid #1e1f22;border-radius:6px;cursor:pointer;transition:.15s}
+.rc-user-card:hover{background:#35373c;border-color:#5865F2}
+.rc-user-card.on{background:rgba(88,101,242,.14);border-color:#5865F2}
+.rc-u-info{display:flex;align-items:center;gap:8px;min-width:0}
+.rc-u-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.rc-u-dot.on{background:#23a55a;box-shadow:0 0 6px rgba(35,165,90,.6)}
+.rc-u-dot.off{background:#80848e}
+.rc-u-name{font-size:13px;font-weight:600;color:#dbdee1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rc-u-badge{font-size:10px;padding:2px 6px;border-radius:4px;background:#1e1f22;color:#949ba4}
+.rc-u-badge.on{color:#23a55a}
+.rc-user-card input[type="checkbox"]{accent-color:#5865F2;width:15px;height:15px;cursor:pointer}
 .pk-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 18px;background:#232428;border-top:1px solid rgba(0,0,0,.35);flex-shrink:0}
 .pk-sum{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:#80848e}
 .pk-sum b{color:#f2f3f5;font-variant-numeric:tabular-nums}
@@ -463,17 +475,23 @@ body.mem-open .members{display:block!important;position:fixed;right:0;top:54px;b
       <div class="pk-sec">Ses</div>
       <div class="row2"><span>🔊 Sistem sesini paylaş</span><div class="switch on" id="swAudio"></div></div>
 
-      <div class="pk-sec" style="margin-top:12px;">🎮 Uzaktan Kontrol İzinleri</div>
-      <label style="font-size:12px;color:#949ba4;">Yayın sırasında kimler bilgisayarınızı kontrol edebilir?</label>
-      <select id="mStreamRcPolicy" style="margin-top:4px;">
-        <option value="off">Kapalı (kimse kontrol edemez)</option>
-        <option value="selected" selected>Seçili kullanıcılar (izinsiz doğrudan kontrol)</option>
-        <option value="everyone">Herkese sor (her istekte bana sor)</option>
-        <option value="everyone_auto">Herkese açık (isteyen herkes izinsiz kontrol etsin)</option>
+      <div class="pk-sec" style="margin-top:14px;display:flex;align-items:center;justify-content:space-between;">
+        <span>🎮 Uzaktan Kontrol</span>
+        <span style="font-size:10px;color:#5865F2;text-transform:none;font-weight:600;">İzin Politikası</span>
+      </div>
+      <select id="mStreamRcPolicy" style="margin-top:4px;border:1px solid #3f4147;">
+        <option value="selected" selected>Seçili kullanıcılar (İzinsiz doğrudan kontrol)</option>
+        <option value="everyone_auto">Herkese açık (Tüm kullanıcılar doğrudan yönetsin)</option>
+        <option value="everyone">Herkese sor (Her istekte onay kutusu aç)</option>
+        <option value="off">Kapalı (Uzaktan kontrol devre dışı)</option>
       </select>
-      <div id="mStreamRcSelectedWrap" style="margin-top:6px;max-height:120px;overflow-y:auto;background:#1e1f22;border:1px solid #232428;border-radius:6px;padding:6px;">
-        <div style="font-size:11px;color:#949ba4;margin-bottom:4px;">Doğrudan kontrol edebilecek kişileri seçin:</div>
-        <div id="mStreamRcUserList"></div>
+      <div id="mStreamRcSelectedWrap" style="margin-top:8px;background:#1e1f22;border:1px solid #2b2d31;border-radius:8px;padding:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <span style="font-size:11px;font-weight:700;color:#949ba4;">DOĞRUDAN KONTROL EDEBİLECEKLER</span>
+          <span id="mRcSelectedCount" style="font-size:11px;color:#5865F2;font-weight:700;">0 seçili</span>
+        </div>
+        <input type="text" id="mRcSearchIn" placeholder="Kullanıcı ara..." style="width:100%;box-sizing:border-box;padding:6px 8px;margin-bottom:6px;font-size:12px;border-radius:6px;background:#2b2d31;border:1px solid #383a40;color:#dbdee1;outline:none;">
+        <div id="mStreamRcUserList" style="max-height:140px;overflow-y:auto;padding-right:2px;"></div>
       </div>
 
       <div class="warn" id="warnBox"></div>
@@ -1492,36 +1510,93 @@ $('btnShare').onclick = () => {
     $('srcTabs').querySelectorAll('.pk-tab').forEach(x => x.classList.toggle('on', x.dataset.t === 'screen'));
     loadSources();
   }
-  // Uzaktan kontrol izin listesini doldur
+  // Uzaktan kontrol izin listesini sunucudan (kayıtlı tüm kullanıcılar: online/offline) çek ve render et
   const mRcList = $('mStreamRcUserList');
   if (mRcList) {
-    mRcList.innerHTML = '';
-    const candUsers = (onlineUsers || []).filter(u => u !== user);
-    if (!candUsers.length) {
-      mRcList.innerHTML = '<div style="font-size:11px;color:#949ba4;">Odada başka kullanıcı yok.</div>';
-    } else {
-      candUsers.forEach(u => {
-        const row = document.createElement('label');
-        row.style.display = 'flex';
-        row.style.alignItems = 'center';
-        row.style.gap = '6px';
-        row.style.fontSize = '12px';
-        row.style.margin = '3px 0';
-        row.style.cursor = 'pointer';
+    mRcList.innerHTML = '<div style="font-size:11px;color:#949ba4;padding:8px;text-align:center;">Kullanıcılar yükleniyor...</div>';
+    
+    const updateCountLbl = () => {
+      if ($('mRcSelectedCount')) $('mRcSelectedCount').textContent = `${remotePermSelected.length} seçili`;
+    };
+
+    const renderUserList = (allUsers) => {
+      const q = ($('mRcSearchIn') ? $('mRcSearchIn').value.trim().toLowerCase() : '');
+      const filtered = allUsers.filter(u => u.username !== user && (!q || u.username.toLowerCase().includes(q)));
+      mRcList.innerHTML = '';
+      if (!filtered.length) {
+        mRcList.innerHTML = '<div style="font-size:11px;color:#949ba4;padding:8px;text-align:center;">Kullanıcı bulunamadı.</div>';
+        return;
+      }
+      filtered.forEach(u => {
+        const isChecked = remotePermSelected.includes(u.username);
+        const card = document.createElement('div');
+        card.className = 'rc-user-card' + (isChecked ? ' on' : '');
+
+        const info = document.createElement('div');
+        info.className = 'rc-u-info';
+        
+        const dot = document.createElement('div');
+        dot.className = 'rc-u-dot ' + (u.online ? 'on' : 'off');
+        dot.title = u.online ? 'Çevrimiçi' : 'Çevrimdışı';
+        info.appendChild(dot);
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'rc-u-name';
+        nameSpan.textContent = u.username;
+        info.appendChild(nameSpan);
+
+        const badge = document.createElement('span');
+        badge.className = 'rc-u-badge ' + (u.online ? 'on' : '');
+        badge.textContent = u.online ? 'Aktif' : 'Çevrimdışı';
+        info.appendChild(badge);
+
+        card.appendChild(info);
+
         const cb = document.createElement('input');
         cb.type = 'checkbox';
-        cb.value = u;
-        cb.checked = remotePermSelected.includes(u);
-        cb.onchange = () => {
-          if (cb.checked) { if (!remotePermSelected.includes(u)) remotePermSelected.push(u); }
-          else { remotePermSelected = remotePermSelected.filter(x => x !== u); }
+        cb.checked = isChecked;
+        card.appendChild(cb);
+
+        card.onclick = (e) => {
+          if (e.target !== cb) cb.checked = !cb.checked;
+          if (cb.checked) {
+            if (!remotePermSelected.includes(u.username)) remotePermSelected.push(u.username);
+            card.classList.add('on');
+          } else {
+            remotePermSelected = remotePermSelected.filter(x => x !== u.username);
+            card.classList.remove('on');
+          }
           localStorage.setItem('remotePermSelected', JSON.stringify(remotePermSelected));
+          updateCountLbl();
         };
-        row.appendChild(cb);
-        row.appendChild(document.createTextNode(u));
-        mRcList.appendChild(row);
+
+        mRcList.appendChild(card);
       });
+      updateCountLbl();
+    };
+
+    // Sunucudan kayıtlı tüm kullanıcıları getir
+    let fetchedUsers = [];
+    fetch('/api/users/list', { headers: { 'Authorization': 'Bearer ' + token } })
+      .then(r => r.json())
+      .then(d => {
+        if (d && Array.isArray(d.users)) {
+          fetchedUsers = d.users;
+        } else {
+          // Fallback: odadaki kullanıcılar
+          fetchedUsers = (onlineUsers || []).map(un => ({ username: un, online: true }));
+        }
+        renderUserList(fetchedUsers);
+      })
+      .catch(() => {
+        fetchedUsers = (onlineUsers || []).map(un => ({ username: un, online: true }));
+        renderUserList(fetchedUsers);
+      });
+
+    if ($('mRcSearchIn')) {
+      $('mRcSearchIn').oninput = () => renderUserList(fetchedUsers);
     }
+
     if ($('mStreamRcPolicy')) {
       $('mStreamRcPolicy').value = remotePermPolicy;
       $('mStreamRcSelectedWrap').style.display = remotePermPolicy === 'selected' ? 'block' : 'none';

@@ -414,6 +414,24 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
+// ---------- Kayıtlı Kullanıcıları Listele (Uzaktan Kontrol İzinleri vb. İçin) ----------
+app.get('/api/users/list', async (req, res) => {
+    const auth = verifyToken((req.headers.authorization || '').replace('Bearer ', ''));
+    if (!auth) return res.status(401).json({ error: 'Yetkisiz.' });
+    try {
+        const { rows } = await pool.query('SELECT username FROM users ORDER BY username ASC');
+        const online = new Set(onlineUsernames().map(u => u.toLowerCase()));
+        const users = rows.map(r => ({
+            username: r.username,
+            online: online.has(r.username.toLowerCase())
+        }));
+        res.json({ users });
+    } catch (e) {
+        console.error('Kullanıcı listesi hatası:', e.message);
+        res.status(500).json({ error: 'Kullanıcı listesi alınamadı.' });
+    }
+});
+
 // ---------- Kullanıcının KENDİ şifresini değiştirmesi ----------
 app.post('/api/account/change-password', async (req, res) => {
     const auth = verifyToken((req.headers.authorization || '').replace('Bearer ', ''));
