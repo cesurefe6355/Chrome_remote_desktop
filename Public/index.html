@@ -1507,11 +1507,7 @@ $('btnGo').onclick = async () => {
   const video = { width: { ideal: w }, height: { ideal: h }, frameRate: { ideal: fps, max: fps } };
   if (!DESKTOP) video.displaySurface = streamCfg.src;
   try {
-    const streamPromise = navigator.mediaDevices.getDisplayMedia({ video, audio: streamCfg.audio });
-    if (DESKTOP && window.lumoDesktop.startShare) {
-      window.lumoDesktop.startShare().catch(() => {});
-    }
-    screen = await streamPromise;
+    screen = await navigator.mediaDevices.getDisplayMedia({ video, audio: streamCfg.audio });
   } catch { return info('İzin Hatası', 'Ekran paylaşımı başlatılamadı veya iptal edildi.'); }
   closeM('mStream'); isHost = true;
   const vt = screen.getVideoTracks()[0];

@@ -9,8 +9,6 @@ contextBridge.exposeInMainWorld('lumoDesktop', {
     getSources: () => ipcRenderer.invoke('lumo:get-sources'),
     // Kullanıcının seçtiği kaynağı ana sürece bildirir (yayın başlatmadan hemen önce)
     pickSource: (id) => ipcRenderer.invoke('lumo:pick-source', String(id)),
-    // Seçili kaynakla ekran paylaşımını başlatır (getDisplayMedia handler'ını tetikler)
-    startShare: () => ipcRenderer.invoke('lumo:start-share'),
     // İşletim sistemi uzaktan kontrolü destekliyor mu (Windows masaüstü)
     isRemoteSupported: () => ipcRenderer.invoke('lumo:is-remote-supported'),
     // Uzaktan kontrol girdisini işletim sistemine ilet

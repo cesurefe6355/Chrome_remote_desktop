@@ -88,20 +88,7 @@ ipcMain.handle('lumo:minimize', () => { if (win && !win.isDestroyed()) { win.min
 ipcMain.handle('lumo:restore', () => { if (win && !win.isDestroyed()) { if (win.isMinimized()) win.restore(); win.focus(); return true; } return false; });
 
 // ---------- Ekran Paylaşımı ----------
-//
-// Yeni mimari (race-condition'siz):
-//   1. `setDisplayMediaRequestHandler` → handler tetiklendiğinde callback'i sakla ve
-//      renderer'a "hazır" sinyali gönder.
-//   2. Renderer zaten seçili kaynağı 'lumo:pick-source' ile bildirir.
-//   3. 'lumo:confirm-source' tetiklenince kaydedilen callback'i çağır.
-//
-//   Eski akış:
-//     pickSource(id) → getDisplayMedia() → handler → getSources yeniden → bul → callback
-//   Yeni akış:
-//     getDisplayMedia() → handler bekler →  user pick → confirm → callback  (tek getSources)
-//
-let pendingDisplayCallback = null;    // setDisplayMediaRequestHandler'den gelen callback
-let pendingSourceId = null;           // kullanıcının seçtiği kaynak ID'si
+let selectedSourceId = null;
 
 ipcMain.handle('lumo:get-sources', async () => {
     const sources = await desktopCapturer.getSources({
@@ -117,45 +104,10 @@ ipcMain.handle('lumo:get-sources', async () => {
     }));
 });
 
-// Renderer: kullanıcının seçtiği kaynak ID'sini bildirir
+// Renderer: kullanıcının seçtiği kaynak ID'sini kaydeder
 ipcMain.handle('lumo:pick-source', async (e, id) => {
-    pendingSourceId = String(id);
+    selectedSourceId = String(id);
     return true;
-});
-
-// Renderer: "Paylaşmayı Başlat" butonuna basıldığında çağrılır.
-// Hem callback hem de sourceId hazırsa paylaşımı başlatır.
-ipcMain.handle('lumo:start-share', async () => {
-    if (!pendingSourceId) return { ok: false, error: 'no-source' };
-
-    try {
-        const sources = await desktopCapturer.getSources({
-            types: ['screen', 'window'],
-            thumbnailSize: { width: 1, height: 1 }
-        });
-        const src = sources.find(s => s.id === pendingSourceId);
-        pendingSourceId = null;
-
-        if (!src) {
-            if (pendingDisplayCallback) { pendingDisplayCallback({}); pendingDisplayCallback = null; }
-            return { ok: false, error: 'source-not-found' };
-        }
-
-        if (pendingDisplayCallback) {
-            const opts = { video: src };
-            if (process.platform === 'win32') opts.audio = 'loopback';
-            pendingDisplayCallback(opts);
-            pendingDisplayCallback = null;
-        } else {
-            // callback henüz gelmedi; kaynak hazır, callback gelince kullanılacak
-            pendingSourceId = src.id; // geri koy — handler alacak
-        }
-        return { ok: true };
-    } catch (err) {
-        console.error('start-share error:', err.message);
-        if (pendingDisplayCallback) { pendingDisplayCallback({}); pendingDisplayCallback = null; }
-        return { ok: false, error: err.message };
-    }
 });
 
 if (!app.requestSingleInstanceLock()) app.quit();
@@ -180,34 +132,23 @@ function createWindow() {
         cb(['media', 'display-capture', 'fullscreen'].includes(permission));
     });
 
-    // Handler tetiklenince callback'i sakla.
-    // Eğer kullanıcı zaten kaynak seçtiyse (lumo:start-share daha hızlı geldiyse)
-    // hemen callback'i çağır.
     session.defaultSession.setDisplayMediaRequestHandler(async (request, callback) => {
-        pendingDisplayCallback = callback;
-
-        // Eğer lumo:start-share daha önce geldiyse ve pendingSourceId hâlâ varsa
-        if (pendingSourceId) {
-            const wantedId = pendingSourceId;
-            pendingSourceId = null;
-            try {
-                const sources = await desktopCapturer.getSources({
-                    types: ['screen', 'window'],
-                    thumbnailSize: { width: 1, height: 1 }
-                });
-                const src = sources.find(s => s.id === wantedId);
-                if (src) {
-                    const opts = { video: src };
-                    if (process.platform === 'win32' && request.audioRequested) opts.audio = 'loopback';
-                    pendingDisplayCallback = null;
-                    callback(opts);
-                    return;
-                }
-            } catch (e) { console.error('Ekran kaynağı seçilemedi:', e.message); }
-            pendingDisplayCallback = null;
-            callback({});
+        try {
+            const sources = await desktopCapturer.getSources({
+                types: ['screen', 'window'],
+                thumbnailSize: { width: 1, height: 1 }
+            });
+            const src = (selectedSourceId && sources.find(s => s.id === selectedSourceId)) || sources[0];
+            if (src) {
+                const opts = { video: src };
+                if (process.platform === 'win32' && request.audioRequested) opts.audio = 'loopback';
+                callback(opts);
+                return;
+            }
+        } catch (e) {
+            console.error('Ekran kaynağı seçilemedi:', e.message);
         }
-        // Aksi hâlde bekle → lumo:start-share geldiğinde yukarıdaki handle çağrılacak
+        callback({});
     });
 
     win.webContents.on('did-fail-load', (e, code, desc, url, isMain) => {
@@ -219,8 +160,6 @@ function createWindow() {
 
     load();
     win.on('closed', () => {
-        // Pencere kapanınca bekleyen callback'i temizle
-        if (pendingDisplayCallback) { pendingDisplayCallback({}); pendingDisplayCallback = null; }
         win = null;
     });
 }
@@ -232,7 +171,6 @@ app.whenReady().then(() => {
 });
 
 app.on('before-quit', () => {
-    if (pendingDisplayCallback) { try { pendingDisplayCallback({}); } catch {} pendingDisplayCallback = null; }
     if (remoteProc && !remoteProc.killed) {
         try { remoteProc.stdin.write('QUIT\n'); remoteProc.kill(); } catch {}
     }
