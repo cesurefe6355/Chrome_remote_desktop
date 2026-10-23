@@ -33,32 +33,6 @@ Sesli sohbet + canlı ekran yayını uygulaması. İki şekilde çalışır:
   avatarları gizleme ve üye listesi açma/kapama. Tercihler tarayıcıda saklanır.
 - **Mobil uyum:** Küçük ekranda kanallar çekmece olarak açılır; üye listesi düğmeyle gösterilir.
 
----
-
-## 🛡️ Yönetici Paneli ("muhtar")
-
-Tarayıcıdan `site-adresin/muhtar` yazarak girilir (örn. `https://chrome-remote-desktop-w9hm.onrender.com/muhtar`).
-Şifre, sunucudaki **`ADMIN_PASSWORD`** ortam değişkenidir. **Varsayılan şifre yoktur:** değişken tanımlı
-değilse panel güvenlik gereği **tamamen kapalıdır** (503). Render'da `Environment` bölümüne en az
-12 karakterlik güçlü bir şifre ekleyip yeniden deploy et.
-
-Panelden yapılabilenler:
-
-- **Kullanıcıları görme:** çevrimiçi/çevrimdışı durumu, küfür uyarı sayısı (`x/3`), ban durumu ve sebebi.
-- **Ban atma:** süreli (1 saat → 30 gün) veya **kalıcı**; sebep yazılabilir. Banlanan kullanıcı anında atılır.
-- **Ban kaldırma** ve **uyarı sayacını sıfırlama**.
-- **Mesajları görme** (kanal kanal) ve **tek tek mesaj silme**, **kanalı tamamen temizleme**,
-  **bir kullanıcının tüm mesajlarını silme**.
-- **Şifre değiştirme:** bir kullanıcının şifresini panelden sıfırlayabilirsin; kullanıcı anında atılır ve
-  yeni şifreyle giriş yapması gerekir.
-- **Kullanıcı silme:** hesabı kalıcı olarak siler; mesajları ve açtığı kanallar da kaldırılır.
-  Kazara silmeyi önlemek için kullanıcı adını yazarak onaylatır.
-- **Oto yenilenme:** panel kendini varsayılan olarak 5 saniyede bir yeniler; üstteki menüden
-  `3 sn / 5 sn / 10 sn / 30 sn / Kapalı` seçilebilir (tercih tarayıcıda saklanır).
-- Canlı istatistikler: kullanıcı, çevrimiçi, uyarı, ban ve mesaj sayıları.
-
-> Kullanıcılar ayrıca uygulama içinde **Ayarlar (⚙)** düğmesinden kendi şifresini değiştirebilir
-> (mevcut şifresini girerek).
 
 ---
 
