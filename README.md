@@ -1,116 +1,188 @@
-# LumoLive (Chrome_remote_desktop)
+<div align="center">
+  <img src="assets/images/readme-hero.gif" alt="29 Ekim — Cumhuriyetin Işığında: hareketli, sinematik kırmızı ve siyah kapak" width="100%" />
 
-Sesli sohbet + canlı ekran yayını uygulaması. İki şekilde çalışır:
+  <br />
 
-- **Web** (`node server.js` → tarayıcıda açılır)
-- **Masaüstü / Electron** (`electron .` → kendi penceresi, özel tasarım)
+  <p><strong>Bir milletin ortak hikâyesi.</strong><br />
+  Cumhuriyetin geçmişine saygı, geleceğine umutla bakan sinematik bir web deneyimi.</p>
 
----
+  <p>
+    <img src="https://img.shields.io/badge/HTML5-Yap%C4%B1-E34F26?style=for-the-badge&logo=html5&logoColor=white" alt="HTML5" />
+    <img src="https://img.shields.io/badge/CSS3-Tasar%C4%B1m-1572B6?style=for-the-badge&logo=css3&logoColor=white" alt="CSS3" />
+    <img src="https://img.shields.io/badge/JavaScript-Etkile%C5%9Fim-F7DF1E?style=for-the-badge&logo=javascript&logoColor=111111" alt="JavaScript" />
+    <img src="https://img.shields.io/badge/Responsive-Mobil%20Uyumlu-8A2BE2?style=for-the-badge" alt="Responsive design" />
+    <img src="https://img.shields.io/badge/Build%20Step-Gerekmez-2E8B57?style=for-the-badge" alt="Build step not required" />
+  </p>
 
-## Özellikler
+  <p>
+    <a href="#kurulum">🚀 Hemen çalıştır</a> &nbsp;·&nbsp;
+    <a href="#bolumler">🎞️ Bölümleri keşfet</a> &nbsp;·&nbsp;
+    <a href="#github-pages">🌐 GitHub Pages ile yayınla</a>
+  </p>
+</div>
 
-- **2 ana yer:** `Genel Sohbet` (metin) ve `Genel Sesli Sohbet` (ses). Başka varsayılan kanal yok.
-- **Kanal açma:** Her kullanıcı en fazla **2 kanal** açabilir. Kanal adı 3-20 karakter, harf/rakam ve `. _ -` içerebilir, küfür içeremez.
-- **Kullanıcı adı:** En az 3 karakter, harf/rakam ve `. _ -`, küfür yasak.
-- **Şifre:** En az 6 karakter.
-- **Beni hatırla:** İşaretliyse oturum 30 gün açık kalır; işaretli değilse **1 saat sonra otomatik çıkış** yapılır.
-- **Tek cihaz kuralı:** Aynı hesaba yeni giriş yapılınca eski oturum kapanır.
-- **Gelişmiş küfür filtresi:** Sohbet, kullanıcı adı ve kanal adlarında çalışır. Büyük/küçük harf, Türkçe karakter (`ş ı ğ ü ö ç`), leetspeak (`s1kt1r`, `$ik`), homoglif harfler (Kiril `а о е`…), ayraçla bölme (`s.i.k`, `a.m.k`), tekrar eden harfler (`siiiktir`) ve görünmez karakterler yakalanır. Sohbette uygunsuz kelimeler `***` ile gizlenir.
-- **Kademeli ceza sistemi (otomatik):** Küfür tespit edildiğinde
-  **1. ve 2. ihlal → uyarı**, **3. ihlal → hesap kalıcı olarak banlanır** ve kullanıcı oturumdan atılır.
-  (24 saat cezasız geçerse uyarı sayacı sıfırlanır.)
-- **Kod paylaşımı:** Sohbetteki **+** butonuna bas → kodu yapıştır → sohbete **`kod-<kullanıcıadı>.txt`** dosyası olarak gönderilir (indirilebilir).
-- **Spam koruması (otomatik):** 5 saniyede 5'ten fazla mesaj, dakikada 20'den fazla mesaj, aynı mesajı tekrar tekrar gönderme
-  ve anlamsız karakter yığınları engellenir. Tekrarlayan ihlallerde kademeli kısa susturma uygulanır
-  (10 sn → 30 sn → 2 dk); sayaç 5 dakika temiz kalınca sıfırlanır. Reddedilen mesaj kutuda kalır, kaybolmaz.
-- **Masaüstü bildirimleri:** Chrome arka plandayken yeni mesajlar işletim sistemi bildirimi olarak görünür;
-  bildirime tıklayınca ilgili kanal açılır. Sekme başlığında okunmamış mesaj sayısı `(3) LumoLive` şeklinde gösterilir.
-  Bildirim izni Ayarlar → Bildirimler veya üst çubuktaki 🔔 düğmesinden verilir.
-- **Ekran yayını:** Kanal içinde ekran paylaşımı, kalite seçenekleri (720p→4K, 30→144 FPS, bit hızı, kodek, sistem sesi).
-- **Modern arayüz:** Discord tarzı mesaj gruplama, "en alta in" düğmesi + okunmamış sayacı,
-  Enter ile gönder / Shift+Enter ile alt satır, `Ctrl+K` ile mesaj kutusuna gitme.
-- **Ayarlar (⚙):** Şifre değiştirme, bildirim sesleri, vurgu rengi (4 renk), sıkışık mesaj görünümü,
-  avatarları gizleme ve üye listesi açma/kapama. Tercihler tarayıcıda saklanır.
-- **Mobil uyum:** Küçük ekranda kanallar çekmece olarak açılır; üye listesi düğmeyle gösterilir.
+<img src="assets/images/readme-divider.gif" alt="Kırmızı ışık taraması şeklinde animasyonlu ayraç" width="100%" />
 
+<a id="proje"></a>
+## 🎬 Proje Hakkında
 
----
+**29 Ekim — Cumhuriyetin Işığında**, Cumhuriyet Bayramı için hazırlanmış; klasik bir bilgi sayfasından çok, aşağı kaydırdıkça yeni sahneler açan görsel bir hikâye anlatımıdır.
 
-## Kurulum
+Koyu tonlar, bayrak kırmızısı, güçlü tipografi, tarihî görseller ve yumuşak hareketler bir araya gelerek ziyaretçiye sinematik bir yolculuk sunar. Sayfa; masaüstü, tablet ve telefon ekranlarına uyum sağlayacak şekilde tasarlanmıştır.
+
+> **Tasarım fikri:** Geçmişin mirasını, bugünün umudunu ve geleceğe duyulan inancı tek bir akışta buluşturmak.
+
+<a id="ozellikler"></a>
+## ✨ Öne Çıkan Özellikler
+
+| Özellik | Deneyim |
+|:--|:--|
+| 🎥 **Sinematik açılış** | Büyük “29 EKİM” başlığı, karanlık arka plan, kırmızı ışıklar ve dekoratif bayrak motifi |
+| 🪄 **Scroll reveal** | Başlıklar, metinler ve görseller ekrana girdikçe yumuşakça görünür |
+| 🌊 **Paralaks derinliği** | Dekoratif katmanlar kaydırma sırasında farklı hızlarda hareket eder |
+| 💡 **Işık taraması** | Yeni bir sahne görünürken ekrandan kırmızı-beyaz ışık geçişi ilerler |
+| 🧭 **Zaman çizgisi** | Tarihî dönüm noktaları ve ilerledikçe dolan dikey zaman çizgisi |
+| ✨ **Parçacık efektleri** | Açılış ve final bölümlerinde hafif, hareketli ışık parçacıkları |
+| 📈 **Kaydırma göstergesi** | Sayfanın ne kadarının gezildiğini gösteren üst çizgi |
+| 🖱️ **İnce etkileşimler** | Kart hover efektleri ve geniş ekranlarda fare hareketine tepki veren ışık |
+| 📱 **Mobil menü** | Küçük ekranlarda açılıp kapanan, dokunmaya uygun menü |
+| ♿ **Hareket hassasiyeti** | `prefers-reduced-motion` tercihini algılayarak animasyonları azaltır |
+| 🧩 **Haricî JS kütüphanesi yok** | HTML, CSS ve Vanilla JavaScript ile çalışır; derleme adımı gerekmez |
+
+<a id="animasyonlar"></a>
+## 🌀 Animasyonlar Nasıl Çalışıyor?
+
+Bu projede amaç yalnızca sayfayı hareketli yapmak değil, **hareketi hikâyenin parçası hâline getirmek**:
+
+- **Görünürlük tabanlı girişler:** `IntersectionObserver`, içeriğin görüntü alanına girdiğini algılar. Öğeler saydamlıktan görünür hâle gelir; yumuşak yükselme, bulanıklıktan netliğe geçiş ve sıralı gecikmeler kullanılır.
+- **Sahne geçişleri:** Her ana bölüm görünür olduğunda JavaScript geçici bir ışık katmanı oluşturur. Animasyon bitince katman kaldırılır.
+- **Kaydırmayla ilişkili derinlik:** `requestAnimationFrame` ile sınırlandırılan kaydırma güncellemesi, dekoratif arka plan öğelerine hafif paralaks hareketi verir.
+- **Canvas parçacıkları:** Açılış ve finaldeki küçük ışıklar canvas üzerinde çizilir. İlgili alan görünür değilken animasyon döngüsü durdurulur.
+- **Performans ve erişilebilirlik:** Animasyonlar azaltılmış hareket tercihi etkinse sadeleşir veya kapanır; küçük ekranlardaki hareket mesafeleri de azaltılır.
+
+GitHub, güvenlik nedeniyle README dosyası içinde sitenin JavaScript'ini çalıştırmaz. Bu nedenle README'nin kendi görsel hareketi yerel **animasyonlu GIF** kapak ve ayraçlarla sağlanır; web sitesindeki etkileşimli animasyonlar ise `index.html` tarayıcıda açıldığında çalışır.
+
+<a id="bolumler"></a>
+## 🎞️ Sayfa Bölümleri
+
+| Sahne | İçerik |
+|:--:|:--|
+| **01** | **Açılış — 29 Ekim:** Büyük başlık, yıl vurgusu ve aşağı kaydırma daveti |
+| **02** | **Bir milletin yolculuğu:** Cumhuriyet fikrine uzanan hikâyeye giriş |
+| **03** | **Tarihî zaman çizgisi:** 1919, 1920, 1922 ve 1923 dönüm noktaları |
+| **04** | **Cumhuriyetin ilanı:** 29 Ekim 1923 ve arşiv görseli |
+| **05** | **Cumhuriyetin değerleri:** Özgürlük, eğitim ve gelişim |
+| **06** | **Geleceğe inanmak:** Atatürk portresi ve gelecek vurgusu |
+| **07** | **Final:** Cumhuriyet Bayramı mesajı ve başa dönüş bağlantısı |
+
+<a id="teknolojiler"></a>
+## 🛠️ Kullanılan Teknolojiler
+
+- **HTML5** — erişilebilir ve anlamlı sayfa yapısı
+- **CSS3** — responsive düzen, görsel tema, geçişler ve keyframe animasyonları
+- **Vanilla JavaScript** — görünürlük gözlemleme, kaydırma takibi, canvas parçacıkları ve mobil menü
+- **Intersection Observer API** — sahne ve içerik girişlerini gözlemleme
+- **Canvas API** — parçacık efektleri
+
+Framework, paket yöneticisi veya derleme aracı zorunlu değildir. Google Fonts ve tarihî görseller internet üzerinden yüklendiği için bunların görünmesi için bağlantı gerekir.
+
+<img src="assets/images/readme-divider.gif" alt="Kırmızı ışık taraması şeklinde animasyonlu ayraç" width="100%" />
+
+<a id="kurulum"></a>
+## 🚀 Kurulum
+
+### 1. Projeyi indir
 
 ```bash
-npm install
+git clone https://github.com/KULLANICI-ADI/cumhuriyetin-isiginda.git
+cd cumhuriyetin-isiginda
 ```
 
-`.env` dosyasına veritabanı bilgilerini gir (bkz. `.env.example`).
+`KULLANICI-ADI` bölümünü GitHub kullanıcı adınla değiştir. Git kullanmıyorsan depodaki **Code → Download ZIP** seçeneğini kullanıp arşivi çıkarabilirsin.
 
-## Çalıştırma
+### 2. Yerel sunucuyu başlat
 
-### Web sürümü
+Python yüklüyse proje kök klasöründe şu komutu çalıştır:
+
 ```bash
-npm start          # http://localhost:3000
+# Windows
+py -m http.server 8000
+
+# py komutu yoksa
+python -m http.server 8000
 ```
 
-### Masaüstü (Electron) sürümü
-```bash
-npm run desktop
+### 3. Tarayıcıda aç
+
+Şu adrese git: **http://localhost:8000**
+
+Değişiklik yaptıktan sonra animasyon veya stil güncellemesi görünmüyorsa tarayıcıda `Ctrl + F5` ile önbelleği yenile.
+
+<a id="dosya-yapisi"></a>
+## 📁 Dosya Yapısı
+
+```text
+cumhuriyetin-isiginda/
+├── index.html                     # Sayfa yapısı ve içerik
+├── README.md                      # Proje tanıtımı ve kurulum rehberi
+├── css/
+│   └── style.css                  # Tema, responsive tasarım ve animasyonlar
+├── js/
+│   └── main.js                    # Kaydırma efektleri ve etkileşimler
+└── assets/
+    └── images/
+        ├── README.txt              # Görsel kaynakları hakkında not
+        ├── readme-hero.gif         # README için animasyonlu kapak
+        └── readme-divider.gif      # Animasyonlu bölüm ayracı
 ```
 
-Derleme (kurulum dosyası):
-```bash
-npm run build      # dist/ klasörüne NSIS kurulum dosyası üretir
-```
+<a id="github-pages"></a>
+## 🌐 GitHub Pages ile Yayınlama
+
+Site statik dosyalardan oluştuğu için GitHub Pages ile yayımlanabilir.
+
+1. GitHub'da `cumhuriyetin-isiginda` adlı bir depo oluştur.
+2. **`index.html`, `css/`, `js/`, `assets/` ve `README.md` dosyalarını depo köküne** yükle. `index.html` bir alt klasörün içinde kalmamalı.
+3. Depoda **Settings → Pages** bölümünü aç.
+4. **Build and deployment** altında kaynağı **Deploy from a branch** olarak seç.
+5. Branch olarak `main`, klasör olarak `/(root)` seçip kaydet.
+6. Pages bölümünde gösterilen yayımlanmış adresi aç.
+
+İlk dağıtımın hazırlanması kısa bir süre alabilir. Görseller ve Google Fonts haricî kaynaklardan geldiğinden, bu kaynakları yüklemek için siteyi açan kişinin internet bağlantısı olması gerekir.
+
+<a id="gorsel-kaynaklari"></a>
+## 🖼️ Görsel Kaynakları
+
+Sitedeki tarihî görseller Wikimedia Commons üzerinden yüklenir:
+
+- [Atatürk portresi — Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Atat%C3%BCrk_portre.png)
+- [Resimli Gazete, 3 Kasım 1923 — Wikimedia Commons](https://commons.wikimedia.org/wiki/File:1923_11_03_Resimli_Gazete_Cumhuriyetin_Ilani.jpg)
+
+Bu görsellerin kullanım koşulları her bir kaynak sayfasında ayrıca belirtilir. Görselleri yeniden dağıtmadan veya farklı bir projede kullanmadan önce ilgili lisans ve atıf koşullarını kontrol et. README kapak GIF'i ise bu proje için oluşturulmuş yerel bir görseldir.
+
+<a id="katki"></a>
+## 🤝 Katkı ve Geliştirme
+
+Geliştirme önerileri ve hata bildirimleri memnuniyetle karşılanır. Katkı yapmadan önce mevcut dosya yapısını korumak ve animasyonların masaüstü ile mobil ekranlarda davranışını kontrol etmek iyi bir başlangıçtır.
+
+Önerilen kontrol listesi:
+
+- [ ] Açılış ve final bölümlerini masaüstü/telefon boyutlarında kontrol et.
+- [ ] Aşağı ve yukarı kaydırırken içerik girişlerinin tekrar çalıştığını doğrula.
+- [ ] Mobil menünün açılma, kapanma ve bağlantı davranışını dene.
+- [ ] Hareketi azaltma ayarı açıkken sayfanın okunabilir kaldığını kontrol et.
+- [ ] Dış görsellerin lisans ve kaynak bilgilerini koru.
+
+<a id="lisans"></a>
+## 📄 Lisans
+
+Bu depoda şu anda ayrı bir `LICENSE` dosyası bulunmuyor. Projeyi yeniden dağıtmayı veya başkalarının kullanımına açmayı düşünüyorsan tercih ettiğin lisansı seçip depo köküne `LICENSE` dosyası ekle. Wikimedia Commons görsellerinin lisansları, projenin kod lisansından ayrı değerlendirilmelidir.
 
 ---
 
-## Ekran paylaşımı seçicisi hakkında
-
-Ekran paylaşmaya basınca çıkan "neyi paylaşacaksın?" penceresi **tamamen LumoLive'ın kendi tasarımıdır**
-(sekmeler: **Ekranlar / Pencereler**, küçük önizlemeler, kalite ayarları). Bu seçici:
-
-- **Masaüstü sürümünde**: Chrome/Chromium'un kendi seçim penceresi **hiç açılmaz**. Kaynak seçimi
-  `main.js` içindeki `setDisplayMediaRequestHandler` ile tamamen bize ait arayüzden yapılır.
-- **Web sürümünde**: Tarayıcı güvenlik kuralı gereği Google Chrome kendi seçim penceresini zorunlu
-  gösterir. Bu pencere site koduyla değiştirilemez/silinemez.
-
-Yani "hiç Chrome tasarımı olmasın" isteği için uygulamayı **masaüstü sürümünde** kullanmak gerekir.
-
----
-
-## Yayın kalitesi
-
-Çözünürlük (720p → 4K), kare hızı (30 → 144 FPS), bit hızı, kodek (AV1 / VP9 / H.264),
-içerik türü ve sistem sesi paylaşımı seçiciden ayarlanır. Nakliye WebRTC (P2P) üzerindendir;
-farklı ağlardaki izleyiciler için `.env` içinde TURN ayarları kullanılabilir.
-
----
-
-## 🔐 Güvenlik
-
-Tarama raporundaki (DiagnoSEO) bulgular kapatıldı; sunucu her yanıtta şu başlıkları gönderir:
-
-| Başlık | Değer / amaç |
-| --- | --- |
-| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains; preload` (yalnızca HTTPS'te) |
-| `Content-Security-Policy` | Dış kaynak yasağı; `frame-ancestors 'self'`; WebSocket yalnızca aynı host |
-| `X-Content-Type-Options` | `nosniff` |
-| `X-Frame-Options` | `SAMEORIGIN` (clickjacking) |
-| `Referrer-Policy` | `strict-origin-when-cross-origin` |
-| `Permissions-Policy` | Kamera/konum/ödeme kapalı; mikrofon ve ekran paylaşımı yalnızca site içi |
-| `Cross-Origin-Opener-Policy` / `Cross-Origin-Resource-Policy` | `same-origin` |
-
-Ek olarak:
-
-- `/.well-known/security.txt` (RFC 9116) ve `/robots.txt` yayınlanır; `/muhtar` ve `/api/` arama motorlarına kapalıdır.
-- **`ADMIN_PASSWORD` tanımlı değilse yönetici paneli çalışmaz** (bilinen varsayılan şifre açığı kapatıldı).
-- Yönetici girişi **5 deneme / 5 dakika** ile sınırlıdır; şifre karşılaştırması zamanlama saldırısına dayanıklıdır.
-- `trust proxy` etkinleştirildi → Render/Cloudflare arkasında hız sınırları gerçek istemci IP'sine uygulanır.
-- Socket.IO: Origin doğrulaması (CSWSH), 256 KB istek sınırı ve bozuk payload'lara karşı güvenli olay sarmalayıcı.
-- Bilinmeyen `/api/*` yolları JSON 404 döner; hata yanıtlarında yığın izi sızmaz.
-- Gövde limiti 10 KB, mesaj limiti 500 karakter, kod paylaşımı limiti ~100 KB'dir.
-
-### Sunucu tarafında yapılması gerekenler
-
-1. Render → **Environment**: `ADMIN_PASSWORD` (12+ karakter) ve `SECRET` (sabit, rastgele) mutlaka tanımlı olmalı.
-2. İsteğe bağlı: `SECURITY_CONTACT=mailto:...` ve özel alan adı için `PUBLIC_HOST=ornek.com`.
-3. DNS tarafı (kodla çözülemez): **SPF** kaydı ekle, **DMARC** politikasını `p=none` → `quarantine` yap, **DNSSEC** etkinleştir.
+<div align="center">
+  <img src="assets/images/readme-divider.gif" alt="Animasyonlu kırmızı ışık çizgisi" width="100%" />
+  <h3>🇹🇷 Cumhuriyetimizin 103. yılı kutlu olsun!</h3>
+  <p><em>Geçmişin mirası, geleceğin umudu.</em></p>
+  <sub>29 Ekim — Cumhuriyetin Işığında</sub>
+</div>
