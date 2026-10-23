@@ -64,7 +64,7 @@ svg{width:20px;height:20px;fill:currentColor;display:block}
 .mi .av{width:32px;height:32px;font-size:14px}
 #voiceView{flex:1;display:none;flex-direction:column;min-width:0;min-height:0;background:#1e1f22}
 #stage{display:none;background:#000;position:relative;height:55%;min-height:180px;flex-shrink:0}
-#stage video{width:100%;height:100%;object-fit:contain}
+#stage video{width:100%;height:100%;object-fit:contain;pointer-events:auto;touch-action:none}
 #stage.remote-active video{cursor:crosshair;box-shadow:inset 0 0 0 2px #23a55a}
 .bar{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:linear-gradient(transparent,rgba(0,0,0,.8));opacity:0;transition:.2s}
 #stage:hover .bar{opacity:1}
@@ -1488,13 +1488,19 @@ function preferCodec(pc, name) {
     pc.getTransceivers().forEach(t => { try { t.setCodecPreferences([...wanted, ...rest]); } catch {} });
   } catch {}
 }
-// Göndericiyi kalite + düşük bant genişliği için ayarla.
-// ÖNEMLİ: degradationPreference 'maintain-resolution' → bant düşünce çözünürlük kırpılmaz (144p sorununu önler).
+// Göndericiyi kalite + akıcı FPS için ayarla.
 async function tuneSender(pc) {
   const s = pc.getSenders().find(x => x.track && x.track.kind === 'video'); if (!s) return;
   const set = async fn => { try { const p = s.getParameters(); if (!p.encodings || !p.encodings.length) p.encodings = [{}]; fn(p); await s.setParameters(p); } catch {} };
-  await set(p => { p.encodings[0].maxBitrate = Math.round(streamCfg.br * 1e6); p.degradationPreference = degradeOf(); });
-  await set(p => { p.encodings[0].maxFramerate = streamCfg.fps; p.encodings[0].scaleResolutionDownBy = 1; p.encodings[0].priority = 'high'; p.encodings[0].networkPriority = 'high'; });
+  await set(p => {
+    p.encodings[0].maxBitrate = Math.round(streamCfg.br * 1e6);
+    // 'maintain-framerate' akıcı 60 FPS garantiler (uzaktan kontrol ve oyun/akıcı deneyim için şart)
+    p.degradationPreference = 'maintain-framerate';
+    p.encodings[0].maxFramerate = streamCfg.fps;
+    p.encodings[0].scaleResolutionDownBy = 1;
+    p.encodings[0].priority = 'high';
+    p.encodings[0].networkPriority = 'high';
+  });
 }
 
 $('btnGo').onclick = async () => {
@@ -1504,15 +1510,25 @@ $('btnGo').onclick = async () => {
     if (!selectedSource) return info('Kaynak seç', 'Lütfen paylaşacağın ekranı veya pencereyi seç.');
     await window.lumoDesktop.pickSource(selectedSource);
   }
-  const video = { width: { ideal: w }, height: { ideal: h }, frameRate: { ideal: fps, max: fps } };
+  const video = {
+    width: { ideal: w, max: w },
+    height: { ideal: h, max: h },
+    frameRate: { ideal: fps, min: Math.min(30, fps), max: fps }
+  };
   if (!DESKTOP) video.displaySurface = streamCfg.src;
   try {
     screen = await navigator.mediaDevices.getDisplayMedia({ video, audio: streamCfg.audio });
   } catch { return info('İzin Hatası', 'Ekran paylaşımı başlatılamadı veya iptal edildi.'); }
   closeM('mStream'); isHost = true;
   const vt = screen.getVideoTracks()[0];
-  try { await vt.applyConstraints({ width: { ideal: w }, height: { ideal: h }, frameRate: { ideal: fps, max: fps } }); } catch {}
-  vt.contentHint = hintOf();
+  try {
+    await vt.applyConstraints({
+      width: { ideal: w, max: w },
+      height: { ideal: h, max: h },
+      frameRate: { ideal: fps, min: Math.min(30, fps), max: fps }
+    });
+  } catch {}
+  vt.contentHint = 'motion';
   vt.onended = stopStream;
   $('vid').srcObject = screen; $('vid').muted = true; showStage(true);
   $('who').textContent = 'Yayıncı sensin'; $('btnStop').style.display = 'inline-block'; $('btnShare').classList.add('act');
@@ -1647,7 +1663,13 @@ socket.on('signal', async ({ sender, signal, type }) => {
 });
 
 socket.on('error-msg', m => { play('err'); info('Hata', m); });
-$('vid').onclick = e => { if (!isHost) { e.target.muted = false; e.target.play(); } };
+$('vid').onclick = e => {
+  if (isRemoteControlling) {
+    e.preventDefault();
+    return;
+  }
+  if (!isHost) { e.target.muted = false; e.target.play().catch(() => {}); }
+};
 function fsc() { const s = $('stage'); document.fullscreenElement ? document.exitFullscreen() : s.requestFullscreen(); }
 window.addEventListener('beforeunload', () => socket.emit('leave-room'));
 
@@ -1963,6 +1985,37 @@ socket.on('remote-control-input', ({ from, action, data }) => {
     if (!isRemoteControlling) return;
     e.preventDefault();
     sendRemoteInput('wheel', { delta: -Math.sign(e.deltaY) * 120 });
+  }, { passive: false });
+
+  // Mobil & Dokunmatik Ekran Desteği (Touch events)
+  vidEl.addEventListener('touchstart', e => {
+    if (!isRemoteControlling) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    if (!t) return;
+    const pt = getNormalizedCoords(t);
+    if (pt) {
+      sendRemoteInput('move', { x: pt.x, y: pt.y });
+      sendRemoteInput('mousedown', { button: 'left' });
+    }
+  }, { passive: false });
+
+  vidEl.addEventListener('touchmove', e => {
+    if (!isRemoteControlling) return;
+    e.preventDefault();
+    const now = performance.now();
+    if (now - lastMouseMoveTime < 20) return;
+    lastMouseMoveTime = now;
+    const t = e.touches[0];
+    if (!t) return;
+    const pt = getNormalizedCoords(t);
+    if (pt) sendRemoteInput('move', { x: pt.x, y: pt.y });
+  }, { passive: false });
+
+  vidEl.addEventListener('touchend', e => {
+    if (!isRemoteControlling) return;
+    e.preventDefault();
+    sendRemoteInput('mouseup', { button: 'left' });
   }, { passive: false });
 
   const isPrintableKey = e => !!e.key && e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey;
