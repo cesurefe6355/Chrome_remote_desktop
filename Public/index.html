@@ -488,6 +488,7 @@ body.mem-open .members{display:block!important;position:fixed;right:0;top:54px;b
   </div>
 </div></div>
 
+<<<<<<< HEAD
 <div class="ov" id="mRemotePerm"><div class="box sset">
   <div class="set-top">
     <h3>Uzaktan Kontrol İzinleri</h3>
@@ -511,6 +512,8 @@ body.mem-open .members{display:block!important;position:fixed;right:0;top:54px;b
   </div>
 </div></div>
 
+=======
+>>>>>>> 99fbee43b22a816ce2e0c9eea021d83d26a509c0
 <div class="ov" id="mCode"><div class="box"><h3>Kod Paylaş</h3>
 <p>Kodu yapıştır; <b id="codeFileName">kod-kullanici.txt</b> olarak sohbete gönderilir.</p>
 <label>Kod</label>
@@ -636,8 +639,12 @@ body.mem-open .members{display:block!important;position:fixed;right:0;top:54px;b
           <span>🎮 Uzaktan kontrol devrede (Ekrana tıklayarak yönetin · Shift+Esc ile çık)</span>
           <button style="padding:4px 12px;font-size:12px;background:#fff;color:#23a55a;border-radius:12px;font-weight:700;" onclick="stopRemoteControlViewer()">Kontrolden Çık</button>
         </div>
+<<<<<<< HEAD
         <button id="btnRequestRemote" style="display:none;position:absolute;top:10px;right:10px;z-index:11;background:#23a55a;color:#fff;padding:8px 14px;border-radius:20px;font-size:13px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.5);" onclick="requestRemoteControl()">🎮 Uzaktan Kontrol İste</button>
         <div class="bar"><span id="who"></span><span><button onclick="fsc()">Tam Ekran</button> <button class="red" id="btnStop" style="display:none" onclick="stopStream()">Yayını Durdur</button></span></div></div>
+=======
+        <div class="bar"><span id="who"></span><span><button id="btnRequestRemote" style="display:none;background:#23a55a;margin-right:6px;" onclick="requestRemoteControl()">🎮 Uzaktan Kontrol İste</button><button onclick="fsc()">Tam Ekran</button> <button class="red" id="btnStop" style="display:none" onclick="stopStream()">Yayını Durdur</button></span></div></div>
+>>>>>>> 99fbee43b22a816ce2e0c9eea021d83d26a509c0
       <div class="tiles" id="tiles"></div>
       <div class="vctl">
         <button class="cb" id="cMic" title="Mikrofon"><i data-ic="mic"></i></button>
@@ -1684,13 +1691,17 @@ $('btnMembers').addEventListener('click', () => { if (innerWidth <= 900) documen
 
 // ==================== UZAKTAN KONTROL SİSTEMİ (REMOTE CONTROL) ====================
 let isRemoteControlling = false;
+<<<<<<< HEAD
 let remoteAutoFs = false;
+=======
+>>>>>>> 99fbee43b22a816ce2e0c9eea021d83d26a509c0
 let remoteHostId = null;
 let activeRemoteViewerId = null;
 let pendingRemoteViewer = null;
 let remoteDataChannels = {};
 let viewerDataChannel = null;
 let lastMouseMoveTime = 0;
+<<<<<<< HEAD
 let remoteReqTimer = 0;
 
 function resetRemoteReqBtn() {
@@ -1698,6 +1709,8 @@ function resetRemoteReqBtn() {
   const b = $('btnRequestRemote');
   if (b && !isRemoteControlling) { b.textContent = '🎮 Uzaktan Kontrol İste'; b.disabled = false; }
 }
+=======
+>>>>>>> 99fbee43b22a816ce2e0c9eea021d83d26a509c0
 
 function syncRemoteControlButtons() {
   const reqBtn = $('btnRequestRemote');
@@ -1713,7 +1726,10 @@ function syncRemoteControlButtons() {
   } else {
     reqBtn.style.display = 'none';
   }
+<<<<<<< HEAD
   updateRemotePermButton();
+=======
+>>>>>>> 99fbee43b22a816ce2e0c9eea021d83d26a509c0
 }
 
 function resetRemoteState() {
@@ -1730,7 +1746,10 @@ function resetRemoteState() {
   pendingRemoteViewer = null;
   viewerDataChannel = null;
   remoteDataChannels = {};
+<<<<<<< HEAD
   resetRemoteReqBtn();
+=======
+>>>>>>> 99fbee43b22a816ce2e0c9eea021d83d26a509c0
   closeM('mRemoteReq');
   syncRemoteControlButtons();
 }
@@ -1740,6 +1759,7 @@ function requestRemoteControl() {
   const btn = $('btnRequestRemote');
   btn.textContent = 'İstek Gönderildi...';
   btn.disabled = true;
+<<<<<<< HEAD
   socket.emit('remote-control-request', { target: hostSid, viewerName: user });
   toast('Uzaktan kontrol isteği yayıncıya iletildi.', 'info');
   clearTimeout(remoteReqTimer);
@@ -1750,6 +1770,10 @@ function requestRemoteControl() {
       toast('Uzaktan kontrol isteğine yanıt gelmedi. Yayıncı masaüstü uygulamasında olmayabilir.', 'err');
     }
   }, 20000);
+=======
+  socket.emit('remote-control-request', { target: hostSid });
+  toast('Uzaktan kontrol isteği yayıncıya iletildi.', 'info');
+>>>>>>> 99fbee43b22a816ce2e0c9eea021d83d26a509c0
 }
 
 socket.on('remote-control-request', ({ viewerId, viewerName }) => {
@@ -1759,6 +1783,7 @@ socket.on('remote-control-request', ({ viewerId, viewerName }) => {
     toast(`${viewerName} uzaktan kontrol istedi, ancak masaüstü uygulamasında (.exe) olmadığınız için izin verilemez.`, 'err');
     return;
   }
+<<<<<<< HEAD
   // İzin politikası kontrolü
   if (remotePermPolicy === 'off') {
     socket.emit('remote-control-response', { target: viewerId, granted: false, reason: 'Yayıncı uzaktan kontrolü kapalı tutuyor.' });
@@ -1778,6 +1803,8 @@ socket.on('remote-control-request', ({ viewerId, viewerName }) => {
     toast(`${viewerName} uzaktan kontrol istedi; şu an başka biri kontrol ediyor.`, 'err');
     return;
   }
+=======
+>>>>>>> 99fbee43b22a816ce2e0c9eea021d83d26a509c0
   pendingRemoteViewer = { id: viewerId, name: viewerName };
   $('remoteReqUser').textContent = viewerName;
   openM('mRemoteReq');
@@ -1799,15 +1826,21 @@ function respondRemoteControl(granted) {
   $('remoteHostBanner').style.display = 'flex';
   socket.emit('remote-control-response', { target: v.id, granted: true });
   toast(`${v.name} için uzaktan kontrol yetkisi verildi!`, 'live');
+<<<<<<< HEAD
   // Pencereyi küçült seçeneği
   if (remoteAutoMinimize && DESKTOP && window.lumoDesktop && typeof window.lumoDesktop.minimizeWindow === 'function') {
     window.lumoDesktop.minimizeWindow();
   }
+=======
+>>>>>>> 99fbee43b22a816ce2e0c9eea021d83d26a509c0
 }
 
 socket.on('remote-control-response', ({ hostId, hostName, granted }) => {
   const btn = $('btnRequestRemote');
+<<<<<<< HEAD
   clearTimeout(remoteReqTimer); remoteReqTimer = 0;
+=======
+>>>>>>> 99fbee43b22a816ce2e0c9eea021d83d26a509c0
   if (!granted) {
     if (btn) {
       btn.textContent = '🎮 Uzaktan Kontrol İste';
@@ -1821,12 +1854,15 @@ socket.on('remote-control-response', ({ hostId, hostName, granted }) => {
   if (btn) btn.style.display = 'none';
   $('remoteViewerBanner').style.display = 'flex';
   $('stage').classList.add('remote-active');
+<<<<<<< HEAD
   // Tam ekran
   const vidEl = $('vid');
   if (vidEl && vidEl.requestFullscreen) {
     vidEl.requestFullscreen().catch(()=>{});
     remoteAutoFs = true;
   }
+=======
+>>>>>>> 99fbee43b22a816ce2e0c9eea021d83d26a509c0
   toast('🎮 Uzaktan kontrol devrede! Ekrana tıklayarak bilgisayarı yönetebilirsiniz.', 'live');
 });
 
@@ -1835,10 +1871,13 @@ function stopRemoteControlHost() {
   socket.emit('remote-control-stop', { target: activeRemoteViewerId });
   activeRemoteViewerId = null;
   $('remoteHostBanner').style.display = 'none';
+<<<<<<< HEAD
   // Pencereyi geri getir
   if (DESKTOP && window.lumoDesktop && typeof window.lumoDesktop.restoreWindow === 'function') {
     window.lumoDesktop.restoreWindow();
   }
+=======
+>>>>>>> 99fbee43b22a816ce2e0c9eea021d83d26a509c0
   toast('Uzaktan kontrol sonlandırıldı.', 'info');
 }
 
@@ -1849,11 +1888,14 @@ function stopRemoteControlViewer() {
   remoteHostId = null;
   $('remoteViewerBanner').style.display = 'none';
   $('stage').classList.remove('remote-active');
+<<<<<<< HEAD
   if (remoteAutoFs) {
     try { document.exitFullscreen(); } catch {}
     remoteAutoFs = false;
   }
   resetRemoteReqBtn();
+=======
+>>>>>>> 99fbee43b22a816ce2e0c9eea021d83d26a509c0
   syncRemoteControlButtons();
   toast('Uzaktan kontrolden çıkıldı.', 'info');
 }
@@ -1864,7 +1906,10 @@ socket.on('remote-control-stopped', ({ by }) => {
     remoteHostId = null;
     $('remoteViewerBanner').style.display = 'none';
     $('stage').classList.remove('remote-active');
+<<<<<<< HEAD
     if (remoteAutoFs) { try { document.exitFullscreen(); } catch {} remoteAutoFs = false; }
+=======
+>>>>>>> 99fbee43b22a816ce2e0c9eea021d83d26a509c0
     syncRemoteControlButtons();
     toast(`${by || 'Yayıncı'} uzaktan kontrolü sonlandırdı.`, 'info');
   }
@@ -1879,8 +1924,11 @@ function sendRemoteInput(action, data = {}) {
   if (!isRemoteControlling || !remoteHostId) return;
   const payload = { action, ...data };
   if (viewerDataChannel && viewerDataChannel.readyState === 'open') {
+<<<<<<< HEAD
     // Kanal tıkanmışsa fare hareketlerini düşür (tıklama/klavye her zaman gider)
     if (action === 'move' && viewerDataChannel.bufferedAmount > 32768) return;
+=======
+>>>>>>> 99fbee43b22a816ce2e0c9eea021d83d26a509c0
     try {
       viewerDataChannel.send(JSON.stringify(payload));
       return;
@@ -1921,6 +1969,7 @@ function getNormalizedCoords(e) {
   };
 }
 
+<<<<<<< HEAD
 let rcRateWin = 0, rcRateCount = 0;
 
 function executeRemoteCommand(cmd) {
@@ -1929,6 +1978,10 @@ function executeRemoteCommand(cmd) {
   const now = performance.now();
   if (now - rcRateWin > 1000) { rcRateWin = now; rcRateCount = 0; }
   if (++rcRateCount > 600) return;
+=======
+function executeRemoteCommand(cmd) {
+  if (!isHost || !DESKTOP || !window.lumoDesktop || typeof window.lumoDesktop.remoteInput !== 'function') return;
+>>>>>>> 99fbee43b22a816ce2e0c9eea021d83d26a509c0
   window.lumoDesktop.remoteInput(cmd);
 }
 
@@ -1968,6 +2021,7 @@ socket.on('remote-control-input', ({ from, action, data }) => {
     sendRemoteInput('mouseup', { button: btn });
   });
 
+<<<<<<< HEAD
   // Ensure mouseup sent even if cursor leaves video element
   window.addEventListener('mouseup', e => {
     if (!isRemoteControlling) return;
@@ -1977,6 +2031,8 @@ socket.on('remote-control-input', ({ from, action, data }) => {
     }
   });
 
+=======
+>>>>>>> 99fbee43b22a816ce2e0c9eea021d83d26a509c0
   vidEl.addEventListener('contextmenu', e => {
     if (!isRemoteControlling) return;
     e.preventDefault();
@@ -1988,6 +2044,7 @@ socket.on('remote-control-input', ({ from, action, data }) => {
     sendRemoteInput('wheel', { delta: -Math.sign(e.deltaY) * 120 });
   }, { passive: false });
 
+<<<<<<< HEAD
   // Yazdırılabilir karakterler yalnızca CHAR ile gönderilir.
   // (KEYDOWN + CHAR birlikte gönderilirse her harf karşı tarafta iki kez yazılır.)
   const isPrintableKey = e => !!e.key && e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey;
@@ -1999,10 +2056,16 @@ socket.on('remote-control-input', ({ from, action, data }) => {
     if (e.key === 'Escape' && !e.shiftKey) {
       return; // default behavior (exit fullscreen)
     }
+=======
+  window.addEventListener('keydown', e => {
+    if (!isRemoteControlling) return;
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+>>>>>>> 99fbee43b22a816ce2e0c9eea021d83d26a509c0
     if (e.key === 'Escape' && e.shiftKey) {
       stopRemoteControlViewer();
       return;
     }
+<<<<<<< HEAD
     e.preventDefault();
     if (isPrintableKey(e)) {
       const cp = e.key.codePointAt(0);
@@ -2012,11 +2075,20 @@ socket.on('remote-control-input', ({ from, action, data }) => {
     // Kontrol/navigasyon tuşları ve Ctrl/Alt kısayolları sanal tuş koduyla gider
     const vk = e.keyCode || e.which;
     if (vk) sendRemoteInput('keydown', { vk });
+=======
+    const vk = e.keyCode || e.which;
+    if (vk) sendRemoteInput('keydown', { vk });
+    if (e.key && e.key.length === 1 && !e.ctrlKey && !e.altKey) {
+      sendRemoteInput('char', { charCode: e.key.charCodeAt(0) });
+    }
+    e.preventDefault();
+>>>>>>> 99fbee43b22a816ce2e0c9eea021d83d26a509c0
   });
 
   window.addEventListener('keyup', e => {
     if (!isRemoteControlling) return;
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+<<<<<<< HEAD
     e.preventDefault();
     if (isPrintableKey(e)) return; // CHAR gönderildi; ayrıca tuş bırakma gerekmez
     const vk = e.keyCode || e.which;
@@ -2028,6 +2100,14 @@ socket.on('remote-control-input', ({ from, action, data }) => {
 $('mRemoteReq').addEventListener('mousedown', e => { if (e.target === $('mRemoteReq') && pendingRemoteViewer) respondRemoteControl(false); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && pendingRemoteViewer) respondRemoteControl(false); });
 
+=======
+    const vk = e.keyCode || e.which;
+    if (vk) sendRemoteInput('keyup', { vk });
+    e.preventDefault();
+  });
+})();
+
+>>>>>>> 99fbee43b22a816ce2e0c9eea021d83d26a509c0
 setView('text'); syncBtns();
 </script>
 </body>
