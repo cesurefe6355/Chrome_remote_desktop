@@ -6,6 +6,7 @@
     "start": "node server.js",
     "test:db": "node test-db.js",
     "desktop": "electron .",
+    "desktop:local": "electron . --local",
     "build": "electron-builder"
   },
   "dependencies": {
@@ -28,7 +29,14 @@
     "files": [
       "main.js",
       "preload.js",
-      "package.json"
+      "package.json",
+      "bin/remote-input.exe"
+    ],
+    "extraResources": [
+      {
+        "from": "bin/remote-input.exe",
+        "to": "bin/remote-input.exe"
+      }
     ],
     "win": {
       "target": "nsis"

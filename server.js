@@ -878,14 +878,15 @@ io.on('connection', (socket) => {
         io.to('t:' + tid).emit('reaction-update', { msgId, reactions: msg.reactions, emoji, by: username, added });
     });
 
-    safeOn(socket, 'start-stream-in-room', () => {
+    safeOn(socket, 'start-stream-in-room', (cb) => {
         const roomId = socket.data.roomId, room = rooms[roomId];
-        if (!room) return socket.emit('error-msg', 'Önce bir odaya katıl.');
-        if (room.isLive) return socket.emit('error-msg', 'Bu odada zaten aktif bir yayın var!');
+        if (!room) return cb && cb({ ok: false, error: 'Önce bir odaya katıl.' });
+        if (room.isLive) return cb && cb({ ok: false, error: 'Bu odada zaten aktif bir yayın var!' });
         room.isLive = true; room.hostSocketId = socket.id; room.hostName = username;
         broadcastRooms();
         io.to(roomId).emit('stream-started', { roomId, hostName: username, hostSocketId: socket.id });
         room.members.forEach(m => m.id !== socket.id && socket.emit('viewer-wants-stream', { viewerId: m.id }));
+        cb && cb({ ok: true });
     });
 
     // İzleyici bağlantı kuramazsa yayıncıdan yeniden teklif ister
@@ -901,6 +902,48 @@ io.on('connection', (socket) => {
     });
 
     safeOn(socket, 'leave-room', () => leaveRoom(socket));
+
+    // ---------- Uzaktan Kontrol (Remote Control) ----------
+    safeOn(socket, 'remote-control-request', ({ target } = {}) => {
+        const room = rooms[socket.data.roomId];
+        // Yalnızca odanın yayıncısına istek gönderilebilir
+        if (!room || room.hostSocketId !== target) {
+            return socket.emit('error-msg', 'Uzaktan kontrol için aktif bir yayıncı bulunamadı.');
+        }
+        if (limited('rcr:' + socket.id, 5, 60000)) {
+            return socket.emit('error-msg', 'Çok sık uzaktan kontrol isteği gönderdin, biraz bekle.');
+        }
+        const t = io.sockets.sockets.get(target);
+        if (t) t.emit('remote-control-request', { viewerId: socket.id, viewerName: username });
+    });
+
+    safeOn(socket, 'remote-control-response', ({ target, granted } = {}) => {
+        const room = rooms[socket.data.roomId];
+        if (!room || room.hostSocketId !== socket.id) return; // yalnızca yayıncı izin verebilir
+        const t = io.sockets.sockets.get(target);
+        if (!t || t.data.roomId !== socket.data.roomId) return;
+        t.emit('remote-control-response', { hostId: socket.id, hostName: username, granted: !!granted });
+    });
+
+    safeOn(socket, 'remote-control-stop', ({ target } = {}) => {
+        const room = rooms[socket.data.roomId];
+        if (!room) return;
+        // Yalnızca yayıncı ile izleyici arasında sonlandırma yapılabilir
+        if (room.hostSocketId !== socket.id && room.hostSocketId !== target) return;
+        const t = io.sockets.sockets.get(target);
+        if (t && t.data.roomId === socket.data.roomId) t.emit('remote-control-stopped', { by: username });
+    });
+
+    safeOn(socket, 'remote-control-input', ({ target, action, data } = {}) => {
+        const room = rooms[socket.data.roomId];
+        // Girdiler yalnızca o anki yayıncıya gider; hız sınırı ile flood engellenir
+        if (!room || room.hostSocketId !== target) return;
+        if (typeof action !== 'string' || !action) return;
+        if (!data || typeof data !== 'object' || Array.isArray(data)) data = {};
+        if (limited('rci:' + socket.id, 500, 1000)) return;
+        const t = io.sockets.sockets.get(target);
+        if (t) t.emit('remote-control-input', { from: socket.id, action, data });
+    });
 
     safeOn(socket, 'signal', (data = {}) => {
         const target = io.sockets.sockets.get(data.target);

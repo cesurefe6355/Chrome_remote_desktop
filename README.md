@@ -27,6 +27,10 @@ Sesli sohbet + canlı ekran yayını uygulaması. İki şekilde çalışır:
   bildirime tıklayınca ilgili kanal açılır. Sekme başlığında okunmamış mesaj sayısı `(3) LumoLive` şeklinde gösterilir.
   Bildirim izni Ayarlar → Bildirimler veya üst çubuktaki 🔔 düğmesinden verilir.
 - **Ekran yayını:** Kanal içinde ekran paylaşımı, kalite seçenekleri (720p→4K, 30→144 FPS, bit hızı, kodek, sistem sesi).
+- **Uzaktan Kontrol (AnyDesk / TeamViewer tarzı):** Masaüstü sürümünde ekranını paylaşan kullanıcının bilgisayarı, izin verdiği izleyiciler tarafından gerçek fare ve klavye girdileriyle uzaktan kontrol edilebilir.
+  - **Güvenlik Onayı:** İzleyici istek gönderdiğinde yayıncıya izin penceresi açılır (`İzin Ver / Reddet`).
+  - **Sıfır Gecikme:** WebRTC DataChannel (P2P) ile milisaniye seviyesinde fare/klavye iletimi.
+  - **Anında İptal:** Yayıncı ekranın üstündeki butondan veya izleyici `Shift+Esc` ile kontrolü anında sonlandırabilir.
 - **Modern arayüz:** Discord tarzı mesaj gruplama, "en alta in" düğmesi + okunmamış sayacı,
   Enter ile gönder / Shift+Enter ile alt satır, `Ctrl+K` ile mesaj kutusuna gitme.
 - **Ayarlar (⚙):** Şifre değiştirme, bildirim sesleri, vurgu rengi (4 renk), sıkışık mesaj görünümü,
@@ -86,6 +90,46 @@ Derleme (kurulum dosyası):
 ```bash
 npm run build      # dist/ klasörüne NSIS kurulum dosyası üretir
 ```
+
+---
+
+## 🎮 Uzaktan kontrol nasıl çalıştırılır?
+
+Uzaktan kontrol **iki taraf** gerektirir. Kontrol edilecek bilgisayarda **masaüstü (Electron) sürümü**
+açık olmalıdır; kontrol eden kişi normal web tarayıcısını kullanabilir.
+
+**Gereksinimler**
+
+- Kontrol edilecek (yayın yapan) bilgisayar: **Windows 10/11**. `bin/remote-input.exe` bu makinede çalışır
+  (.NET Framework 4.x; Windows'ta hazır gelir).
+- En az iki kullanıcı hesabı (biri yayıncı, biri izleyici).
+- Render adresine erişim (HTTPS). Yerel test için `npm run desktop:local` + `npm start`.
+
+**Adım adım**
+
+1. **Kontrol edilecek bilgisayarda** proje klasöründe terminal aç:
+   ```bash
+   npm run desktop
+   ```
+   (veya `npm run build` ile ürettiğin kurulum dosyasını kurup LumoLive'ı aç).
+2. İki kullanıcı da aynı **sesli kanala** (`Genel Sesli Sohbet`) girsin.
+3. Yayıncı, **Ekran Paylaş** → kaynağı seç → **Yayını Başlat** desin.
+4. İzleyici yayını görünce ekranın altındaki yeşil **“🎮 Uzaktan Kontrol İste”** düğmesine bassın.
+5. Yayıncının ekranında **“Uzaktan Kontrol İsteği”** penceresi açılır → **İzin Ver (Kabul)**.
+6. İzleyici artık videoya tıklayıp fareyi hareket ettirebilir, tıklayabilir, tekerleği kullanabilir ve
+   klavyeyle yazabilir. `Ctrl+C / Ctrl+V`, `Enter`, `Backspace`, oklar ve fonksiyon tuşları da iletilir.
+7. Bitirmek için: izleyici **Shift+Esc** veya **“Kontrolden Çık”**; yayıncı üstteki
+   **“Kontrolü Durdur”** düğmesi.
+
+**Önemli notlar**
+
+- Yayıncı web tarayıcısındaysa (Electron değilse) istek otomatik reddedilir; çünkü tarayıcı işletim sistemi
+  fare/klavye kontrolüne izin vermez. Bu yüzden kontrol edilecek tarafta **masaüstü uygulaması şarttır**.
+- Yayıncı **birincil monitörü** paylaşmalıdır; çoklu monitörde koordinatlar birincil ekrana göre eşlenir.
+- Yönetici (Administrator) olarak açılmış pencereler, LumoLive yönetici değilse kontrol edilemez (Windows UIPI).
+- Aynı anda yalnızca **bir izleyici** kontrol edebilir; yayıncı dilediği an kesebilir.
+- Girdiler önce WebRTC DataChannel (P2P) ile, kanal açılamazsa Socket.IO üzerinden gider; sunucu tarafında
+  saniyede 500 olay sınırı ve yalnızca aktif yayıncıya yönlendirme vardır.
 
 ---
 
