@@ -902,6 +902,32 @@ io.on('connection', (socket) => {
 
     safeOn(socket, 'leave-room', () => leaveRoom(socket));
 
+    // ---------- Uzaktan Kontrol (Remote Control) ----------
+    safeOn(socket, 'remote-control-request', ({ target } = {}) => {
+        const t = io.sockets.sockets.get(target);
+        if (!t || !socket.data.roomId || t.data.roomId !== socket.data.roomId) {
+            return socket.emit('error-msg', 'Hedef kullanıcı odada bulunamadı.');
+        }
+        t.emit('remote-control-request', { viewerId: socket.id, viewerName: username });
+    });
+
+    safeOn(socket, 'remote-control-response', ({ target, granted } = {}) => {
+        const t = io.sockets.sockets.get(target);
+        if (!t || !socket.data.roomId || t.data.roomId !== socket.data.roomId) return;
+        t.emit('remote-control-response', { hostId: socket.id, hostName: username, granted: !!granted });
+    });
+
+    safeOn(socket, 'remote-control-stop', ({ target } = {}) => {
+        const t = io.sockets.sockets.get(target);
+        if (t) t.emit('remote-control-stopped', { by: username });
+    });
+
+    safeOn(socket, 'remote-control-input', ({ target, action, data } = {}) => {
+        const t = io.sockets.sockets.get(target);
+        if (!t || !socket.data.roomId || t.data.roomId !== socket.data.roomId) return;
+        t.emit('remote-control-input', { from: socket.id, action, data });
+    });
+
     safeOn(socket, 'signal', (data = {}) => {
         const target = io.sockets.sockets.get(data.target);
         // sadece aynı odadaki kişilere sinyal gönderilebilir
