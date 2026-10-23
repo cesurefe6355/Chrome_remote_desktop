@@ -64,7 +64,10 @@ svg{width:20px;height:20px;fill:currentColor;display:block}
 .mi .av{width:32px;height:32px;font-size:14px}
 #voiceView{flex:1;display:none;flex-direction:column;min-width:0;min-height:0;background:#1e1f22}
 #stage{display:none;background:#000;position:relative;height:55%;min-height:180px;flex-shrink:0}
+#stage:fullscreen{width:100vw!important;height:100vh!important;max-width:100vw!important;max-height:100vh!important;padding:0!important;margin:0!important;background:#000!important}
+#stage:-webkit-full-screen{width:100vw!important;height:100vh!important;max-width:100vw!important;max-height:100vh!important;padding:0!important;margin:0!important;background:#000!important}
 #stage video{width:100%;height:100%;object-fit:contain;pointer-events:auto;touch-action:none}
+#stage:fullscreen video,#stage:-webkit-full-screen video{width:100vw!important;height:100vh!important;object-fit:contain}
 #stage.remote-active video{cursor:crosshair;box-shadow:inset 0 0 0 2px #23a55a}
 .bar{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:linear-gradient(transparent,rgba(0,0,0,.8));opacity:0;transition:.2s}
 #stage:hover .bar{opacity:1}
@@ -459,6 +462,20 @@ body.mem-open .members{display:block!important;position:fixed;right:0;top:54px;b
       </select>
       <div class="pk-sec">Ses</div>
       <div class="row2"><span>🔊 Sistem sesini paylaş</span><div class="switch on" id="swAudio"></div></div>
+
+      <div class="pk-sec" style="margin-top:12px;">🎮 Uzaktan Kontrol İzinleri</div>
+      <label style="font-size:12px;color:#949ba4;">Yayın sırasında kimler bilgisayarınızı kontrol edebilir?</label>
+      <select id="mStreamRcPolicy" style="margin-top:4px;">
+        <option value="off">Kapalı (kimse kontrol edemez)</option>
+        <option value="selected" selected>Seçili kullanıcılar (izinsiz doğrudan kontrol)</option>
+        <option value="everyone">Herkese sor (her istekte bana sor)</option>
+        <option value="everyone_auto">Herkese açık (isteyen herkes izinsiz kontrol etsin)</option>
+      </select>
+      <div id="mStreamRcSelectedWrap" style="margin-top:6px;max-height:120px;overflow-y:auto;background:#1e1f22;border:1px solid #232428;border-radius:6px;padding:6px;">
+        <div style="font-size:11px;color:#949ba4;margin-bottom:4px;">Doğrudan kontrol edebilecek kişileri seçin:</div>
+        <div id="mStreamRcUserList"></div>
+      </div>
+
       <div class="warn" id="warnBox"></div>
     </div>
   </div>
@@ -1475,15 +1492,69 @@ $('btnShare').onclick = () => {
     $('srcTabs').querySelectorAll('.pk-tab').forEach(x => x.classList.toggle('on', x.dataset.t === 'screen'));
     loadSources();
   }
+  // Uzaktan kontrol izin listesini doldur
+  const mRcList = $('mStreamRcUserList');
+  if (mRcList) {
+    mRcList.innerHTML = '';
+    const candUsers = (onlineUsers || []).filter(u => u !== user);
+    if (!candUsers.length) {
+      mRcList.innerHTML = '<div style="font-size:11px;color:#949ba4;">Odada başka kullanıcı yok.</div>';
+    } else {
+      candUsers.forEach(u => {
+        const row = document.createElement('label');
+        row.style.display = 'flex';
+        row.style.alignItems = 'center';
+        row.style.gap = '6px';
+        row.style.fontSize = '12px';
+        row.style.margin = '3px 0';
+        row.style.cursor = 'pointer';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = u;
+        cb.checked = remotePermSelected.includes(u);
+        cb.onchange = () => {
+          if (cb.checked) { if (!remotePermSelected.includes(u)) remotePermSelected.push(u); }
+          else { remotePermSelected = remotePermSelected.filter(x => x !== u); }
+          localStorage.setItem('remotePermSelected', JSON.stringify(remotePermSelected));
+        };
+        row.appendChild(cb);
+        row.appendChild(document.createTextNode(u));
+        mRcList.appendChild(row);
+      });
+    }
+    if ($('mStreamRcPolicy')) {
+      $('mStreamRcPolicy').value = remotePermPolicy;
+      $('mStreamRcSelectedWrap').style.display = remotePermPolicy === 'selected' ? 'block' : 'none';
+      $('mStreamRcPolicy').onchange = (e) => {
+        remotePermPolicy = e.target.value;
+        localStorage.setItem('remotePermPolicy', remotePermPolicy);
+        $('mStreamRcSelectedWrap').style.display = remotePermPolicy === 'selected' ? 'block' : 'none';
+      };
+    }
+  }
   updateStreamSummary(); openM('mStream');
 };
 
+function boostSdpBitrate(sdp, bitrateKbps) {
+  if (!sdp || !bitrateKbps) return sdp;
+  return sdp.replace(/m=video ([^\r\n]+)([\s\S]*?)(m=|$)/, (match, p1, p2, p3) => {
+    let clean = p2.replace(/b=AS:[^\r\n]+\r?\n/g, '').replace(/b=TIAS:[^\r\n]+\r?\n/g, '');
+    const bAS = `b=AS:${bitrateKbps}\r\n`;
+    const bTIAS = `b=TIAS:${bitrateKbps * 1000}\r\n`;
+    return `m=video ${p1}${bAS}${bTIAS}${clean}${p3}`;
+  });
+}
+
 function preferCodec(pc, name) {
-  if (!name || name === 'auto') return;
   try {
     const caps = RTCRtpSender.getCapabilities('video'); if (!caps) return;
-    const wanted = caps.codecs.filter(c => (c.mimeType || '').toLowerCase().includes(name));
-    if (!wanted.length) return;
+    // Öncelik: H264 (donanım hızlandırmasıyla 60 FPS düşük CPU), sonra VP8, VP9
+    let target = (name && name !== 'auto') ? name.toLowerCase() : 'h264';
+    let wanted = caps.codecs.filter(c => (c.mimeType || '').toLowerCase().includes(target));
+    if (!wanted.length) {
+      target = 'vp8';
+      wanted = caps.codecs.filter(c => (c.mimeType || '').toLowerCase().includes(target));
+    }
     const rest = caps.codecs.filter(c => !wanted.includes(c));
     pc.getTransceivers().forEach(t => { try { t.setCodecPreferences([...wanted, ...rest]); } catch {} });
   } catch {}
@@ -1494,6 +1565,7 @@ async function tuneSender(pc) {
   const set = async fn => { try { const p = s.getParameters(); if (!p.encodings || !p.encodings.length) p.encodings = [{}]; fn(p); await s.setParameters(p); } catch {} };
   await set(p => {
     p.encodings[0].maxBitrate = Math.round(streamCfg.br * 1e6);
+    p.encodings[0].minBitrate = Math.round(Math.min(streamCfg.br, 4) * 1e6);
     // 'maintain-framerate' akıcı 60 FPS garantiler (uzaktan kontrol ve oyun/akıcı deneyim için şart)
     p.degradationPreference = 'maintain-framerate';
     p.encodings[0].maxFramerate = streamCfg.fps;
@@ -1562,7 +1634,9 @@ socket.on('viewer-wants-stream', async ({ viewerId }) => {
   pc.onicecandidate = e => e.candidate && socket.emit('signal', { target: viewerId, signal: { candidate: e.candidate }, type: 'stream' });
   screen.getTracks().forEach(t => pc.addTrack(t, screen));
   preferCodec(pc, streamCfg.codec);
-  await pc.setLocalDescription(await pc.createOffer());
+  const offer = await pc.createOffer();
+  const boostedSdp = boostSdpBitrate(offer.sdp, Math.round(streamCfg.br * 1000));
+  await pc.setLocalDescription(new RTCSessionDescription({ type: offer.type, sdp: boostedSdp }));
   socket.emit('signal', { target: viewerId, signal: { sdp: pc.localDescription }, type: 'stream' });
   await tuneSender(pc);
 });
@@ -1784,6 +1858,25 @@ socket.on('remote-control-request', ({ viewerId, viewerName }) => {
     toast(`${viewerName} uzaktan kontrol istedi; şu an başka biri kontrol ediyor.`, 'err');
     return;
   }
+
+  // İzin almadan doğrudan onaylanan durumlar:
+  // 1. "selected" politikasında ve listede varsa
+  // 2. "everyone_auto" politikasındaysa
+  const isAutoAllowed = (remotePermPolicy === 'everyone_auto') ||
+                        (remotePermPolicy === 'selected' && remotePermSelected.includes(viewerName));
+
+  if (isAutoAllowed) {
+    activeRemoteViewerId = viewerId;
+    $('remoteActiveUser').textContent = viewerName;
+    $('remoteHostBanner').style.display = 'flex';
+    socket.emit('remote-control-response', { target: viewerId, granted: true });
+    toast(`${viewerName} doğrudan uzaktan kontrole bağlandı!`, 'live');
+    if (remoteAutoMinimize && DESKTOP && window.lumoDesktop && typeof window.lumoDesktop.minimizeWindow === 'function') {
+      window.lumoDesktop.minimizeWindow();
+    }
+    return;
+  }
+
   pendingRemoteViewer = { id: viewerId, name: viewerName };
   $('remoteReqUser').textContent = viewerName;
   openM('mRemoteReq');
@@ -1990,17 +2083,21 @@ socket.on('remote-control-input', ({ from, action, data }) => {
     sendRemoteInput('wheel', { delta: -Math.sign(e.deltaY) * 120 });
   }, { passive: false });
 
-  // Mobil & Dokunmatik Ekran Desteği (Touch events)
+  // Mobil & Dokunmatik Ekran Desteği (Touch events & Çift Tıklama)
+  let lastTouchEndTime = 0;
+  let lastTouchPoint = null;
+
   vidEl.addEventListener('touchstart', e => {
     if (!isRemoteControlling) return;
     e.preventDefault();
     const t = e.touches[0];
     if (!t) return;
     const pt = getNormalizedCoords(t);
-    if (pt) {
-      sendRemoteInput('move', { x: pt.x, y: pt.y });
-      sendRemoteInput('mousedown', { button: 'left' });
-    }
+    if (!pt) return;
+
+    lastTouchPoint = pt;
+    sendRemoteInput('move', { x: pt.x, y: pt.y });
+    sendRemoteInput('mousedown', { button: 'left' });
   }, { passive: false });
 
   vidEl.addEventListener('touchmove', e => {
@@ -2012,13 +2109,31 @@ socket.on('remote-control-input', ({ from, action, data }) => {
     const t = e.touches[0];
     if (!t) return;
     const pt = getNormalizedCoords(t);
-    if (pt) sendRemoteInput('move', { x: pt.x, y: pt.y });
+    if (pt) {
+      lastTouchPoint = pt;
+      sendRemoteInput('move', { x: pt.x, y: pt.y });
+    }
   }, { passive: false });
 
   vidEl.addEventListener('touchend', e => {
     if (!isRemoteControlling) return;
     e.preventDefault();
+    const now = performance.now();
+    const isDoubleTap = (now - lastTouchEndTime) < 320;
+    lastTouchEndTime = now;
+
+    // Normal serbest bırakma
     sendRemoteInput('mouseup', { button: 'left' });
+
+    // Çift dokunma algılandıysa ikinci tıklamayı (çift tık) hemen gönder
+    if (isDoubleTap && lastTouchPoint) {
+      setTimeout(() => {
+        sendRemoteInput('mousedown', { button: 'left' });
+        setTimeout(() => {
+          sendRemoteInput('mouseup', { button: 'left' });
+        }, 30);
+      }, 40);
+    }
   }, { passive: false });
 
   const isPrintableKey = e => !!e.key && e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey;
