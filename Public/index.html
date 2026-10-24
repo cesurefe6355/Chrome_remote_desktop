@@ -1612,26 +1612,23 @@ $('btnShare').onclick = () => {
 
 function boostSdpBitrate(sdp, bitrateKbps) {
   if (!sdp || !bitrateKbps) return sdp;
-  return sdp.replace(/m=video ([^\r\n]+)([\s\S]*?)(m=|$)/, (match, p1, p2, p3) => {
-    let clean = p2.replace(/b=AS:[^\r\n]+\r?\n/g, '').replace(/b=TIAS:[^\r\n]+\r?\n/g, '');
-    const bAS = `b=AS:${bitrateKbps}\r\n`;
-    const bTIAS = `b=TIAS:${bitrateKbps * 1000}\r\n`;
-    return `m=video ${p1}${bAS}${bTIAS}${clean}${p3}`;
+  return sdp.replace(/(m=video [^\r\n]+(?:\r?\n))/, (match) => {
+    return `${match}b=AS:${bitrateKbps}\r\nb=TIAS:${bitrateKbps * 1000}\r\n`;
   });
 }
 
 function preferCodec(pc, name) {
+  if (!name || name === 'auto') return;
   try {
     const caps = RTCRtpSender.getCapabilities('video'); if (!caps) return;
-    // Öncelik: H264 (donanım hızlandırmasıyla 60 FPS düşük CPU), sonra VP8, VP9
-    let target = (name && name !== 'auto') ? name.toLowerCase() : 'h264';
-    let wanted = caps.codecs.filter(c => (c.mimeType || '').toLowerCase().includes(target));
-    if (!wanted.length) {
-      target = 'vp8';
-      wanted = caps.codecs.filter(c => (c.mimeType || '').toLowerCase().includes(target));
-    }
+    const wanted = caps.codecs.filter(c => (c.mimeType || '').toLowerCase().includes(name.toLowerCase()));
+    if (!wanted.length) return;
     const rest = caps.codecs.filter(c => !wanted.includes(c));
-    pc.getTransceivers().forEach(t => { try { t.setCodecPreferences([...wanted, ...rest]); } catch {} });
+    pc.getTransceivers().forEach(t => {
+      if (t.sender && t.sender.track && t.sender.track.kind === 'video') {
+        try { t.setCodecPreferences([...wanted, ...rest]); } catch {}
+      }
+    });
   } catch {}
 }
 // Göndericiyi kalite + akıcı FPS için ayarla.
