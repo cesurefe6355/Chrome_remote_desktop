@@ -83,7 +83,7 @@ npm start          # http://localhost:3000
 
 ### Masaüstü (Electron) sürümü
 ```bash
-npm run desktop
+  npm run desktop
 ```
 
 Derleme (kurulum dosyası):

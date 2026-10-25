@@ -1618,11 +1618,14 @@ function boostSdpBitrate(sdp, bitrateKbps) {
 }
 
 function preferCodec(pc, name) {
-  if (!name || name === 'auto') return;
   try {
     const caps = RTCRtpSender.getCapabilities('video'); if (!caps) return;
-    const wanted = caps.codecs.filter(c => (c.mimeType || '').toLowerCase().includes(name.toLowerCase()));
-    if (!wanted.length) return;
+    // Kullanıcı özel seçmediyse veya auto ise: H264 öncelikli (Donanımsal GPU enkoder/dekoder ile ultra hızlı ve akıcı)
+    let target = (name && name !== 'auto') ? name.toLowerCase() : 'h264';
+    let wanted = caps.codecs.filter(c => (c.mimeType || '').toLowerCase().includes(target));
+    if (!wanted.length) {
+      wanted = caps.codecs.filter(c => (c.mimeType || '').toLowerCase().includes('vp8'));
+    }
     const rest = caps.codecs.filter(c => !wanted.includes(c));
     pc.getTransceivers().forEach(t => {
       if (t.sender && t.sender.track && t.sender.track.kind === 'video') {
@@ -1631,14 +1634,16 @@ function preferCodec(pc, name) {
     });
   } catch {}
 }
-// Göndericiyi kalite + akıcı FPS için ayarla.
+// Göndericiyi kalite + akıcı 60 FPS + düşük gecikme için profesyonel ayarla.
 async function tuneSender(pc) {
   const s = pc.getSenders().find(x => x.track && x.track.kind === 'video'); if (!s) return;
   const set = async fn => { try { const p = s.getParameters(); if (!p.encodings || !p.encodings.length) p.encodings = [{}]; fn(p); await s.setParameters(p); } catch {} };
   await set(p => {
-    p.encodings[0].maxBitrate = Math.round(streamCfg.br * 1e6);
-    p.encodings[0].minBitrate = Math.round(Math.min(streamCfg.br, 4) * 1e6);
-    // 'maintain-framerate' akıcı 60 FPS garantiler (uzaktan kontrol ve oyun/akıcı deneyim için şart)
+    // Bit hızını kullanıcının seçtiği Mbps'ye göre ölçekle
+    const targetBps = Math.round(streamCfg.br * 1e6);
+    p.encodings[0].maxBitrate = targetBps;
+    p.encodings[0].minBitrate = Math.round(Math.min(targetBps, Math.max(3e6, targetBps * 0.6)));
+    // 'maintain-framerate' akıcı 60 FPS garantiler (uzaktan kontrol ve akıcılık için şart)
     p.degradationPreference = 'maintain-framerate';
     p.encodings[0].maxFramerate = streamCfg.fps;
     p.encodings[0].scaleResolutionDownBy = 1;
@@ -1799,6 +1804,11 @@ socket.on('signal', async ({ sender, signal, type }) => {
           };
           viewPC.ontrack = e => {
             const v = $('vid'); v.srcObject = e.streams[0]; v.muted = deaf;
+            // Gecikmeyi düşürüp akıcılığı maksimize etmek için alıcı optimizasyonu
+            try {
+              const rx = viewPC.getReceivers().find(r => r.track && r.track.kind === 'video');
+              if (rx && 'playoutDelayHint' in rx) rx.playoutDelayHint = 0;
+            } catch (err) {}
             v.play().catch(() => { v.muted = true; v.play(); toast('Ses kapalı: sesi açmak için videoya tıkla', 'live'); });
           };
         }
