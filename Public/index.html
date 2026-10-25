@@ -69,7 +69,11 @@ svg{width:20px;height:20px;fill:currentColor;display:block}
 #stage video{width:100%;height:100%;object-fit:contain;pointer-events:auto;touch-action:none}
 #stage:fullscreen video,#stage:-webkit-full-screen video{width:100vw!important;height:100vh!important;object-fit:contain}
 #stage.remote-active video{cursor:crosshair;box-shadow:inset 0 0 0 2px #23a55a}
+#btnExitFs{display:none;position:absolute;top:14px;right:14px;z-index:9999;background:rgba(20,20,24,0.85);color:#fff;border:1px solid rgba(255,255,255,0.25);border-radius:20px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,0.6);transition:background .15s,transform .15s}
+#btnExitFs:hover{background:#da373c;border-color:#da373c;transform:scale(1.04)}
+#stage:fullscreen #btnExitFs,#stage:-webkit-full-screen #btnExitFs{display:flex!important;align-items:center;gap:6px}
 .bar{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:linear-gradient(transparent,rgba(0,0,0,.8));opacity:0;transition:.2s}
+#stage:fullscreen .bar,#stage:-webkit-full-screen .bar{z-index:9998;opacity:1}
 #stage:hover .bar{opacity:1}
 .vwait{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#000;color:#dbdee1;text-align:center;padding:16px;font-size:15px}
 .tiles{flex:1;overflow:auto;padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));grid-auto-rows:150px;gap:12px;align-content:start}
@@ -558,6 +562,7 @@ body.mem-open .members{display:block!important;position:fixed;right:0;top:54px;b
   </div>
   <div class="set-tabs">
     <button class="stab on" type="button" data-s="acc">Hesap</button>
+    <button class="stab" type="button" data-s="voice">Ses ve Görüntü</button>
     <button class="stab" type="button" data-s="notif">Bildirimler</button>
     <button class="stab" type="button" data-s="look">Görünüm</button>
     <button class="stab" type="button" data-s="about">Hakkında</button>
@@ -570,6 +575,52 @@ body.mem-open .members{display:block!important;position:fixed;right:0;top:54px;b
       <label>Yeni Şifre</label><input type="password" id="pwNew" autocomplete="new-password">
       <label>Yeni Şifre (tekrar)</label><input type="password" id="pwNew2" autocomplete="new-password">
       <div class="acts"><button class="g" onclick="closeM('mPass')">Kapat</button><button id="btnPwSave">Şifreyi Güncelle</button></div>
+    </section>
+
+    <section class="sv" id="sv-voice">
+      <div class="sec">Giriş Cihazı (Mikrofon)</div>
+      <label>Mikrofon</label>
+      <select id="setMicSelect" style="width:100%;padding:9px 10px;border-radius:8px;background:#1e1f22;border:1px solid #3f4147;color:#dbdee1;font-size:14px;outline:0;"></select>
+      <div style="margin-top:10px;">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:#949ba4;margin-bottom:4px;">
+          <span>Giriş Sesi Seviyesi</span>
+          <span id="setMicVolLbl">100%</span>
+        </div>
+        <input type="range" id="setMicVol" min="0" max="100" value="100" style="width:100%;">
+      </div>
+
+      <div class="sec" style="margin-top:16px;">Mikrofon Testi</div>
+      <p style="font-size:12px;color:#949ba4;margin-bottom:8px;">Mikrofonunun ses alıp almadığını kontrol et. "Mikrofonu Dene"ye basıp konuşun.</p>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button type="button" id="btnTestMic" style="flex-shrink:0;">Mikrofonu Dene</button>
+        <div style="flex:1;background:#1e1f22;height:18px;border-radius:9px;overflow:hidden;border:1px solid #383a40;position:relative;">
+          <div id="micTestBar" style="width:0%;height:100%;background:linear-gradient(90deg,#23a55a,#f0b132);transition:width 0.05s ease-out;"></div>
+        </div>
+      </div>
+
+      <div class="sec" style="margin-top:16px;">Çıkış Cihazı (Hoparlör / Kulaklık)</div>
+      <label>Hoparlör</label>
+      <select id="setSpkSelect" style="width:100%;padding:9px 10px;border-radius:8px;background:#1e1f22;border:1px solid #3f4147;color:#dbdee1;font-size:14px;outline:0;"></select>
+      <div style="margin-top:10px;">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:#949ba4;margin-bottom:4px;">
+          <span>Çıkış Sesi Seviyesi</span>
+          <span id="setSpkVolLbl">100%</span>
+        </div>
+        <input type="range" id="setSpkVol" min="0" max="100" value="100" style="width:100%;">
+      </div>
+
+      <div class="sec" style="margin-top:16px;">Gelişmiş Ses İşleme</div>
+      <div class="row2"><span>🎙️ Gürültü Azaltma (Noise Suppression)</span><div class="switch on" id="swNoise"></div></div>
+      <div class="row2"><span>🔄 Yankı Engelleme (Echo Cancellation)</span><div class="switch on" id="swEcho"></div></div>
+      <div class="row2"><span>🎚️ Otomatik Kazanç Kontrolü (Auto Gain)</span><div class="switch on" id="swGain"></div></div>
+
+      <div class="sec" style="margin-top:16px;">Uzaktan Kontrol Güvenliği & Kısayollar</div>
+      <div style="font-size:12px;color:#949ba4;line-height:1.7;background:#1e1f22;padding:12px;border-radius:8px;border:1px solid #2b2d31;">
+        <div>🛑 <b style="color:#f23f42;">F9:</b> Uzaktan kontrolü anında keser ve kapatır (Acil Durdurma).</div>
+        <div>⌨️ <b style="color:#5865F2;">Shift + Esc:</b> İzleyici uzaktan kontrol modundan anında çıkar.</div>
+        <div>🖥️ <b style="color:#23a55a;">Esc:</b> Tam ekrandan anında çıkar.</div>
+      </div>
+      <div class="acts" style="margin-top:14px;"><button class="g" onclick="closeM('mPass')">Kapat</button></div>
     </section>
 
     <section class="sv" id="sv-notif">
@@ -662,16 +713,17 @@ body.mem-open .members{display:block!important;position:fixed;right:0;top:54px;b
     </div>
     <div id="voiceView">
       <div id="stage"><video id="vid" autoplay playsinline></video><div class="stats" id="vstats"></div><div class="vwait" id="vwait"></div>
-        <div id="remoteHostBanner" style="display:none;position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(218,55,60,0.92);color:#fff;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.5);align-items:center;gap:10px;">
+        <button id="btnExitFs" type="button" onclick="fsc()" title="Tam Ekrandan Çık (Esc)">✕ Tam Ekrandan Çık (Esc)</button>
+        <div id="remoteHostBanner" style="display:none;position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(218,55,60,0.95);color:#fff;padding:6px 16px;border-radius:20px;font-size:13px;font-weight:700;z-index:9990;box-shadow:0 4px 14px rgba(0,0,0,0.6);align-items:center;gap:12px;">
           <span>🔴 Bilgisayarınız <span id="remoteActiveUser"></span> tarafından kontrol ediliyor</span>
-          <button style="padding:4px 12px;font-size:12px;background:#fff;color:#da373c;border-radius:12px;font-weight:700;" onclick="stopRemoteControlHost()">Kontrolü Durdur</button>
+          <button style="padding:4px 12px;font-size:12px;background:#fff;color:#da373c;border-radius:12px;font-weight:800;border:0;cursor:pointer;" onclick="stopRemoteControlHost()" title="Uzaktan kontrolü anında kes">🛑 Acil Durdur (F9)</button>
         </div>
-        <div id="remoteViewerBanner" style="display:none;position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(35,165,90,0.95);color:#fff;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,0.5);align-items:center;gap:10px;">
-          <span>🎮 Uzaktan kontrol devrede (Ekrana tıklayarak yönetin · Shift+Esc ile çık)</span>
-          <button style="padding:4px 12px;font-size:12px;background:#fff;color:#23a55a;border-radius:12px;font-weight:700;" onclick="stopRemoteControlViewer()">Kontrolden Çık</button>
+        <div id="remoteViewerBanner" style="display:none;position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(35,165,90,0.96);color:#fff;padding:6px 16px;border-radius:20px;font-size:13px;font-weight:700;z-index:9990;box-shadow:0 4px 14px rgba(0,0,0,0.6);align-items:center;gap:12px;">
+          <span>🎮 Uzaktan kontrol devrede (Ekrana tıklayarak yönetin)</span>
+          <button style="padding:4px 12px;font-size:12px;background:#fff;color:#23a55a;border-radius:12px;font-weight:800;border:0;cursor:pointer;" onclick="stopRemoteControlViewer()" title="Kontrolden çık">🛑 Kontrolü Bırak (F9 / Shift+Esc)</button>
         </div>
         <button id="btnRequestRemote" style="display:none;position:absolute;top:10px;right:10px;z-index:11;background:#23a55a;color:#fff;padding:8px 14px;border-radius:20px;font-size:13px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.5);" onclick="requestRemoteControl()">🎮 Uzaktan Kontrol İste</button>
-        <div class="bar"><span id="who"></span><span><button onclick="fsc()">Tam Ekran</button> <button class="red" id="btnStop" style="display:none" onclick="stopStream()">Yayını Durdur</button></span></div></div>
+        <div class="bar"><span id="who"></span><span><button id="btnFsToggle" onclick="fsc()">Tam Ekran</button> <button class="red" id="btnStop" style="display:none" onclick="stopStream()">Yayını Durdur</button></span></div></div>
       <div class="tiles" id="tiles"></div>
       <div class="vctl">
         <button class="cb" id="cMic" title="Mikrofon"><i data-ic="mic"></i></button>
@@ -690,7 +742,7 @@ const user = localStorage.getItem('lumolive_user'), token = localStorage.getItem
 if (!user || !token) location.replace('/login.html');
 const $ = id => document.getElementById(id);
 const escH = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const openM = id => $(id).style.display = 'flex', closeM = id => $(id).style.display = 'none';
+const openM = id => $(id).style.display = 'flex', closeM = id => { $(id).style.display = 'none'; if (id === 'mPass' && typeof stopMicTest === 'function') stopMicTest(); };
 const info = (t, d) => { $('infoT').textContent = t; $('infoD').textContent = d; openM('mInfo'); };
 
 const color = n => `hsl(${[...n].reduce((a, c) => a + c.charCodeAt(0) * 7, 0) % 360},55%,45%)`;
@@ -932,9 +984,144 @@ setInterval(() => {
   }
 }, 100);
 
-// ----- Mikrofon / Sağırlaştırma -----
-const micReady = (navigator.mediaDevices || { getUserMedia: () => Promise.reject() }).getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
-  .then(s => { micStream = s; watch('me', s); syncBtns(); }).catch(() => syncBtns());
+// ----- Discord Tipi Gelişmiş Ses ve Cihaz Yöneticisi -----
+let audioSettings = {
+  micId: localStorage.getItem('lumolive_micId') || 'default',
+  spkId: localStorage.getItem('lumolive_spkId') || 'default',
+  micVol: Number(localStorage.getItem('lumolive_micVol') || 100),
+  spkVol: Number(localStorage.getItem('lumolive_spkVol') || 100),
+  noiseSuppression: localStorage.getItem('lumolive_noise') !== '0',
+  echoCancellation: localStorage.getItem('lumolive_echo') !== '0',
+  autoGainControl: localStorage.getItem('lumolive_gain') !== '0'
+};
+
+let micTestStream = null;
+let micTestTimer = null;
+let micTestCtx = null;
+
+async function getMicConstraints() {
+  const c = {
+    echoCancellation: audioSettings.echoCancellation,
+    noiseSuppression: audioSettings.noiseSuppression,
+    autoGainControl: audioSettings.autoGainControl
+  };
+  if (audioSettings.micId && audioSettings.micId !== 'default') {
+    c.deviceId = { exact: audioSettings.micId };
+  }
+  return c;
+}
+
+async function startOrUpdateMic(isInit = false) {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+  try {
+    const constraints = { audio: await getMicConstraints() };
+    const s = await navigator.mediaDevices.getUserMedia(constraints);
+    if (micStream) {
+      micStream.getTracks().forEach(t => t.stop());
+    }
+    micStream = s;
+    const track = s.getAudioTracks()[0];
+    if (track) {
+      track.enabled = micOn && !deaf;
+      // Aktif ses bağlantılarında track'i canlı güncelle
+      Object.values(voice).forEach(pc => {
+        try {
+          const sender = pc.getSenders().find(x => x.track && x.track.kind === 'audio');
+          if (sender) sender.replaceTrack(track).catch(() => {});
+        } catch {}
+      });
+    }
+    watch('me', s);
+    syncBtns();
+    if (!isInit) toast('Mikrofon cihazı güncellendi', 'live');
+  } catch (err) {
+    console.warn('Mikrofon başlatılamadı:', err);
+    syncBtns();
+  }
+}
+
+async function populateAudioDevices() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const micSel = $('setMicSelect');
+    const spkSel = $('setSpkSelect');
+    if (micSel) {
+      micSel.innerHTML = '';
+      const mics = devices.filter(d => d.kind === 'audioinput');
+      mics.forEach((m, idx) => {
+        const opt = document.createElement('option');
+        opt.value = m.deviceId;
+        opt.textContent = m.label || `Mikrofon ${idx + 1}`;
+        if (m.deviceId === audioSettings.micId) opt.selected = true;
+        micSel.appendChild(opt);
+      });
+      if (!mics.length) micSel.innerHTML = '<option value="">Mikrofon bulunamadı</option>';
+    }
+    if (spkSel) {
+      spkSel.innerHTML = '';
+      const spks = devices.filter(d => d.kind === 'audiooutput');
+      spks.forEach((s, idx) => {
+        const opt = document.createElement('option');
+        opt.value = s.deviceId;
+        opt.textContent = s.label || `Hoparlör / Kulaklık ${idx + 1}`;
+        if (s.deviceId === audioSettings.spkId) opt.selected = true;
+        spkSel.appendChild(opt);
+      });
+      if (!spks.length) spkSel.innerHTML = '<option value="default">Varsayılan Ses Çıkışı</option>';
+    }
+  } catch (e) { console.warn('Cihaz listesi hatası:', e); }
+}
+
+function applySpeakerVolume(vol) {
+  audioSettings.spkVol = vol;
+  localStorage.setItem('lumolive_spkVol', vol);
+  if ($('setSpkVolLbl')) $('setSpkVolLbl').textContent = vol + '%';
+  const v = Math.max(0, Math.min(1, vol / 100));
+  document.querySelectorAll('#audioBox audio').forEach(a => { a.volume = v; });
+  const vid = $('vid'); if (vid) vid.volume = v;
+}
+
+function stopMicTest() {
+  if (micTestTimer) { clearInterval(micTestTimer); micTestTimer = null; }
+  if (micTestStream) { micTestStream.getTracks().forEach(t => t.stop()); micTestStream = null; }
+  if (micTestCtx) { try { micTestCtx.close(); } catch {} micTestCtx = null; }
+  const btn = $('btnTestMic'); if (btn) btn.textContent = 'Mikrofonu Dene';
+  const bar = $('micTestBar'); if (bar) bar.style.width = '0%';
+}
+
+function toggleMicTest() {
+  if (micTestStream) {
+    stopMicTest();
+    return;
+  }
+  getMicConstraints().then(ac => {
+    return navigator.mediaDevices.getUserMedia({ audio: ac });
+  }).then(st => {
+    micTestStream = st;
+    const btn = $('btnTestMic'); if (btn) btn.textContent = 'Durdur';
+    const ctx = micTestCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = ctx.createMediaStreamSource(st);
+    const anal = ctx.createAnalyser();
+    anal.fftSize = 256;
+    src.connect(anal);
+    const buf = new Uint8Array(anal.frequencyBinCount);
+    const bar = $('micTestBar');
+    micTestTimer = setInterval(() => {
+      anal.getByteFrequencyData(buf);
+      let sum = 0;
+      for (let i = 0; i < buf.length; i++) sum += buf[i];
+      const avg = sum / buf.length;
+      const pct = Math.min(100, Math.round((avg / 128) * 100 * (audioSettings.micVol / 100) * 1.5));
+      if (bar) bar.style.width = pct + '%';
+    }, 40);
+  }).catch(err => {
+    toast('Mikrofon test edilemedi: ' + (err.message || 'İzin verilmedi'), 'err');
+  });
+}
+
+// Başlangıç mikrofon erişimi
+startOrUpdateMic(true);
 const vs = () => socket.emit('voice-state', { muted: !micStream || !micOn, deaf });
 function syncBtns() {
   ['btnMic', 'cMic'].forEach(i => $(i).classList.toggle('off', !micStream || !micOn));
@@ -1211,6 +1398,21 @@ function openSettings(tab) {
   $('swCompact').classList.toggle('on', document.body.classList.contains('compact'));
   $('swNoAv').classList.toggle('on', document.body.classList.contains('noav'));
   $('swMembers').classList.toggle('on', !document.body.classList.contains('no-members'));
+
+  // Ses ayarları arayüzünü güncelle
+  if ($('setMicVol')) {
+    $('setMicVol').value = audioSettings.micVol;
+    $('setMicVolLbl').textContent = audioSettings.micVol + '%';
+  }
+  if ($('setSpkVol')) {
+    $('setSpkVol').value = audioSettings.spkVol;
+    $('setSpkVolLbl').textContent = audioSettings.spkVol + '%';
+  }
+  if ($('swNoise')) $('swNoise').classList.toggle('on', audioSettings.noiseSuppression);
+  if ($('swEcho')) $('swEcho').classList.toggle('on', audioSettings.echoCancellation);
+  if ($('swGain')) $('swGain').classList.toggle('on', audioSettings.autoGainControl);
+
+  populateAudioDevices();
   syncNotifUI();
   setSettingTab(tab || 'acc');
   openM('mPass');
@@ -1218,9 +1420,67 @@ function openSettings(tab) {
 function setSettingTab(s) {
   document.querySelectorAll('.stab').forEach(x => x.classList.toggle('on', x.dataset.s === s));
   document.querySelectorAll('.sv').forEach(v => v.classList.toggle('on', v.id === 'sv-' + s));
+  if (s !== 'voice') stopMicTest();
 }
 document.querySelectorAll('.stab').forEach(t => t.onclick = () => setSettingTab(t.dataset.s));
 $('btnSet').onclick = () => openSettings('acc');
+
+// Ses ayarları kontrol dinleyicileri
+if ($('setMicSelect')) {
+  $('setMicSelect').onchange = (e) => {
+    audioSettings.micId = e.target.value;
+    localStorage.setItem('lumolive_micId', audioSettings.micId);
+    startOrUpdateMic();
+  };
+}
+if ($('setSpkSelect')) {
+  $('setSpkSelect').onchange = (e) => {
+    audioSettings.spkId = e.target.value;
+    localStorage.setItem('lumolive_spkId', audioSettings.spkId);
+    document.querySelectorAll('#audioBox audio').forEach(a => {
+      if (typeof a.setSinkId === 'function') a.setSinkId(audioSettings.spkId).catch(() => {});
+    });
+  };
+}
+if ($('setMicVol')) {
+  $('setMicVol').oninput = (e) => {
+    audioSettings.micVol = Number(e.target.value);
+    localStorage.setItem('lumolive_micVol', audioSettings.micVol);
+    $('setMicVolLbl').textContent = audioSettings.micVol + '%';
+  };
+}
+if ($('setSpkVol')) {
+  $('setSpkVol').oninput = (e) => {
+    applySpeakerVolume(Number(e.target.value));
+  };
+}
+if ($('btnTestMic')) {
+  $('btnTestMic').onclick = toggleMicTest;
+}
+if ($('swNoise')) {
+  $('swNoise').onclick = () => {
+    audioSettings.noiseSuppression = !audioSettings.noiseSuppression;
+    localStorage.setItem('lumolive_noise', audioSettings.noiseSuppression ? '1' : '0');
+    $('swNoise').classList.toggle('on', audioSettings.noiseSuppression);
+    startOrUpdateMic();
+  };
+}
+if ($('swEcho')) {
+  $('swEcho').onclick = () => {
+    audioSettings.echoCancellation = !audioSettings.echoCancellation;
+    localStorage.setItem('lumolive_echo', audioSettings.echoCancellation ? '1' : '0');
+    $('swEcho').classList.toggle('on', audioSettings.echoCancellation);
+    startOrUpdateMic();
+  };
+}
+if ($('swGain')) {
+  $('swGain').onclick = () => {
+    audioSettings.autoGainControl = !audioSettings.autoGainControl;
+    localStorage.setItem('lumolive_gain', audioSettings.autoGainControl ? '1' : '0');
+    $('swGain').classList.toggle('on', audioSettings.autoGainControl);
+    startOrUpdateMic();
+  };
+}
 
 // Bildirim sesleri (ayarlar içindeki anahtar)
 $('swSnd2').onclick = () => {
@@ -1611,10 +1871,16 @@ $('btnShare').onclick = () => {
 };
 
 function boostSdpBitrate(sdp, bitrateKbps) {
-  if (!sdp || !bitrateKbps) return sdp;
-  return sdp.replace(/(m=video [^\r\n]+(?:\r?\n))/, (match) => {
-    return `${match}b=AS:${bitrateKbps}\r\nb=TIAS:${bitrateKbps * 1000}\r\n`;
+  if (!sdp) return sdp;
+  const kbps = bitrateKbps || 8000;
+  let res = sdp.replace(/(m=video [^\r\n]+(?:\r?\n))/, (match) => {
+    return `${match}b=AS:${kbps}\r\nb=TIAS:${kbps * 1000}\r\n`;
   });
+  res = res.replace(/(a=fmtp:\d+ [^\r\n]+)/g, (match) => {
+    if (match.includes('x-google-')) return match;
+    return `${match};x-google-min-bitrate=3500;x-google-start-bitrate=${Math.min(kbps, 8000)};x-google-max-bitrate=${Math.max(kbps, 20000)}`;
+  });
+  return res;
 }
 
 function preferCodec(pc, name) {
@@ -1814,7 +2080,12 @@ socket.on('signal', async ({ sender, signal, type }) => {
         }
         if (signal.sdp) {
           await viewPC.setRemoteDescription(signal.sdp); flush(viewPC);
-          if (signal.sdp.type === 'offer') { await viewPC.setLocalDescription(await viewPC.createAnswer()); socket.emit('signal', { target: sender, signal: { sdp: viewPC.localDescription }, type: 'stream' }); }
+          if (signal.sdp.type === 'offer') {
+            const ans = await viewPC.createAnswer();
+            const boostedAns = boostSdpBitrate(ans.sdp, Math.round((streamCfg.br || 8) * 1000));
+            await viewPC.setLocalDescription(new RTCSessionDescription({ type: ans.type, sdp: boostedAns }));
+            socket.emit('signal', { target: sender, signal: { sdp: viewPC.localDescription }, type: 'stream' });
+          }
         } else if (signal.candidate) addCand(viewPC, signal.candidate);
       }
     }
@@ -1829,7 +2100,20 @@ $('vid').onclick = e => {
   }
   if (!isHost) { e.target.muted = false; e.target.play().catch(() => {}); }
 };
-function fsc() { const s = $('stage'); document.fullscreenElement ? document.exitFullscreen() : s.requestFullscreen(); }
+function fsc() {
+  const s = $('stage');
+  if (document.fullscreenElement) {
+    if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+  } else {
+    if (s.requestFullscreen) s.requestFullscreen().catch(() => {});
+    else if (s.webkitRequestFullscreen) s.webkitRequestFullscreen();
+  }
+}
+document.addEventListener('fullscreenchange', () => {
+  const isFs = !!document.fullscreenElement;
+  const btn = $('btnFsToggle');
+  if (btn) btn.textContent = isFs ? 'Tam Ekrandan Çık' : 'Tam Ekran';
+});
 window.addEventListener('beforeunload', () => socket.emit('leave-room'));
 
 // ----- Oturum süresi: "Beni hatırla" kapalıysa 1 saat sonra otomatik çıkış -----
@@ -1843,7 +2127,24 @@ window.addEventListener('beforeunload', () => socket.emit('leave-room'));
 })();
 
 // Esc / boşluğa tıklama ile pencereleri kapat, ikon düğmelerine erişilebilir ad ver
-document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.ov').forEach(o => { if (o.style.display === 'flex') closeM(o.id); }); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'F9') {
+    if (isHost && activeRemoteViewerId) {
+      stopRemoteControlHost();
+      toast('Uzaktan kontrol F9 tuşu ile anında durduruldu!', 'err');
+    } else if (isRemoteControlling) {
+      stopRemoteControlViewer();
+      toast('Uzaktan kontrolden F9 tuşu ile çıkıldı!', 'info');
+    }
+  }
+  if (e.key === 'Escape') {
+    if (document.fullscreenElement) {
+      try { document.exitFullscreen(); } catch {}
+    } else {
+      document.querySelectorAll('.ov').forEach(o => { if (o.style.display === 'flex') closeM(o.id); });
+    }
+  }
+});
 document.querySelectorAll('.ov').forEach(o => o.addEventListener('mousedown', e => { if (e.target === o) closeM(o.id); }));
 document.querySelectorAll('button[title]').forEach(b => b.setAttribute('aria-label', b.title));
 $('btnMembers').addEventListener('click', () => { if (innerWidth <= 900) document.body.classList.toggle('mem-open'); });
@@ -2221,15 +2522,37 @@ socket.on('remote-control-input', ({ from, action, data }) => {
   const isPrintableKey = e => !!e.key && e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey;
 
   window.addEventListener('keydown', e => {
+    // F9 Acil Durdurma tuşu
+    if (e.key === 'F9') {
+      e.preventDefault();
+      if (isHost && activeRemoteViewerId) {
+        stopRemoteControlHost();
+        toast('Uzaktan kontrol F9 tuşu ile anında durduruldu!', 'err');
+        return;
+      }
+      if (isRemoteControlling) {
+        stopRemoteControlViewer();
+        toast('Uzaktan kontrolden F9 ile çıkıldı!', 'info');
+        return;
+      }
+    }
+    // Escape: Tam ekrandaysa öncelikle tam ekrandan çıkar
+    if (e.key === 'Escape') {
+      if (document.fullscreenElement) {
+        e.preventDefault();
+        try { document.exitFullscreen(); } catch {}
+        return;
+      }
+      if (isRemoteControlling && e.shiftKey) {
+        e.preventDefault();
+        stopRemoteControlViewer();
+        return;
+      }
+    }
     if (!isRemoteControlling) return;
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
-    if (e.key === 'Escape' && !e.shiftKey) {
-      return;
-    }
-    if (e.key === 'Escape' && e.shiftKey) {
-      stopRemoteControlViewer();
-      return;
-    }
+    if (e.key === 'Escape') return;
+
     e.preventDefault();
     if (isPrintableKey(e)) {
       const cp = e.key.codePointAt(0);
@@ -2249,6 +2572,18 @@ socket.on('remote-control-input', ({ from, action, data }) => {
     if (vk) sendRemoteInput('keyup', { vk });
   });
 })();
+
+if (window.lumoDesktop && typeof window.lumoDesktop.onEmergencyStop === 'function') {
+  window.lumoDesktop.onEmergencyStop(() => {
+    if (isHost && activeRemoteViewerId) {
+      stopRemoteControlHost();
+      toast('🛑 Uzaktan kontrol F9 ile acil durduruldu!', 'err');
+    } else if (isRemoteControlling) {
+      stopRemoteControlViewer();
+      toast('🛑 Uzaktan kontrolden F9 ile çıkıldı!', 'info');
+    }
+  });
+}
 
 $('mRemoteReq').addEventListener('mousedown', e => { if (e.target === $('mRemoteReq') && pendingRemoteViewer) respondRemoteControl(false); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && pendingRemoteViewer) respondRemoteControl(false); });

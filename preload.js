@@ -15,5 +15,11 @@ contextBridge.exposeInMainWorld('lumoDesktop', {
     remoteInput: (cmd) => ipcRenderer.invoke('lumo:remote-input', cmd),
     // Pencereyi küçült / geri getir (uzaktan kontrol devreye girdiğinde)
     minimizeWindow: () => ipcRenderer.invoke('lumo:minimize'),
-    restoreWindow: () => ipcRenderer.invoke('lumo:restore')
+    restoreWindow: () => ipcRenderer.invoke('lumo:restore'),
+    // F9 Acil durdurma kısayolu dinleyicisi
+    onEmergencyStop: (callback) => {
+        ipcRenderer.on('lumo:emergency-stop', () => {
+            if (typeof callback === 'function') callback();
+        });
+    }
 });

@@ -116,8 +116,9 @@ namespace LumoRemote
         }
 
         // Host öncelik (Host Override) sistemi:
-        // Host fiziksel olarak fareyi hareket ettirdiğinde karşı tarafın girdileri bloke edilir.
-        // Host fareyi bıraktıktan 800ms sonra kontrol tekrar karşı tarafa açılır.
+        // Yayın yapan bilgisayarın faresi fiziksel olarak bariz bir şekilde oynatılırsa
+        // karşı tarafın fare hareketleri geçici olarak durur.
+        // Yayıncı fareyi bıraktıktan 600ms sonra kontrol tekrar karşı tarafa açılır.
         static long lastHostPhysicalInputTime = 0;
         static int lastExpectedCursorX = -1;
         static int lastExpectedCursorY = -1;
@@ -126,7 +127,7 @@ namespace LumoRemote
         static bool IsHostActive()
         {
             long elapsed = sw.ElapsedMilliseconds - lastHostPhysicalInputTime;
-            return elapsed < 800; // 800ms cooldown (0.8 saniye)
+            return elapsed < 600; // 600ms cooldown (0.6 saniye)
         }
 
         static void CheckHostPhysicalMovement()
@@ -139,8 +140,8 @@ namespace LumoRemote
                     int dx = pt.X - lastExpectedCursorX;
                     int dy = pt.Y - lastExpectedCursorY;
                     int distSq = (dx * dx) + (dy * dy);
-                    // 12 pikselden fazla beklenmedik sapma varsa host kendisi fareyi oynatmıştır
-                    if (distSq > 144)
+                    // 25 pikselden fazla fiziksel sapma varsa (625) host kendisi fareyi oynatmıştır
+                    if (distSq > 625)
                     {
                         lastHostPhysicalInputTime = sw.ElapsedMilliseconds;
                     }
@@ -164,7 +165,7 @@ namespace LumoRemote
                 lastExpectedCursorY = initPt.Y;
             }
 
-            // Arka planda 35ms'de bir fiziksel fare hareketini izleyen iş parçacığı
+            // Arka planda 50ms'de bir fiziksel fare hareketini izleyen iş parçacığı
             Thread trackerThread = new Thread(() =>
             {
                 while (true)
@@ -174,7 +175,7 @@ namespace LumoRemote
                         CheckHostPhysicalMovement();
                     }
                     catch { }
-                    Thread.Sleep(35);
+                    Thread.Sleep(50);
                 }
             });
             trackerThread.IsBackground = true;
@@ -196,17 +197,17 @@ namespace LumoRemote
                     break;
                 }
 
-                // Eğer host şu anda klavye veya faresini kullanıyorsa karşı tarafın komutlarını yut (ignore et)
-                CheckHostPhysicalMovement();
-                if (IsHostActive())
-                {
-                    continue;
-                }
-
                 string[] parts = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 if (parts.Length == 0) continue;
 
                 string cmd = parts[0].ToUpperInvariant();
+
+                // Eğer host aktif olarak kendi faresini oynatıyorsa uzaktan gelen MOVE komutunu engelle,
+                // fakat acil tıklama/bırakma komutları (MOUSEDOWN, MOUSEUP) asla kaybolmasın!
+                if (cmd == "MOVE" && IsHostActive())
+                {
+                    continue;
+                }
 
                 try
                 {
@@ -223,8 +224,17 @@ namespace LumoRemote
                                 int targetY = (int)Math.Round(py * (shHeight - 1));
                                 
                                 SetCursorPos(targetX, targetY);
-                                lastExpectedCursorX = targetX;
-                                lastExpectedCursorY = targetY;
+                                POINT actualPt;
+                                if (GetCursorPos(out actualPt))
+                                {
+                                    lastExpectedCursorX = actualPt.X;
+                                    lastExpectedCursorY = actualPt.Y;
+                                }
+                                else
+                                {
+                                    lastExpectedCursorX = targetX;
+                                    lastExpectedCursorY = targetY;
+                                }
                             }
                             break;
 
