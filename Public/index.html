@@ -1120,8 +1120,14 @@ function toggleMicTest() {
   });
 }
 
-// Başlangıç mikrofon erişimi
-startOrUpdateMic(true);
+// Başlangıç mikrofon erişimi (Promise olarak saklanır)
+const micReady = (async () => {
+  try {
+    await startOrUpdateMic(true);
+  } catch (e) {
+    console.warn('Mikrofon başlangıç hatası:', e);
+  }
+})();
 const vs = () => socket.emit('voice-state', { muted: !micStream || !micOn, deaf });
 function syncBtns() {
   ['btnMic', 'cMic'].forEach(i => $(i).classList.toggle('off', !micStream || !micOn));
@@ -1557,6 +1563,7 @@ $('btnPwSave').onclick = async () => {
 };
 
 // ----- Ses kanalı -----
+let voiceJoinSeq = 0; // bekleyen/eskimiş katılma isteklerini ayırt etmek için
 function cleanup() {
   Object.values(voice).forEach(p => p.close()); Object.keys(voice).forEach(k => delete voice[k]);
   Object.values(hostPCs).forEach(p => p.close()); Object.keys(hostPCs).forEach(k => delete hostPCs[k]);
@@ -1566,11 +1573,24 @@ function cleanup() {
   stopStats();
 }
 async function joinVoice(id) {
-  if (isHost) stopStream(); cleanup(); await Promise.all([micReady, iceReady]); voiceId = id;
+  const seq = ++voiceJoinSeq; // ayrılma / başka kanala geçiş bu isteği geçersiz kılar
+  if (isHost) stopStream();
+  // Temizlik sırasında oluşabilecek bir hata kanala girişi engellemesin.
+  try { cleanup(); } catch (err) { console.warn('Ses kanalı temizlik uyarısı:', err); }
+  // Mikrofon izni / ICE listesi hazır olmasa bile kanala giriş bloklanmamalı.
+  // Eskiden burada sınırsız bekleniyordu; izin penceresi açık kalınca
+  // 'join-room' hiç gönderilmiyor ve kullanıcı ses kanalına giremiyordu.
+  await Promise.race([
+    Promise.allSettled([micReady, iceReady]),
+    new Promise(r => setTimeout(r, 1500)) // en geç 1.5 sn sonra odaya katıl
+  ]).catch(err => console.warn('Ses kanalı hazırlık uyarısı:', err));
+  if (seq !== voiceJoinSeq) return; // bu arada kanaldan çıkıldı veya başka kanala geçildi
+  voiceId = id;
   socket.emit('join-room', { roomId: id });
 }
 function openVoice(id) { if (voiceId !== id) joinVoice(id); setView('voice'); }
 function leaveVoice() {
+  voiceJoinSeq++; // bekleyen katılma isteğini iptal et
   if (!voiceId) return; if (isHost) stopStream();
   socket.emit('leave-room'); voiceId = ''; voiceMembers = []; hostSid = null; cleanup(); play('leave');
   $('vstat').style.display = 'none'; setView('text');
