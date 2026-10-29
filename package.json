@@ -5,6 +5,7 @@
   "scripts": {
     "start": "node server.js",
     "test:db": "node test-db.js",
+    "check:syntax": "node --check server.js && node --check db.js && node --check main.js && node --check preload.js",
     "desktop": "electron .",
     "desktop:local": "electron . --local",
     "build": "electron-builder"

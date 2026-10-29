@@ -74,6 +74,14 @@ npm install
 
 `.env` dosyasına veritabanı bilgilerini gir (bkz. `.env.example`).
 
+### Hızlı kod denetimi
+
+Sunucu ve Electron giriş dosyalarında sözdizimi hatası olmadığını doğrulamak için:
+
+```bash
+npm run check:syntax
+```
+
 ## Çalıştırma
 
 ### Web sürümü
