@@ -147,13 +147,12 @@ const STRIKE_WINDOW_MS = 24 * 3600e3;                   // 24 saat cezasız geç
 // ---------- Yönetici (admin / "muhtar") oturumu ----------
 // Varsayılan şifre KALDIRILDI: ADMIN_PASSWORD yoksa panel devre dışı kalır (güvenli varsayılan).
 const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || '').trim().replace(/^["']|["']$/g, '');
-const ADMIN_ENABLED = ADMIN_PASSWORD.length >= 6;
+const ADMIN_ENABLED = ADMIN_PASSWORD.length >= 12;
 if (!ADMIN_ENABLED) {
-    console.error('[GÜVENLİK] ADMIN_PASSWORD tanımlı değil veya 6 karakterden kısa — /muhtar paneli DEVRE DIŞI.');
-    console.error('           Render > Environment bölümüne güçlü bir ADMIN_PASSWORD ekleyip yeniden deploy edin.');
+    console.error('[GÜVENLİK] ADMIN_PASSWORD tanımlı değil veya 12 karakterden kısa — /muhtar paneli DEVRE DIŞI.');
+    console.error('           Render > Environment bölümüne en az 12 karakterlik güçlü bir ADMIN_PASSWORD ekleyip yeniden deploy edin.');
 } else {
     console.log('[BİLGİ] Yönetici paneli (/muhtar) aktif. Şifre uzunluğu: ' + ADMIN_PASSWORD.length);
-    if (ADMIN_PASSWORD.length < 12) console.warn('[GÜVENLİK] ADMIN_PASSWORD kısa; en az 12 karakter önerilir.');
 }
 if (!process.env.SECRET) console.warn('[GÜVENLİK] SECRET tanımlı değil — oturumlar sunucu yeniden başlayınca geçersiz olur. Render > Environment üzerinden sabit ve uzun bir SECRET ayarlayın.');
 const ADMIN_SESSION_MS = 12 * 3600e3;                   // 12 saat
